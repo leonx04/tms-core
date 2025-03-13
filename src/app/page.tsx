@@ -166,86 +166,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-gradient-to-tr from-primary/5 to-transparent pointer-events-none rounded-xl"></div>
               <div className="relative bg-card border border-border/40 rounded-xl overflow-hidden shadow-modern-lg">
                 {/* Dashboard Preview SVG */}
-                <svg 
-                  viewBox="0 0 1200 600" 
-                  className="w-full h-auto"
-                  fill="none" 
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  {/* Dashboard Background */}
-                  <rect width="1200" height="600" fill="var(--card)" />
-                  
-                  {/* Header */}
-                  <rect width="1200" height="60" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                  <rect x="20" y="15" width="100" height="30" rx="4" fill="var(--primary)" />
-                  <rect x="1050" y="15" width="30" height="30" rx="15" fill="var(--muted)" />
-                  <rect x="1100" y="15" width="30" height="30" rx="15" fill="var(--muted)" />
-                  <rect x="1150" y="15" width="30" height="30" rx="15" fill="var(--muted)" />
-                  
-                  {/* Sidebar */}
-                  <rect width="220" height="540" y="60" fill="var(--muted)" />
-                  <rect x="20" y="80" width="180" height="40" rx="4" fill="var(--card)" />
-                  <rect x="20" y="140" width="180" height="40" rx="4" fill="var(--primary)" opacity="0.1" />
-                  <rect x="20" y="200" width="180" height="40" rx="4" fill="var(--card)" />
-                  <rect x="20" y="260" width="180" height="40" rx="4" fill="var(--card)" />
-                  <rect x="20" y="320" width="180" height="40" rx="4" fill="var(--card)" />
-                  
-                  {/* Main Content */}
-                  <rect x="240" y="80" width="940" height="60" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                  <rect x="260" y="95" width="300" height="30" rx="4" fill="var(--muted)" />
-                  <rect x="1050" y="95" width="100" height="30" rx="4" fill="var(--primary)" />
-                  
-                  {/* Task Cards */}
-                  <rect x="240" y="160" width="300" height="180" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                  <rect x="260" y="180" width="260" height="20" rx="2" fill="var(--muted)" />
-                  <rect x="260" y="210" width="200" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  <rect x="260" y="230" width="180" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  <rect x="260" y="280" width="80" height="24" rx="12" fill="var(--primary)" opacity="0.1" />
-                  <rect x="350" y="280" width="80" height="24" rx="12" fill="var(--success)" opacity="0.1" />
-                  <rect x="260" y="314" width="40" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  
-                  <rect x="560" y="160" width="300" height="180" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                  <rect x="580" y="180" width="260" height="20" rx="2" fill="var(--muted)" />
-                  <rect x="580" y="210" width="200" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  <rect x="580" y="230" width="180" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  <rect x="580" y="280" width="80" height="24" rx="12" fill="var(--warning)" opacity="0.1" />
-                  <rect x="670" y="280" width="80" height="24" rx="12" fill="var(--destructive)" opacity="0.1" />
-                  <rect x="580" y="314" width="40" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  
-                  <rect x="880" y="160" width="300" height="180" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                  <rect x="900" y="180" width="260" height="20" rx="2" fill="var(--muted)" />
-                  <rect x="900" y="210" width="200" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  <rect x="900" y="230" width="180" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  <rect x="900" y="280" width="80" height="24" rx="12" fill="var(--primary)" opacity="0.1" />
-                  <rect x="990" y="280" width="80" height="24" rx="12" fill="var(--success)" opacity="0.1" />
-                  <rect x="900" y="314" width="40" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  
-                  {/* Charts */}
-                  <rect x="240" y="360" width="460" height="220" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                  <rect x="260" y="380" width="200" height="20" rx="2" fill="var(--muted)" />
-                  <rect x="260" y="420" width="420" height="140" rx="4" fill="var(--muted)" opacity="0.1" />
-                  <path d="M280 520 L340 480 L400 500 L460 450 L520 470 L580 420 L640 440" stroke="var(--primary)" strokeWidth="3" fill="none" />
-                  <circle cx="340" cy="480" r="4" fill="var(--primary)" />
-                  <circle cx="400" cy="500" r="4" fill="var(--primary)" />
-                  <circle cx="460" cy="450" r="4" fill="var(--primary)" />
-                  <circle cx="520" cy="470" r="4" fill="var(--primary)" />
-                  <circle cx="580" cy="420" r="4" fill="var(--primary)" />
-                  
-                  {/* Activity */}
-                  <rect x="720" y="360" width="460" height="220" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                  <rect x="740" y="380" width="200" height="20" rx="2" fill="var(--muted)" />
-                  <rect x="740" y="420" width="40" height="40" rx="20" fill="var(--muted)" />
-                  <rect x="790" y="425" width="150" height="15" rx="2" fill="var(--muted)" />
-                  <rect x="790" y="445" width="100" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  
-                  <rect x="740" y="480" width="40" height="40" rx="20" fill="var(--muted)" />
-                  <rect x="790" y="485" width="150" height="15" rx="2" fill="var(--muted)" />
-                  <rect x="790" y="505" width="100" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                  
-                  <rect x="740" y="540" width="40" height="40" rx="20" fill="var(--muted)" />
-                  <rect x="790" y="545" width="150" height="15" rx="2" fill="var(--muted)" />
-                  <rect x="790" y="565" width="100" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                </svg>
+                <img src="/project-demo.jpg" alt="Project List" />
                 
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
               </div>
@@ -470,70 +391,10 @@ export default function Home() {
                 viewport={{ once: true, margin: "-100px" }}
               >
                 <div className="p-4 border-b border-border bg-muted/50">
-                  <h3 className="text-lg font-semibold">Project Dashboard</h3>
+                  <h3 className="text-lg font-semibold">Cloudinary Config</h3>
                 </div>
                 <div className="p-0">
-                  <svg 
-                    viewBox="0 0 800 500" 
-                    className="w-full h-auto"
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Dashboard Background */}
-                    <rect width="800" height="500" fill="var(--card)" />
-                    
-                    {/* Header */}
-                    <rect width="800" height="50" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="20" y="10" width="80" height="30" rx="4" fill="var(--primary)" />
-                    <rect x="700" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    <rect x="750" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    
-                    {/* Project Header */}
-                    <rect x="20" y="70" width="760" height="60" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="85" width="200" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="650" y="85" width="110" height="30" rx="4" fill="var(--primary)" />
-                    
-                    {/* Task Board */}
-                    <rect x="20" y="150" width="760" height="330" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    
-                    {/* Columns */}
-                    <rect x="30" y="170" width="180" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="220" y="170" width="180" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="410" y="170" width="180" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="600" y="170" width="180" height="30" rx="4" fill="var(--muted)" />
-                    
-                    {/* Tasks Column 1 */}
-                    <rect x="30" y="210" width="180" height="100" rx="4" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="220" width="160" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="40" y="250" width="120" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="40" y="270" width="60" height="20" rx="10" fill="var(--primary)" opacity="0.1" />
-                    <rect x="110" y="270" width="60" height="20" rx="10" fill="var(--destructive)" opacity="0.1" />
-                    
-                    <rect x="30" y="320" width="180" height="100" rx="4" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="330" width="160" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="40" y="360" width="120" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="40" y="380" width="60" height="20" rx="10" fill="var(--primary)" opacity="0.1" />
-                    <rect x="110" y="380" width="60" height="20" rx="10" fill="var(--warning)" opacity="0.1" />
-                    
-                    {/* Tasks Column 2 */}
-                    <rect x="220" y="210" width="180" height="100" rx="4" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="230" y="220" width="160" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="230" y="250" width="120" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="230" y="270" width="60" height="20" rx="10" fill="var(--success)" opacity="0.1" />
-                    <rect x="300" y="270" width="60" height="20" rx="10" fill="var(--primary)" opacity="0.1" />
-                    
-                    {/* Tasks Column 3 */}
-                    <rect x="410" y="210" width="180" height="100" rx="4" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="420" y="220" width="160" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="420" y="250" width="120" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="420" y="270" width="60" height="20" rx="10" fill="var(--warning)" opacity="0.1" />
-                    
-                    {/* Tasks Column 4 */}
-                    <rect x="600" y="210" width="180" height="100" rx="4" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="610" y="220" width="160" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="610" y="250" width="120" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="610" y="270" width="60" height="20" rx="10" fill="var(--success)" opacity="0.1" />
-                  </svg>
+                <img src="/cloudinary.jpg" alt="Cloudinary Config" />
                 </div>
               </motion.div>
               
@@ -548,70 +409,7 @@ export default function Home() {
                   <h3 className="text-lg font-semibold">Task Details</h3>
                 </div>
                 <div className="p-0">
-                  <svg 
-                    viewBox="0 0 800 500" 
-                    className="w-full h-auto"
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Task Detail Background */}
-                    <rect width="800" height="500" fill="var(--card)" />
-                    
-                    {/* Header */}
-                    <rect width="800" height="50" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="20" y="10" width="80" height="30" rx="4" fill="var(--primary)" />
-                    <rect x="700" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    <rect x="750" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    
-                    {/* Task Header */}
-                    <rect x="20" y="70" width="760" height="80" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="85" width="400" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="40" y="125" width="60" height="20" rx="10" fill="var(--primary)" opacity="0.1" />
-                    <rect x="110" y="125" width="60" height="20" rx="10" fill="var(--success)" opacity="0.1" />
-                    <rect x="180" y="125" width="60" height="20" rx="10" fill="var(--warning)" opacity="0.1" />
-                    <rect x="650" y="85" width="110" height="30" rx="4" fill="var(--primary)" />
-                    
-                    {/* Task Description */}
-                    <rect x="20" y="160" width="760" height="120" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="180" width="720" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="40" y="200" width="680" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="40" y="220" width="700" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="40" y="240" width="600" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    {/* Task Details */}
-                    <rect x="20" y="290" width="370" height="190" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="310" width="150" height="20" rx="2" fill="var(--muted)" />
-                    
-                    <rect x="40" y="340" width="20" height="20" rx="10" fill="var(--muted)" />
-                    <rect x="70" y="340" width="100" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="180" y="340" width="150" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="40" y="370" width="20" height="20" rx="10" fill="var(--muted)" />
-                    <rect x="70" y="370" width="100" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="180" y="370" width="150" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="40" y="400" width="20" height="20" rx="10" fill="var(--muted)" />
-                    <rect x="70" y="400" width="100" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="180" y="400" width="150" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="40" y="430" width="20" height="20" rx="10" fill="var(--muted)" />
-                    <rect x="70" y="430" width="100" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="180" y="430" width="150" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    {/* Comments */}
-                    <rect x="410" y="290" width="370" height="190" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="430" y="310" width="150" height="20" rx="2" fill="var(--muted)" />
-                    
-                    <rect x="430" y="340" width="30" height="30" rx="15" fill="var(--muted)" />
-                    <rect x="470" y="345" width="150" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="470" y="360" width="280" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="430" y="390" width="30" height="30" rx="15" fill="var(--muted)" />
-                    <rect x="470" y="395" width="150" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    <rect x="470" y="410" width="280" height="10" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="430" y="440" width="330" height="30" rx="4" fill="var(--primary)" />
-                  </svg>
+                <img src="/task-detail.jpg" alt="Task Details" />
                 </div>
               </motion.div>
             </div>
@@ -628,87 +426,7 @@ export default function Home() {
                   <h3 className="text-lg font-semibold">Team Management</h3>
                 </div>
                 <div className="p-0">
-                  <svg 
-                    viewBox="0 0 800 500" 
-                    className="w-full h-auto"
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Team Management Background */}
-                    <rect width="800" height="500" fill="var(--card)" />
-                    
-                    {/* Header */}
-                    <rect width="800" height="50" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="20" y="10" width="80" height="30" rx="4" fill="var(--primary)" />
-                    <rect x="700" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    <rect x="750" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    
-                    {/* Team Header */}
-                    <rect x="20" y="70" width="760" height="60" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="85" width="200" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="650" y="85" width="110" height="30" rx="4" fill="var(--primary)" />
-                    
-                    {/* Team Members Table */}
-                    <rect x="20" y="150" width="760" height="330" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    
-                    {/* Table Header */}
-                    <rect x="20" y="150" width="760" height="50" rx="8 8 0 0" fill="var(--muted)" />
-                    <rect x="40" y="165" width="100" height="20" rx="2" fill="var(--card)" />
-                    <rect x="300" y="165" width="100" height="20" rx="2" fill="var(--card)" />
-                    <rect x="500" y="165" width="100" height="20" rx="2" fill="var(--card)" />
-                    <rect x="650" y="165" width="100" height="20" rx="2" fill="var(--card)" />
-                    
-                    {/* Table Row 1 */}
-                    <rect x="40" y="220" width="40" height="40" rx="20" fill="var(--primary)" opacity="0.1" />
-                    <rect x="90" y="230" width="150" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="90" y="245" width="100" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="300" y="230" width="60" height="20" rx="10" fill="var(--primary)" opacity="0.1" />
-                    <rect x="370" y="230" width="60" height="20" rx="10" fill="var(--success)" opacity="0.1" />
-                    
-                    <rect x="500" y="230" width="100" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="500" y="245" width="80" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="650" y="230" width="80" height="30" rx="4" fill="var(--destructive)" opacity="0.1" />
-                    
-                    {/* Table Row 2 */}
-                    <rect x="40" y="280" width="40" height="40" rx="20" fill="var(--primary)" opacity="0.1" />
-                    <rect x="90" y="290" width="150" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="90" y="305" width="100" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="300" y="290" width="60" height="20" rx="10" fill="var(--warning)" opacity="0.1" />
-                    <rect x="370" y="290" width="60" height="20" rx="10" fill="var(--primary)" opacity="0.1" />
-                    
-                    <rect x="500" y="290" width="100" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="500" y="305" width="80" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="650" y="290" width="80" height="30" rx="4" fill="var(--destructive)" opacity="0.1" />
-                    
-                    {/* Table Row 3 */}
-                    <rect x="40" y="340" width="40" height="40" rx="20" fill="var(--primary)" opacity="0.1" />
-                    <rect x="90" y="350" width="150" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="90" y="365" width="100" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="300" y="350" width="60" height="20" rx="10" fill="var(--success)" opacity="0.1" />
-                    <rect x="370" y="350" width="60" height="20" rx="10" fill="var(--warning)" opacity="0.1" />
-                    
-                    <rect x="500" y="350" width="100" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="500" y="365" width="80" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="650" y="350" width="80" height="30" rx="4" fill="var(--destructive)" opacity="0.1" />
-                    
-                    {/* Table Row 4 */}
-                    <rect x="40" y="400" width="40" height="40" rx="20" fill="var(--primary)" opacity="0.1" />
-                    <rect x="90" y="410" width="150" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="90" y="425" width="100" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="300" y="410" width="60" height="20" rx="10" fill="var(--primary)" opacity="0.1" />
-                    
-                    <rect x="500" y="410" width="100" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="500" y="425" width="80" height="8" rx="2" fill="var(--muted)" opacity="0.7" />
-                    
-                    <rect x="650" y="410" width="80" height="30" rx="4" fill="var(--destructive)" opacity="0.1" />
-                  </svg>
+                <img src="/member-setting.jpg" alt="Team Management" />
                 </div>
               </motion.div>
               
@@ -720,72 +438,10 @@ export default function Home() {
                 viewport={{ once: true, margin: "-100px" }}
               >
                 <div className="p-4 border-b border-border bg-muted/50">
-                  <h3 className="text-lg font-semibold">Analytics Dashboard</h3>
+                  <h3 className="text-lg font-semibold">Webhook support</h3>
                 </div>
                 <div className="p-0">
-                  <svg 
-                    viewBox="0 0 800 500" 
-                    className="w-full h-auto"
-                    fill="none" 
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    {/* Analytics Background */}
-                    <rect width="800" height="500" fill="var(--card)" />
-                    
-                    {/* Header */}
-                    <rect width="800" height="50" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="20" y="10" width="80" height="30" rx="4" fill="var(--primary)" />
-                    <rect x="700" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    <rect x="750" y="10" width="30" height="30" rx="15" fill="var(--muted)" />
-                    
-                    {/* Analytics Header */}
-                    <rect x="20" y="70" width="760" height="60" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="85" width="200" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="550" y="85" width="100" height="30" rx="4" fill="var(--muted)" />
-                    <rect x="660" y="85" width="100" height="30" rx="4" fill="var(--primary)" />
-                    
-                    {/* Stats Cards */}
-                    <rect x="20" y="150" width="180" height="100" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="170" width="100" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="40" y="200" width="60" height="30" rx="2" fill="var(--primary)" opacity="0.1" />
-                    
-                    <rect x="210" y="150" width="180" height="100" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="230" y="170" width="100" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="230" y="200" width="60" height="30" rx="2" fill="var(--success)" opacity="0.1" />
-                    
-                    <rect x="400" y="150" width="180" height="100" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="420" y="170" width="100" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="420" y="200" width="60" height="30" rx="2" fill="var(--warning)" opacity="0.1" />
-                    
-                    <rect x="590" y="150" width="180" height="100" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="610" y="170" width="100" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="610" y="200" width="60" height="30" rx="2" fill="var(--destructive)" opacity="0.1" />
-                    
-                    {/* Charts */}
-                    <rect x="20" y="270" width="370" height="210" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="40" y="290" width="150" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="40" y="320" width="330" height="140" rx="4" fill="var(--muted)" opacity="0.1" />
-                    <path d="M60 420 L100 380 L140 400 L180 360 L220 370 L260 340 L300 350 L340 320" stroke="var(--primary)" strokeWidth="3" fill="none" />
-                    <circle cx="100" cy="380" r="4" fill="var(--primary)" />
-                    <circle cx="140" cy="400" r="4" fill="var(--primary)" />
-                    <circle cx="180" cy="360" r="4" fill="var(--primary)" />
-                    <circle cx="220" cy="370" r="4" fill="var(--primary)" />
-                    <circle cx="260" cy="340" r="4" fill="var(--primary)" />
-                    <circle cx="300" cy="350" r="4" fill="var(--primary)" />
-                    <circle cx="340" cy="320" r="4" fill="var(--primary)" />
-                    
-                    <rect x="410" y="270" width="370" height="210" rx="8" fill="var(--card)" stroke="var(--border)" strokeWidth="1" />
-                    <rect x="430" y="290" width="150" height="20" rx="2" fill="var(--muted)" />
-                    <rect x="430" y="320" width="330" height="140" rx="4" fill="var(--muted)" opacity="0.1" />
-                    <circle cx="520" cy="390" r="50" fill="var(--primary)" opacity="0.1" />
-                    <circle cx="520" cy="390" r="35" fill="var(--success)" opacity="0.1" />
-                    <circle cx="520" cy="390" r="35" fill="var(--success)" opacity="0.1" />
-                    <circle cx="520" cy="390" r="20" fill="var(--warning)" opacity="0.1" />
-                    <rect x="600" y="340" width="150" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="600" y="360" width="120" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="600" y="380" width="130" height="10" rx="2" fill="var(--muted)" />
-                    <rect x="600" y="400" width="110" height="10" rx="2" fill="var(--muted)" />
-                  </svg>
+                <img src="/webhook.jpg" alt="Webhook support" />
                 </div>
               </motion.div>
             </div>

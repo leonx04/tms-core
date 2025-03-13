@@ -4,7 +4,8 @@ import type React from "react"
 
 import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
 import { formatDate } from "@/lib/utils"
 import {
@@ -14,7 +15,7 @@ import {
   updatePassword,
   updateProfile,
 } from "firebase/auth"
-import { ArrowLeft, CreditCard, Moon, Save, Sun } from "lucide-react"
+import { ArrowLeft, CreditCard, Eye, EyeOff, Moon, Save, Sun } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -150,8 +151,8 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+      <header className="border-b border-border shadow-sm">
+        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-2">
             <Link href="/projects">
               <span className="text-2xl font-bold text-primary">TMS</span>
@@ -166,275 +167,314 @@ export default function ProfilePage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-3xl">
+      <main className="container mx-auto px-6 py-10 max-w-6xl">
         <Link
           href="/projects"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Projects
         </Link>
 
-        <h1 className="text-3xl font-bold mb-8">Your Profile</h1>
+        <h1 className="text-3xl font-bold mb-8">Your Account</h1>
 
-        {error && <div className="bg-destructive/10 text-destructive p-4 rounded-md mb-6">{error}</div>}
+        {error && (
+          <div className="bg-destructive/10 text-destructive p-5 rounded-lg mb-8 border border-destructive/20 shadow-sm">
+            {error}
+          </div>
+        )}
 
         {success && (
-          <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-4 rounded-md mb-6">
+          <div className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 p-5 rounded-lg mb-8 border border-green-200 dark:border-green-800 shadow-sm">
             {success}
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-8">
-          <Card className="shadow-modern">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Account Information</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
+              <CardHeader>
+                <CardTitle className="text-2xl">Profile Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleProfileUpdate} className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label htmlFor="displayName" className="block text-sm font-medium">
+                        Display Name
+                      </label>
+                      <input
+                        id="displayName"
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full p-3 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary/30"
+                        disabled={isSaving}
+                      />
+                    </div>
 
-              <form onSubmit={handleProfileUpdate} className="space-y-4">
-                <div>
-                  <label htmlFor="displayName" className="block text-sm font-medium mb-1">
-                    Display Name
-                  </label>
-                  <input
-                    id="displayName"
-                    type="text"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full p-2 rounded-md border border-input bg-background"
-                    disabled={isSaving}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <label htmlFor="email" className="block text-sm font-medium">
+                        Email Address
+                      </label>
+                      <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full p-3 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary/30"
+                        disabled={isSaving}
+                      />
+                      {email !== user?.email && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          You'll need to verify your current password to change your email.
+                        </p>
+                      )}
+                    </div>
+                  </div>
 
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium mb-1">
-                    Email Address
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-2 rounded-md border border-input bg-background"
-                    disabled={isSaving}
-                  />
-                  {email !== user?.email && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      You'll need to verify your current password to change your email.
-                    </p>
+                  <Separator className="my-6" />
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Change Password</h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label htmlFor="newPassword" className="block text-sm font-medium">
+                          New Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="newPassword"
+                            type={showPassword ? "text" : "password"}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            className="w-full p-3 pr-10 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary/30"
+                            disabled={isSaving}
+                            placeholder="Leave blank to keep current"
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label htmlFor="confirmPassword" className="block text-sm font-medium">
+                          Confirm New Password
+                        </label>
+                        <input
+                          id="confirmPassword"
+                          type={showPassword ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          className="w-full p-3 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary/30"
+                          disabled={isSaving}
+                          placeholder="Confirm new password"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {(email !== user?.email || newPassword) && (
+                    <div className="space-y-2 bg-muted/40 p-4 rounded-lg border border-border">
+                      <label htmlFor="currentPassword" className="block text-sm font-medium">
+                        Current Password <span className="text-destructive">*</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          id="currentPassword"
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={currentPassword}
+                          onChange={(e) => setCurrentPassword(e.target.value)}
+                          className="w-full p-3 pr-10 rounded-md border border-input bg-background focus:ring-2 focus:ring-primary/30"
+                          disabled={isSaving}
+                          required={email !== user?.email || !!newPassword}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        >
+                          {showCurrentPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Required to change email or password</p>
+                    </div>
                   )}
-                </div>
 
-                <div>
-                  <label htmlFor="newPassword" className="block text-sm font-medium mb-1">
-                    New Password (leave blank to keep current)
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="newPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full p-2 rounded-md border border-input bg-background"
-                      disabled={isSaving}
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? "Hide" : "Show"}
-                    </button>
-                  </div>
-                </div>
+                  <Separator className="my-6" />
 
-                <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium mb-1">
-                    Confirm New Password
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    type={showPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full p-2 rounded-md border border-input bg-background"
-                    disabled={isSaving}
-                  />
-                </div>
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">Preferences</h3>
 
-                {(email !== user?.email || newPassword) && (
-                  <div>
-                    <label htmlFor="currentPassword" className="block text-sm font-medium mb-1">
-                      Current Password <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        id="currentPassword"
-                        type={showCurrentPassword ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="w-full p-2 rounded-md border border-input bg-background"
-                        disabled={isSaving}
-                        required={email !== user?.email || !!newPassword}
-                      />
-                      <button
-                        type="button"
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      >
-                        {showCurrentPassword ? "Hide" : "Show"}
-                      </button>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <input
+                            id="emailNotifications"
+                            type="checkbox"
+                            className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={emailNotifications}
+                            onChange={(e) => setEmailNotifications(e.target.checked)}
+                            disabled={isSaving}
+                          />
+                          <label htmlFor="emailNotifications" className="text-base">
+                            Receive email notifications
+                          </label>
+                        </div>
+
+                        <div className="flex items-center space-x-3">
+                          <input
+                            id="inAppNotifications"
+                            type="checkbox"
+                            className="h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={inAppNotifications}
+                            onChange={(e) => setInAppNotifications(e.target.checked)}
+                            disabled={isSaving}
+                          />
+                          <label htmlFor="inAppNotifications" className="text-base">
+                            Receive in-app notifications
+                          </label>
+                        </div>
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-base">Theme:</span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                            className="flex items-center space-x-2"
+                          >
+                            {theme === "dark" ? (
+                              <>
+                                <Sun className="h-4 w-4" />
+                                <span>Light Mode</span>
+                              </>
+                            ) : (
+                              <>
+                                <Moon className="h-4 w-4" />
+                                <span>Dark Mode</span>
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                )}
 
-                <div className="pt-4 border-t border-border">
-                  <h3 className="text-lg font-medium mb-2">Preferences</h3>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <input
-                        id="emailNotifications"
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                        checked={emailNotifications}
-                        onChange={(e) => setEmailNotifications(e.target.checked)}
-                        disabled={isSaving}
-                      />
-                      <label htmlFor="emailNotifications" className="ml-2 block text-sm">
-                        Receive email notifications
-                      </label>
-                    </div>
-
-                    <div className="flex items-center">
-                      <input
-                        id="inAppNotifications"
-                        type="checkbox"
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                        checked={inAppNotifications}
-                        onChange={(e) => setInAppNotifications(e.target.checked)}
-                        disabled={isSaving}
-                      />
-                      <label htmlFor="inAppNotifications" className="ml-2 block text-sm">
-                        Receive in-app notifications
-                      </label>
-                    </div>
-
-                    <div className="flex items-center">
-                      <span className="text-sm mr-2">Theme:</span>
-                      <button
-                        type="button"
-                        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                        className="p-2 rounded-md hover:bg-accent"
-                      >
-                        {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                      </button>
-                    </div>
+                  <div className="flex justify-end pt-4">
+                    <Button type="submit" disabled={isSaving} size="lg" className="px-8">
+                      <Save className="mr-2 h-5 w-5" />
+                      {isSaving ? "Saving..." : "Save Changes"}
+                    </Button>
                   </div>
-                </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
 
-                <div className="flex justify-end">
-                  <Button type="submit" disabled={isSaving}>
-                    <Save className="mr-2 h-4 w-4" />
-                    {isSaving ? "Saving..." : "Save Changes"}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-modern">
-            <CardContent className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Subscription</h2>
-
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="font-medium">
+          <div>
+            <Card className="shadow-md hover:shadow-lg transition-shadow duration-300">
+              <CardHeader>
+                <CardTitle className="text-2xl">Subscription</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="flex flex-col space-y-2">
+                  <p className="font-medium text-lg">
                     Current Plan:{" "}
-                    <span className="text-primary">
+                    <span className="text-primary font-semibold">
                       {userData?.packageId
                         ? userData.packageId.charAt(0).toUpperCase() + userData.packageId.slice(1)
                         : "N/A"}
                     </span>
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground">
                     Expires: {userData?.packageExpiry ? formatDate(userData.packageExpiry) : "N/A"}
                   </p>
                 </div>
 
-                <Button variant="outline" onClick={handleUpgradeClick}>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Upgrade Plan
+                <div className="bg-muted/40 p-5 rounded-lg border border-border">
+                  <h3 className="font-medium mb-3">Plan Features</h3>
+                  <ul className="space-y-2">
+                    {userData?.packageId === "basic" && (
+                      <>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Up to 3 projects
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Basic task management
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Email notifications
+                        </li>
+                      </>
+                    )}
+
+                    {userData?.packageId === "plus" && (
+                      <>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Up to 10 projects
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Advanced task management
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          GitHub integration
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Email & in-app notifications
+                        </li>
+                      </>
+                    )}
+
+                    {userData?.packageId === "premium" && (
+                      <>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Unlimited projects
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Full task management suite
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Advanced GitHub integration
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Priority support
+                        </li>
+                        <li className="flex items-center">
+                          <span className="mr-2 text-primary">•</span>
+                          Custom Cloudinary configuration
+                        </li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+
+                <Button variant="outline" onClick={handleUpgradeClick} className="w-full py-6 text-base" size="lg">
+                  <CreditCard className="mr-2 h-5 w-5" />
+                  Manage Subscription
                 </Button>
-              </div>
-
-              <div className="bg-muted p-4 rounded-md">
-                <h3 className="text-sm font-medium mb-2">Plan Details</h3>
-                <ul className="space-y-1 text-sm">
-                  {userData?.packageId === "basic" && (
-                    <>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Up to 3 projects
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Basic task management
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Email notifications
-                      </li>
-                    </>
-                  )}
-
-                  {userData?.packageId === "plus" && (
-                    <>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Up to 10 projects
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Advanced task management
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        GitHub integration
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Email & in-app notifications
-                      </li>
-                    </>
-                  )}
-
-                  {userData?.packageId === "premium" && (
-                    <>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Unlimited projects
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Full task management suite
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Advanced GitHub integration
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Priority support
-                      </li>
-                      <li className="flex items-center">
-                        <span className="mr-2">•</span>
-                        Custom Cloudinary configuration
-                      </li>
-                    </>
-                  )}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </main>
     </div>

@@ -124,54 +124,58 @@ export default function UpgradePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 py-4">
+      <header className="border-b border-border shadow-sm">
+        <div className="container mx-auto px-6 py-4">
           <Link href="/projects" className="text-2xl font-bold text-primary">
             TMS <span className="text-sm text-muted-foreground">v1</span>
           </Link>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-5xl">
+      <main className="container mx-auto px-6 py-10 max-w-7xl">
         <Link
           href="/profile"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Account
         </Link>
 
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Upgrade Your Plan</h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-4">Upgrade Your Plan</h1>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
             Choose the plan that's right for your team and unlock more features to boost your productivity.
           </p>
         </div>
 
         {error && (
-          <div className="bg-destructive/10 text-destructive p-4 rounded-md mb-6 max-w-2xl mx-auto">{error}</div>
+          <div className="bg-destructive/10 text-destructive p-5 rounded-lg mb-8 max-w-3xl mx-auto border border-destructive/20 shadow-sm">
+            {error}
+          </div>
         )}
 
         {success && (
-          <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-4 rounded-md mb-6 max-w-2xl mx-auto">
+          <div className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 p-5 rounded-lg mb-8 max-w-3xl mx-auto border border-green-200 dark:border-green-800 shadow-sm">
             {success}
           </div>
         )}
 
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-12">
           <Tabs
             defaultValue="monthly"
-            className="w-full max-w-2xl"
+            className="w-full max-w-4xl"
             onValueChange={(value) => setBillingCycle(value as "monthly" | "yearly")}
           >
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="monthly">Monthly Billing</TabsTrigger>
-              <TabsTrigger value="yearly">
+            <TabsList className="grid w-full grid-cols-2 mb-8">
+              <TabsTrigger value="monthly" className="text-base py-3">
+                Monthly Billing
+              </TabsTrigger>
+              <TabsTrigger value="yearly" className="text-base py-3">
                 Yearly Billing{" "}
                 <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">Save 20%</span>
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="monthly">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <TabsContent value="monthly" className="animate-fadeIn">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
                 <PricingCard
                   title="Basic"
                   price="Free"
@@ -225,8 +229,8 @@ export default function UpgradePage() {
                 />
               </div>
             </TabsContent>
-            <TabsContent value="yearly">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+            <TabsContent value="yearly" className="animate-fadeIn">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
                 <PricingCard
                   title="Basic"
                   price="Free"
@@ -283,18 +287,18 @@ export default function UpgradePage() {
           </Tabs>
         </div>
 
-        <div className="max-w-2xl mx-auto bg-muted/30 p-6 rounded-lg border border-border">
+        <div className="max-w-3xl mx-auto bg-muted/40 p-8 rounded-xl border border-border shadow-sm">
           <div className="flex items-start">
-            <Shield className="h-6 w-6 text-primary mr-3 mt-1" />
+            <Shield className="h-8 w-8 text-primary mr-4 mt-1 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold mb-2">Secure Payment Processing</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="font-semibold text-xl mb-3">Secure Payment Processing</h3>
+              <p className="text-muted-foreground mb-5">
                 All payments are securely processed through Stripe. Your payment information is never stored on our
                 servers.
               </p>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3">
                 <CreditCard className="h-5 w-5 text-muted-foreground" />
-                <span className="text-sm">We accept all major credit cards and PayPal</span>
+                <span>We accept all major credit cards and PayPal</span>
               </div>
             </div>
           </div>
@@ -328,34 +332,41 @@ function PricingCard({
   highlighted?: boolean
 }) {
   return (
-    <Card className={`overflow-hidden ${highlighted ? "border-primary/20 shadow-lg" : ""}`}>
+    <Card
+      className={`overflow-hidden transition-all duration-200 ${
+        highlighted
+          ? "border-primary shadow-lg dark:shadow-primary/10 scale-105 z-10"
+          : "hover:border-border/80 hover:shadow-md"
+      }`}
+    >
       {highlighted && (
-        <div className="bg-primary text-primary-foreground text-center py-1 text-sm font-medium">Most Popular</div>
+        <div className="bg-primary text-primary-foreground text-center py-2 text-sm font-medium">Most Popular</div>
       )}
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-        <div className="mt-2">
-          <span className="text-3xl font-bold">{price}</span>
-          {period && <span className="text-muted-foreground ml-1">{period}</span>}
+      <CardHeader className={highlighted ? "pb-4" : "pb-2"}>
+        <CardTitle className="text-2xl">{title}</CardTitle>
+        <CardDescription className="text-base">{description}</CardDescription>
+        <div className="mt-4">
+          <span className="text-4xl font-bold">{price}</span>
+          {period && <span className="text-muted-foreground ml-2">{period}</span>}
         </div>
       </CardHeader>
-      <CardContent>
-        <ul className="space-y-2">
+      <CardContent className="pb-6">
+        <ul className="space-y-3">
           {features.map((feature, index) => (
             <li key={index} className="flex items-start">
-              <Check className="h-5 w-5 text-primary mr-2 shrink-0" />
-              <span>{feature}</span>
+              <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+              <span className="text-foreground/90">{feature}</span>
             </li>
           ))}
         </ul>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="pt-2 pb-6">
         <Button
           onClick={onClick}
           disabled={disabled}
           variant={current ? "outline" : highlighted ? "default" : "outline"}
-          className="w-full"
+          className="w-full py-6 text-base"
+          size="lg"
         >
           {buttonText}
         </Button>

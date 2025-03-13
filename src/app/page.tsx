@@ -63,17 +63,23 @@ export default function Home() {
         {/* Logos Section */}
         <section className="py-12 bg-muted/30 dark:bg-muted/10 border-y border-border/20">
           <div className="container mx-auto px-4">
-            <p className="text-center text-muted-foreground mb-8">Trusted by teams from leading companies</p>
+            <p className="text-center text-muted-foreground mb-8">
+              Trusted by teams from leading companies
+            </p>
             <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-              {/* Company logos would go here - using placeholders */}
-              <div className="h-8 w-24 bg-muted/50 rounded-md"></div>
-              <div className="h-8 w-32 bg-muted/50 rounded-md"></div>
-              <div className="h-8 w-28 bg-muted/50 rounded-md"></div>
-              <div className="h-8 w-20 bg-muted/50 rounded-md"></div>
-              <div className="h-8 w-30 bg-muted/50 rounded-md"></div>
+              <img src="https://cdn.simpleicons.org/trello/0079BF" alt="Trello" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/asana/273347" alt="Asana" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/jira/0052CC" alt="Jira" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/clickup/7B68EE" alt="ClickUp" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/notion/000000" alt="Notion" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/github/181717" alt="GitHub" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/firebase/FFCA28" alt="Firebase" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/slack/4A154B" alt="Slack" className="h-8 w-auto" />
+              <img src="https://cdn.simpleicons.org/linear/5E6AD2" alt="Linear" className="h-8 w-auto" />
             </div>
           </div>
         </section>
+
 
         {/* Features Section */}
         <section id="features" className="py-20 bg-background">

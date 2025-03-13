@@ -155,7 +155,7 @@ export default function ProfilePage() {
           <div className="flex items-center space-x-2">
             <Link href="/projects">
               <span className="text-2xl font-bold text-primary">TMS</span>
-              <span className="text-sm text-muted-foreground ml-1">v5</span>
+              <span className="text-sm text-muted-foreground ml-1">v1</span>
             </Link>
           </div>
           <div className="flex items-center space-x-2">

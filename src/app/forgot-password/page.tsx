@@ -1,17 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { auth } from "@/lib/firebase"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { sendPasswordResetEmail } from "firebase/auth"
+import { AlertCircle, ArrowLeft, CheckCircle, Mail } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { sendPasswordResetEmail } from "firebase/auth"
-import { auth } from "@/lib/firebase"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Mail, AlertCircle, CheckCircle } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { z } from "zod"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
                   T
                 </div>
                 <span className="text-2xl font-bold ml-2">TMS</span>
-                <span className="text-xs text-muted-foreground ml-1 mt-1">v5</span>
+                <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
               </div>
             </Link>
             <h1 className="text-2xl font-bold mt-6">Reset your password</h1>

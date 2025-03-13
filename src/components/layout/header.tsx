@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/auth-context"
+import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { Menu, X, User, LogOut, ChevronDown, Folder, Home } from "lucide-react"
-import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
+import { useEffect, useState } from "react"
 
 export default function Header() {
   const { user, userData, signOut } = useAuth()
@@ -43,7 +43,7 @@ export default function Header() {
               T
             </div>
             <span className="text-xl font-bold ml-2">TMS</span>
-            <span className="text-xs text-muted-foreground ml-1 mt-1">v5</span>
+            <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
           </Link>
         </div>
 

@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { ref, update } from "firebase/database"
-import { database } from "@/lib/firebase"
-import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Check, CreditCard, Shield } from "lucide-react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase"
 import { PACKAGE_LIMITS } from "@/lib/utils"
 import { loadStripe } from "@stripe/stripe-js"
+import { ref, update } from "firebase/database"
+import { ArrowLeft, Check, CreditCard, Shield } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "")
@@ -127,7 +127,7 @@ export default function UpgradePage() {
       <header className="border-b border-border">
         <div className="container mx-auto px-4 py-4">
           <Link href="/projects" className="text-2xl font-bold text-primary">
-            TMS <span className="text-sm text-muted-foreground">v5</span>
+            TMS <span className="text-sm text-muted-foreground">v1</span>
           </Link>
         </div>
       </header>

@@ -1,5 +1,5 @@
+import { Github, Linkedin, Twitter } from "lucide-react"
 import Link from "next/link"
-import { Github, Twitter, Linkedin } from "lucide-react"
 
 export default function Footer() {
   return (
@@ -12,7 +12,7 @@ export default function Footer() {
                 T
               </div>
               <span className="text-xl font-bold ml-2">TMS</span>
-              <span className="text-xs text-muted-foreground ml-1 mt-1">v5</span>
+              <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
               A comprehensive task management system designed for software development teams.

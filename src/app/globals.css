@@ -378,3 +378,229 @@ label {
     linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px);
 }
 
+/* Status Colors với độ tương phản cao */
+.status-todo {
+  @apply bg-blue-100 text-blue-800 border-blue-300;
+}
+
+.dark .status-todo {
+  @apply bg-blue-900 text-blue-100 border-blue-700;
+}
+
+.status-in-progress {
+  @apply bg-yellow-100 text-yellow-800 border-yellow-300;
+}
+
+.dark .status-in-progress {
+  @apply bg-yellow-900 text-yellow-100 border-yellow-700;
+}
+
+.status-resolved {
+  @apply bg-green-100 text-green-800 border-green-300;
+}
+
+.dark .status-resolved {
+  @apply bg-green-900 text-green-100 border-green-700;
+}
+
+.status-closed {
+  @apply bg-gray-100 text-gray-800 border-gray-300;
+}
+
+.dark .status-closed {
+  @apply bg-gray-800 text-gray-100 border-gray-600;
+}
+
+/* Priority Colors với độ tương phản cao */
+.priority-low {
+  @apply bg-blue-50 text-blue-800 border-blue-200;
+}
+
+.dark .priority-low {
+  @apply bg-blue-900 text-blue-50 border-blue-700;
+}
+
+.priority-medium {
+  @apply bg-yellow-50 text-yellow-800 border-yellow-200;
+}
+
+.dark .priority-medium {
+  @apply bg-yellow-900 text-yellow-50 border-yellow-700;
+}
+
+.priority-high {
+  @apply bg-orange-50 text-orange-800 border-orange-200;
+}
+
+.dark .priority-high {
+  @apply bg-orange-900 text-orange-50 border-orange-700;
+}
+
+.priority-critical {
+  @apply bg-red-50 text-red-800 border-red-200;
+}
+
+.dark .priority-critical {
+  @apply bg-red-900 text-red-50 border-red-700;
+}
+
+/* Type Colors với độ tương phản cao */
+.type-bug {
+  @apply bg-red-50 text-red-800 border-red-200;
+}
+
+.dark .type-bug {
+  @apply bg-red-900 text-red-50 border-red-700;
+}
+
+.type-feature {
+  @apply bg-purple-50 text-purple-800 border-purple-200;
+}
+
+.dark .type-feature {
+  @apply bg-purple-900 text-purple-50 border-purple-700;
+}
+
+.type-enhancement {
+  @apply bg-indigo-50 text-indigo-800 border-indigo-200;
+}
+
+.dark .type-enhancement {
+  @apply bg-indigo-900 text-indigo-50 border-indigo-700;
+}
+
+.type-documentation {
+  @apply bg-emerald-50 text-emerald-800 border-emerald-200;
+}
+
+.dark .type-documentation {
+  @apply bg-emerald-900 text-emerald-50 border-emerald-700;
+}
+
+/* Role Colors với độ tương phản cao */
+.role-admin {
+  @apply bg-purple-50 text-purple-800 border-purple-200;
+}
+
+.dark .role-admin {
+  @apply bg-purple-900 text-purple-50 border-purple-700;
+}
+
+.role-dev {
+  @apply bg-blue-50 text-blue-800 border-blue-200;
+}
+
+.dark .role-dev {
+  @apply bg-blue-900 text-blue-50 border-blue-700;
+}
+
+.role-tester {
+  @apply bg-green-50 text-green-800 border-green-200;
+}
+
+.dark .role-tester {
+  @apply bg-green-900 text-green-50 border-green-700;
+}
+
+.role-documentWriter {
+  @apply bg-amber-50 text-amber-800 border-amber-200;
+}
+
+.dark .role-documentWriter {
+  @apply bg-amber-900 text-amber-50 border-amber-700;
+}
+
+/* Styles cho badges/tags */
+.status-badge, .priority-badge, .type-badge, .role-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border;
+}
+
+/* Tăng cường độ tương phản bằng cách thêm viền */
+.status-todo, .status-in-progress, .status-resolved, .status-closed,
+.priority-low, .priority-medium, .priority-high, .priority-critical,
+.type-bug, .type-feature, .type-enhancement, .type-documentation,
+.role-admin, .role-dev, .role-tester, .role-documentWriter {
+  @apply border border-solid;
+}
+
+/* Tăng cường độ tương phản bằng cách thêm icons */
+.status-todo::before,
+.status-in-progress::before,
+.status-resolved::before,
+.status-closed::before,
+.priority-low::before,
+.priority-medium::before,
+.priority-high::before,
+.priority-critical::before,
+.type-bug::before,
+.type-feature::before,
+.type-enhancement::before,
+.type-documentation::before {
+  @apply mr-1 inline-block w-2 h-2 rounded-full;
+  content: "";
+}
+
+.status-todo::before {
+  @apply bg-blue-500;
+}
+
+.status-in-progress::before {
+  @apply bg-yellow-500;
+}
+
+.status-resolved::before {
+  @apply bg-green-500;
+}
+
+.status-closed::before {
+  @apply bg-gray-500;
+}
+
+.priority-low::before {
+  @apply bg-blue-500;
+}
+
+.priority-medium::before {
+  @apply bg-yellow-500;
+}
+
+.priority-high::before {
+  @apply bg-orange-500;
+}
+
+.priority-critical::before {
+  @apply bg-red-500;
+}
+
+.type-bug::before {
+  @apply bg-red-500;
+}
+
+.type-feature::before {
+  @apply bg-purple-500;
+}
+
+.type-enhancement::before {
+  @apply bg-indigo-500;
+}
+
+.type-documentation::before {
+  @apply bg-emerald-500;
+}
+
+/* Đảm bảo text không bị mờ */
+.status-badge, .priority-badge, .type-badge, .role-badge {
+  @apply font-semibold;
+}
+
+/* Khi các badge nhỏ hơn, tăng kích thước font */
+@media (max-width: 640px) {
+  .status-badge, .priority-badge, .type-badge, .role-badge {
+    @apply text-xs py-1 px-3;
+  }
+}
+
+/* Hiệu ứng hover cho các badge */
+.status-badge:hover, .priority-badge:hover, .type-badge:hover, .role-badge:hover {
+  @apply opacity-90 shadow-sm;
+}

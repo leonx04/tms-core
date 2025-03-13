@@ -1,17 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { ThemeToggle } from "@/components/theme-toggle"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { useAuth } from "@/contexts/auth-context"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { ArrowLeft, Eye, EyeOff, Github, Mail, UserPlus } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Button } from "@/components/ui/button"
-import { useAuth } from "@/contexts/auth-context"
-import { Eye, EyeOff, UserPlus, ArrowLeft, Github, Mail } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { ThemeToggle } from "@/components/theme-toggle"
-import { Separator } from "@/components/ui/separator"
 
 const registerSchema = z
   .object({
@@ -118,7 +118,7 @@ export default function RegisterPage() {
                   T
                 </div>
                 <span className="text-2xl font-bold ml-2">TMS</span>
-                <span className="text-xs text-muted-foreground ml-1 mt-1">v5</span>
+                <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
               </div>
             </Link>
             <h1 className="text-2xl font-bold mt-6">Create an account</h1>

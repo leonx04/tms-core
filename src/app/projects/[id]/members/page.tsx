@@ -9,24 +9,13 @@ import { ref, get, remove, push, set } from "firebase/database"
 import { database } from "@/lib/firebase"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import {
-  ArrowLeft,
-  UserPlus,
-  Trash2,
-  Shield,
-  Code,
-  TestTube,
-  FileText,
-  AlertCircle,
-  CheckCircle,
-  X,
-  Mail,
-} from "lucide-react"
+import { ArrowLeft, UserPlus, Trash2, Shield, Code, TestTube, FileText, AlertCircle, CheckCircle, X, Mail, Info } from 'lucide-react'
 import { formatDate, getRoleColor, getRoleLabel } from "@/lib/utils"
 import Header from "@/components/layout/header"
 import { PageHeader } from "@/components/layout/page-header"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import type { Project, User } from "@/types"
 
 export default function ProjectMembersPage() {
@@ -39,6 +28,7 @@ export default function ProjectMembersPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
@@ -63,16 +53,15 @@ export default function ProjectMembersPage() {
           ...projectSnapshot.val(),
         }
 
-        // Check if user is an admin of this project
-        if (
-          !projectData.members ||
-          !projectData.members[user.uid] ||
-          !projectData.members[user.uid].roles.includes("admin")
-        ) {
+        // Check if user is a member of this project
+        if (!projectData.members || !projectData.members[user.uid]) {
           router.push(`/projects/${projectId}`)
           return
         }
 
+        // Check if user is an admin of this project
+        const isUserAdmin = projectData.members[user.uid].roles.includes("admin")
+        setIsAdmin(isUserAdmin)
         setProject(projectData)
 
         // Fetch all users who are members of this project
@@ -109,7 +98,7 @@ export default function ProjectMembersPage() {
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!user || !project || !inviteEmail.trim() || selectedRoles.length === 0) return
+    if (!user || !project || !inviteEmail.trim() || selectedRoles.length === 0 || !isAdmin) return
 
     setIsInviting(true)
     setError(null)
@@ -206,7 +195,7 @@ export default function ProjectMembersPage() {
   }
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!user || !project || memberId === user.uid || memberId === project.ownerId) return
+    if (!user || !project || memberId === user.uid || memberId === project.ownerId || !isAdmin) return
 
     try {
       // Remove member from project
@@ -249,7 +238,7 @@ export default function ProjectMembersPage() {
   }
 
   const handleUpdateRoles = async (memberId: string, roles: string[]) => {
-    if (!user || !project || memberId === user.uid || memberId === project.ownerId) return
+    if (!user || !project || memberId === user.uid || memberId === project.ownerId || !isAdmin) return
 
     try {
       // Update member roles
@@ -332,6 +321,16 @@ export default function ProjectMembersPage() {
 
         <PageHeader title="Manage Members" description={`Invite and manage team members for ${project.name}`} />
 
+        {!isAdmin && (
+          <Alert className="mb-6 bg-muted/50 border-muted">
+            <Info className="h-4 w-4" />
+            <AlertTitle>View-only mode</AlertTitle>
+            <AlertDescription>
+              You are viewing this page in read-only mode. Only project administrators can invite or manage members.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {error && (
           <div className="bg-destructive/10 text-destructive p-4 rounded-xl mb-6 flex items-start animate-fadeIn">
             <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -358,7 +357,7 @@ export default function ProjectMembersPage() {
                       <th className="px-4 py-3 text-left text-sm font-medium">User</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Roles</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Added</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                      {isAdmin && <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -409,41 +408,43 @@ export default function ProjectMembersPage() {
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3">
-                            {user && memberId !== user.uid && memberId !== project.ownerId && (
-                              <div className="flex items-center space-x-2">
-                                {showDeleteConfirm === memberId ? (
-                                  <>
-                                    <Button
-                                      variant="destructive"
-                                      size="sm"
-                                      onClick={() => handleRemoveMember(memberId)}
-                                      className="rounded-lg"
-                                    >
-                                      Confirm
-                                    </Button>
+                          {isAdmin && (
+                            <td className="px-4 py-3">
+                              {user && memberId !== user.uid && memberId !== project.ownerId && (
+                                <div className="flex items-center space-x-2">
+                                  {showDeleteConfirm === memberId ? (
+                                    <>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleRemoveMember(memberId)}
+                                        className="rounded-lg"
+                                      >
+                                        Confirm
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowDeleteConfirm(null)}
+                                        className="rounded-lg"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </Button>
+                                    </>
+                                  ) : (
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => setShowDeleteConfirm(null)}
-                                      className="rounded-lg"
+                                      onClick={() => setShowDeleteConfirm(memberId)}
+                                      className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
                                     >
-                                      <X className="h-4 w-4" />
+                                      <Trash2 className="h-4 w-4" />
                                     </Button>
-                                  </>
-                                ) : (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => setShowDeleteConfirm(memberId)}
-                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </div>
-                            )}
-                          </td>
+                                  )}
+                                </div>
+                              )}
+                            </td>
+                          )}
                         </tr>
                       ))}
                   </tbody>
@@ -452,109 +453,110 @@ export default function ProjectMembersPage() {
             </div>
           </div>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">Invite Member</h2>
+          {isAdmin && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">Invite Member</h2>
 
-            <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-fadeIn">
-              <div className="p-6">
-                <form onSubmit={handleInvite} className="space-y-5">
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium mb-1">
-                      Email Address <span className="text-destructive">*</span>
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <input
-                        id="email"
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                        disabled={isInviting}
-                        required
-                        placeholder="user@example.com"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Roles <span className="text-destructive">*</span>
-                    </label>
-                    <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
-                      <div className="flex items-center">
+              <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-fadeIn">
+                <div className="p-6">
+                  <form onSubmit={handleInvite} className="space-y-5">
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1">
+                        Email Address <span className="text-destructive">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <input
-                          id="role-admin"
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          checked={selectedRoles.includes("admin")}
-                          onChange={() => handleRoleToggle("admin")}
+                          id="email"
+                          type="email"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                           disabled={isInviting}
+                          required
+                          placeholder="user@example.com"
                         />
-                        <label htmlFor="role-admin" className="ml-2 block text-sm">
-                          <span className="font-medium">Admin</span> - Can manage project settings and members
-                        </label>
-                      </div>
-
-                      <div className="flex items-center">
-                        <input
-                          id="role-dev"
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          checked={selectedRoles.includes("dev")}
-                          onChange={() => handleRoleToggle("dev")}
-                          disabled={isInviting}
-                        />
-                        <label htmlFor="role-dev" className="ml-2 block text-sm">
-                          <span className="font-medium">Developer</span> - Can update task status and link commits
-                        </label>
-                      </div>
-
-                      <div className="flex items-center">
-                        <input
-                          id="role-tester"
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          checked={selectedRoles.includes("tester")}
-                          onChange={() => handleRoleToggle("tester")}
-                          disabled={isInviting}
-                        />
-                        <label htmlFor="role-tester" className="ml-2 block text-sm">
-                          <span className="font-medium">Tester</span> - Can verify and close tasks
-                        </label>
-                      </div>
-
-                      <div className="flex items-center">
-                        <input
-                          id="role-doc"
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                          checked={selectedRoles.includes("documentWriter")}
-                          onChange={() => handleRoleToggle("documentWriter")}
-                          disabled={isInviting}
-                        />
-                        <label htmlFor="role-doc" className="ml-2 block text-sm">
-                          <span className="font-medium">Document Writer</span> - Can manage task documentation
-                        </label>
                       </div>
                     </div>
-                  </div>
 
-                  <Button
-                    type="submit"
-                    disabled={isInviting || !inviteEmail.trim() || selectedRoles.length === 0}
-                    className="w-full rounded-lg"
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    {isInviting ? "Inviting..." : "Invite Member"}
-                  </Button>
-                </form>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Roles <span className="text-destructive">*</span>
+                      </label>
+                      <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
+                        <div className="flex items-center">
+                          <input
+                            id="role-admin"
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={selectedRoles.includes("admin")}
+                            onChange={() => handleRoleToggle("admin")}
+                            disabled={isInviting}
+                          />
+                          <label htmlFor="role-admin" className="ml-2 block text-sm">
+                            <span className="font-medium">Admin</span> - Can manage project settings and members
+                          </label>
+                        </div>
+
+                        <div className="flex items-center">
+                          <input
+                            id="role-dev"
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={selectedRoles.includes("dev")}
+                            onChange={() => handleRoleToggle("dev")}
+                            disabled={isInviting}
+                          />
+                          <label htmlFor="role-dev" className="ml-2 block text-sm">
+                            <span className="font-medium">Developer</span> - Can update task status and link commits
+                          </label>
+                        </div>
+
+                        <div className="flex items-center">
+                          <input
+                            id="role-tester"
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={selectedRoles.includes("tester")}
+                            onChange={() => handleRoleToggle("tester")}
+                            disabled={isInviting}
+                          />
+                          <label htmlFor="role-tester" className="ml-2 block text-sm">
+                            <span className="font-medium">Tester</span> - Can verify and close tasks
+                          </label>
+                        </div>
+
+                        <div className="flex items-center">
+                          <input
+                            id="role-doc"
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            checked={selectedRoles.includes("documentWriter")}
+                            onChange={() => handleRoleToggle("documentWriter")}
+                            disabled={isInviting}
+                          />
+                          <label htmlFor="role-doc" className="ml-2 block text-sm">
+                            <span className="font-medium">Document Writer</span> - Can manage task documentation
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isInviting || !inviteEmail.trim() || selectedRoles.length === 0}
+                      className="w-full rounded-lg"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      {isInviting ? "Inviting..." : "Invite Member"}
+                    </Button>
+                  </form>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
     </div>
   )
 }
-

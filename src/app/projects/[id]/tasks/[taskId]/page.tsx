@@ -9,18 +9,7 @@ import { ref, get, set, push, update, query, orderByChild, equalTo } from "fireb
 import { database } from "@/lib/firebase"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import {
-  ArrowLeft,
-  Edit,
-  Clock,
-  Calendar,
-  User,
-  MessageSquare,
-  GitCommit,
-  ChevronRight,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react"
+import { ArrowLeft, Edit, Clock, Calendar, User, MessageSquare, GitCommit, ChevronRight, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import {
   formatDate,
   formatDateTime,
@@ -30,6 +19,7 @@ import {
   TASK_STATUS,
   getStatusLabel,
 } from "@/lib/utils"
+import { formatTextWithLinks } from "@/lib/format-text-with-links"
 import Header from "@/components/layout/header"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Badge } from "@/components/ui/badge"
@@ -48,11 +38,13 @@ export default function TaskDetailPage() {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
   const [commitId, setCommitId] = useState("")
   const [showChildTasks, setShowChildTasks] = useState(true)
+  const [projectData, setProjectData] = useState<any>(null)
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
   const taskId = params.taskId as string
+  const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchTaskData = async () => {
@@ -91,6 +83,7 @@ export default function TaskDetailPage() {
         }
 
         const projectData = projectSnapshot.val()
+        setProjectData(projectData)
 
         // Check if user is a member of this project
         if (!projectData.members || !projectData.members[user.uid]) {
@@ -367,6 +360,82 @@ export default function TaskDetailPage() {
     }
   }
 
+  const canUpdateStatus = () => {
+    if (!user || !task || !projectData) return false
+
+    // Get user roles in this project
+    const roles = projectData.members?.[user.uid]?.roles || []
+
+    // Check if user can update based on current status and role
+    switch (task.status) {
+      case TASK_STATUS.TODO:
+        // Anyone assigned to the task or developers can move from Todo to In Progress
+        return task.assignedTo?.includes(user.uid) || roles.includes("dev")
+      case TASK_STATUS.IN_PROGRESS:
+        // Only developers can move from In Progress to Resolved
+        return roles.includes("dev")
+      case TASK_STATUS.RESOLVED:
+        // Only testers can move from Resolved to Closed
+        return roles.includes("tester")
+      case TASK_STATUS.CLOSED:
+        // Only testers can reopen a closed task
+        return roles.includes("tester")
+      default:
+        return false
+    }
+  }
+
+  const getNextStatus = () => {
+    switch (task?.status) {
+      case TASK_STATUS.TODO:
+        return TASK_STATUS.IN_PROGRESS
+      case TASK_STATUS.IN_PROGRESS:
+        return TASK_STATUS.RESOLVED
+      case TASK_STATUS.RESOLVED:
+        return TASK_STATUS.CLOSED
+      case TASK_STATUS.CLOSED:
+        return TASK_STATUS.TODO // Reopen
+      default:
+        return null
+    }
+  }
+
+  const getNextStatusLabel = () => {
+    switch (task?.status) {
+      case TASK_STATUS.TODO:
+        return "Start Progress"
+      case TASK_STATUS.IN_PROGRESS:
+        return "Resolve"
+      case TASK_STATUS.RESOLVED:
+        return "Close"
+      case TASK_STATUS.CLOSED:
+        return "Reopen"
+      default:
+        return ""
+    }
+  }
+
+  const fetchUserData = async (userId: string) => {
+    setUsersLoading(prev => ({ ...prev, [userId]: true }));
+    try {
+      const userRef = ref(database, `users/${userId}`);
+      const userSnapshot = await get(userRef);
+      if (userSnapshot.exists()) {
+        setUsers(prev => ({
+          ...prev,
+          [userId]: {
+            id: userId,
+            ...userSnapshot.val()
+          }
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+    } finally {
+      setUsersLoading(prev => ({ ...prev, [userId]: false }));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -397,66 +466,6 @@ export default function TaskDetailPage() {
     )
   }
 
-  const canUpdateStatus = async () => {
-    if (!user) return false
-
-    // Get user roles in this project
-    const projectRef = ref(database, `projects/${projectId}/members/${user.uid}/roles`)
-    const rolesSnapshot = await get(projectRef)
-
-    if (!rolesSnapshot.exists()) return false
-
-    const roles = rolesSnapshot.val() || []
-
-    // Check if user can update based on current status and role
-    switch (task.status) {
-      case TASK_STATUS.TODO:
-        // Anyone assigned to the task or developers can move from Todo to In Progress
-        return task.assignedTo?.includes(user.uid) || roles.includes("dev")
-      case TASK_STATUS.IN_PROGRESS:
-        // Only developers can move from In Progress to Resolved
-        return roles.includes("dev")
-      case TASK_STATUS.RESOLVED:
-        // Only testers can move from Resolved to Closed
-        return roles.includes("tester")
-      case TASK_STATUS.CLOSED:
-        // Only testers can reopen a closed task
-        return roles.includes("tester")
-      default:
-        return false
-    }
-  }
-
-  const getNextStatus = () => {
-    switch (task.status) {
-      case TASK_STATUS.TODO:
-        return TASK_STATUS.IN_PROGRESS
-      case TASK_STATUS.IN_PROGRESS:
-        return TASK_STATUS.RESOLVED
-      case TASK_STATUS.RESOLVED:
-        return TASK_STATUS.CLOSED
-      case TASK_STATUS.CLOSED:
-        return TASK_STATUS.TODO // Reopen
-      default:
-        return null
-    }
-  }
-
-  const getNextStatusLabel = () => {
-    switch (task.status) {
-      case TASK_STATUS.TODO:
-        return "Start Progress"
-      case TASK_STATUS.IN_PROGRESS:
-        return "Resolve"
-      case TASK_STATUS.RESOLVED:
-        return "Close"
-      case TASK_STATUS.CLOSED:
-        return "Reopen"
-      default:
-        return ""
-    }
-  }
-
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -470,11 +479,11 @@ export default function TaskDetailPage() {
         </Link>
 
         <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm mb-8 animate-fadeIn">
-          <div className="p-6 border-b border-border bg-muted/50">
+          <div className="p-4 md:p-6 border-b border-border bg-muted/50">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-              <h1 className="text-2xl font-bold">{task.title}</h1>
+              <h1 className="text-xl md:text-2xl font-bold break-words">{task.title}</h1>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 self-start">
                 <Link href={`/projects/${projectId}/tasks/${taskId}/edit`}>
                   <Button variant="outline" size="sm" className="rounded-lg">
                     <Edit className="mr-2 h-4 w-4" /> Edit
@@ -523,31 +532,38 @@ export default function TaskDetailPage() {
 
             <div className="prose dark:prose-invert max-w-none mb-6">
               {task.description ? (
-                <p>{task.description}</p>
+                <div
+                  className="break-words"
+                  dangerouslySetInnerHTML={{
+                    __html: formatTextWithLinks(task.description, projectData?.githubRepo),
+                  }}
+                />
               ) : (
                 <p className="text-muted-foreground italic">No description provided</p>
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
               <div className="flex items-center">
-                <User className="h-4 w-4 text-muted-foreground mr-2" />
+                <User className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
                 <span className="text-sm text-muted-foreground">Created by:</span>
-                <span className="text-sm ml-2 font-medium">{users[task.createdBy]?.displayName || "Unknown user"}</span>
+                <span className="text-sm ml-2 font-medium truncate">
+                  {users[task.createdBy]?.displayName || "Unknown user"}
+                </span>
               </div>
 
               <div className="flex items-center">
-                <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                <Calendar className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
                 <span className="text-sm text-muted-foreground">Created:</span>
                 <span className="text-sm ml-2">{formatDate(task.createdAt)}</span>
               </div>
 
               <div className="flex items-center">
-                <User className="h-4 w-4 text-muted-foreground mr-2" />
+                <User className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
                 <span className="text-sm text-muted-foreground">Assigned to:</span>
-                <div className="flex ml-2">
+                <div className="flex ml-2 flex-wrap">
                   {task.assignedTo && task.assignedTo.length > 0 ? (
-                    <div className="flex -space-x-2">
+                    <div className="flex flex-wrap gap-1">
                       {task.assignedTo.map((userId) => (
                         <div
                           key={userId}
@@ -566,7 +582,7 @@ export default function TaskDetailPage() {
 
               {task.dueDate && (
                 <div className="flex items-center">
-                  <Calendar className="h-4 w-4 text-muted-foreground mr-2" />
+                  <Calendar className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Due date:</span>
                   <span className="text-sm ml-2">{formatDate(task.dueDate)}</span>
                 </div>
@@ -574,17 +590,29 @@ export default function TaskDetailPage() {
 
               {task.estimatedTime && (
                 <div className="flex items-center">
-                  <Clock className="h-4 w-4 text-muted-foreground mr-2" />
+                  <Clock className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Estimated time:</span>
                   <span className="text-sm ml-2">{task.estimatedTime} hours</span>
                 </div>
               )}
 
               {task.gitCommitId && (
-                <div className="flex items-center">
-                  <GitCommit className="h-4 w-4 text-muted-foreground mr-2" />
+                <div className="flex items-center col-span-1 sm:col-span-2">
+                  <GitCommit className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
                   <span className="text-sm text-muted-foreground">Commit ID:</span>
-                  <span className="text-sm ml-2 font-mono">{task.gitCommitId}</span>
+                  {projectData?.githubRepo ? (
+                    <a
+                      href={`https://github.com/${projectData.githubRepo}/commit/${task.gitCommitId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm ml-2 font-mono text-primary hover:underline flex items-center"
+                    >
+                      {task.gitCommitId}
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
+                  ) : (
+                    <span className="text-sm ml-2 font-mono">{task.gitCommitId}</span>
+                  )}
                 </div>
               )}
             </div>
@@ -592,7 +620,7 @@ export default function TaskDetailPage() {
             {task.status === TASK_STATUS.IN_PROGRESS && user && (
               <div className="mb-6 p-4 border border-border rounded-lg bg-card">
                 <h3 className="text-sm font-medium mb-2">Link a commit when resolving</h3>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     placeholder="Enter commit ID or hash"
@@ -625,8 +653,8 @@ export default function TaskDetailPage() {
                 </div>
 
                 {showChildTasks && (
-                  <div className="bg-muted rounded-lg overflow-hidden">
-                    <table className="w-full">
+                  <div className="bg-muted rounded-lg overflow-hidden overflow-x-auto">
+                    <table className="w-full min-w-[500px]">
                       <thead>
                         <tr className="border-b border-border">
                           <th className="px-4 py-2 text-left text-sm font-medium">Title</th>
@@ -655,16 +683,22 @@ export default function TaskDetailPage() {
                             </td>
                             <td className="px-4 py-2">
                               {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
-                                <div className="flex -space-x-2">
-                                  {childTask.assignedTo.map((userId) => (
-                                    <div
-                                      key={userId}
-                                      className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-muted"
-                                      title={users[userId]?.displayName || "Unknown user"}
-                                    >
-                                      {users[userId]?.displayName?.charAt(0) || "?"}
-                                    </div>
-                                  ))}
+                                <div className="flex flex-wrap gap-1">
+                                  {childTask.assignedTo.map((userId) => {
+                                    if (!users[userId] && !usersLoading[userId]) {
+                                      fetchUserData(userId);
+                                    }
+
+                                    return (
+                                      <div
+                                        key={userId}
+                                        className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-muted"
+                                        title={users[userId]?.displayName || "Loading user..."}
+                                      >
+                                        {users[userId]?.displayName?.charAt(0) || "?"}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               ) : (
                                 <span className="text-sm text-muted-foreground italic">Unassigned</span>
@@ -733,7 +767,11 @@ export default function TaskDetailPage() {
                         </div>
                       </div>
                       <div className="prose dark:prose-invert max-w-none pl-12">
-                        <p>{comment.content}</p>
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: formatTextWithLinks(comment.content, projectData?.githubRepo),
+                          }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -781,7 +819,14 @@ export default function TaskDetailPage() {
                             <p className="text-xs text-muted-foreground">{formatDateTime(entry.timestamp)}</p>
                           </div>
                         </div>
-                        {entry.comment && <p className="text-sm ml-9 mt-1 text-muted-foreground">{entry.comment}</p>}
+                        {entry.comment && (
+                          <div
+                            className="text-sm ml-9 mt-1 text-muted-foreground"
+                            dangerouslySetInnerHTML={{
+                              __html: formatTextWithLinks(entry.comment, projectData?.githubRepo),
+                            }}
+                          />
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -794,4 +839,3 @@ export default function TaskDetailPage() {
     </div>
   )
 }
-

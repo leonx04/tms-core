@@ -2,79 +2,102 @@
 @tailwind components;
 @tailwind utilities;
 
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
 @layer base {
   :root {
+    /* Light mode với độ tương phản cao hơn */
     --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-
+    --foreground: 0 0% 0%; /* Tối hơn (đen hoàn toàn) */
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-
+    --card-foreground: 0 0% 0%; /* Tối hơn */
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-
-    --primary: 240 5.9% 10%;
-    --primary-foreground: 0 0% 98%;
-
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
-
-    --warning: 38 92% 50%;
-    --warning-foreground: 240 5.9% 10%;
-
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 240 5.9% 10%;
-
+    --popover-foreground: 0 0% 0%; /* Tối hơn */
+    --primary: 0 0% 0%; /* Tối hơn */
+    --primary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
+    --secondary: 0 0% 92%; /* Sáng hơn một chút */
+    --secondary-foreground: 0 0% 0%; /* Tối hơn */
+    --muted: 0 0% 92%; /* Sáng hơn một chút */
+    --muted-foreground: 0 0% 20%; /* Tối hơn để dễ đọc */
+    --accent: 0 0% 92%; /* Sáng hơn một chút */
+    --accent-foreground: 0 0% 0%; /* Tối hơn */
+    --destructive: 0 100% 50%; /* Đỏ hơn và sáng hơn */
+    --destructive-foreground: 0 0% 100%; /* Trắng hoàn toàn */
+    --border: 0 0% 80%; /* Đậm hơn */
+    --input: 0 0% 80%; /* Đậm hơn */
+    --ring: 0 0% 0%; /* Tối hơn */
+    --chart-1: 12 85% 55%; /* Đậm hơn */
+    --chart-2: 173 68% 35%; /* Đậm hơn */
+    --chart-3: 197 47% 20%; /* Đậm hơn */
+    --chart-4: 43 84% 60%; /* Đậm hơn */
+    --chart-5: 27 97% 60%; /* Đậm hơn */
     --radius: 0.5rem;
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 240 5.3% 20%; /* Tối hơn */
+    --sidebar-primary: 240 5.9% 0%; /* Tối hơn */
+    --sidebar-primary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
+    --sidebar-accent: 240 4.8% 90%;
+    --sidebar-accent-foreground: 240 5.9% 0%; /* Tối hơn */
+    --sidebar-border: 220 13% 80%; /* Đậm hơn */
+    --sidebar-ring: 217.2 91.2% 50%; /* Đậm hơn */
+    --success: 142 76% 36%; /* Xanh lá cây đậm hơn */
+    --success-foreground: 0 0% 100%; /* Trắng hoàn toàn */
+    --warning: 38 92% 50%; /* Vàng đậm hơn */
+    --warning-foreground: 0 0% 0%; /* Đen hoàn toàn */
   }
-
+  
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    /* Dark mode với độ tương phản cao hơn */
+    --background: 240 10% 0%; /* Đen hơn */
+    --foreground: 0 0% 100%; /* Trắng hoàn toàn */
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 240 10% 3%; /* Tối hơn */
+    --card-foreground: 0 0% 100%; /* Trắng hoàn toàn */
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 240 10% 3%; /* Tối hơn */
+    --popover-foreground: 0 0% 100%; /* Trắng hoàn toàn */
 
-    --primary: 0 0% 98%;
-    --primary-foreground: 240 5.9% 10%;
+    --primary: 0 0% 100%; /* Trắng hoàn toàn */
+    --primary-foreground: 240 5.9% 0%; /* Đen hoàn toàn */
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 20%; /* Sáng hơn một chút */
+    --secondary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 3.7% 20%; /* Sáng hơn một chút */
+    --muted-foreground: 240 5% 90%; /* Sáng hơn */
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 3.7% 20%; /* Sáng hơn một chút */
+    --accent-foreground: 0 0% 100%; /* Trắng hoàn toàn */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 70% 50%; /* Đỏ sáng hơn */
+    --destructive-foreground: 0 0% 100%; /* Trắng hoàn toàn */
 
-    --success: 142 76% 36%;
-    --success-foreground: 0 0% 98%;
+    --success: 142 76% 45%; /* Xanh lá cây sáng hơn */
+    --success-foreground: 0 0% 100%; /* Trắng hoàn toàn */
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 240 5.9% 10%;
+    --warning: 38 92% 60%; /* Vàng sáng hơn */
+    --warning-foreground: 0 0% 0%; /* Đen hoàn toàn */
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 240 4.9% 83.9%;
+    --border: 240 3.7% 30%; /* Sáng hơn */
+    --input: 240 3.7% 30%; /* Sáng hơn */
+    --ring: 240 4.9% 90%; /* Sáng hơn */
+    
+    --sidebar-background: 240 5.9% 0%; /* Tối hơn */
+    --sidebar-foreground: 240 4.8% 100%; /* Sáng hơn */
+    --sidebar-primary: 224.3 76.3% 60%; /* Sáng hơn */
+    --sidebar-primary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
+    --sidebar-accent: 240 3.7% 25%; /* Sáng hơn */
+    --sidebar-accent-foreground: 240 4.8% 100%; /* Sáng hơn */
+    --sidebar-border: 240 3.7% 25%; /* Sáng hơn */
+    --sidebar-ring: 217.2 91.2% 70%; /* Sáng hơn */
   }
 }
 
@@ -84,14 +107,81 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/* Custom Scrollbar */
+/* Cải thiện độ tương phản cho các phần tử form */
+input, select, textarea {
+  @apply border-2 border-input;
+}
+
+input:focus, select:focus, textarea:focus {
+  @apply ring-2 ring-primary/80 border-primary;
+}
+
+/* Cải thiện độ tương phản cho buttons */
+button, .btn {
+  @apply font-medium;
+}
+
+/* Thiết lập focus rings rõ ràng hơn */
+*:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+}
+
+/* Cải thiện độ tương phản cho labels */
+label {
+  @apply font-medium text-foreground;
+}
+
+/* Dark mode improvements */
+.dark .bg-card {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); /* Bóng đậm hơn */
+}
+
+.dark .border {
+  border-color: rgba(255, 255, 255, 0.2); /* Đường viền sáng hơn */
+}
+
+.dark a {
+  text-decoration-color: rgba(255, 255, 255, 0.4); /* Màu gạch chân đậm hơn */
+}
+
+/* Cải thiện độ tương phản cho văn bản prose trong dark mode */
+.dark .prose {
+  color: hsl(var(--foreground));
+}
+
+.dark .prose a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-decoration-thickness: 2px; /* Đường gạch chân dày hơn */
+  text-underline-offset: 2px;
+}
+
+.dark .prose strong {
+  color: hsl(var(--foreground));
+  font-weight: 700; /* Đậm hơn */
+}
+
+.dark .prose code {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+  font-weight: 500; /* Đậm hơn */
+}
+
+.dark .prose blockquote {
+  border-color: hsl(var(--border));
+  border-left-width: 4px; /* Đậm hơn */
+  color: hsl(var(--muted-foreground));
+}
+
+/* Custom Scrollbar với độ tương phản cao hơn */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px; /* Lớn hơn */
+  height: 10px; /* Lớn hơn */
 }
 
 ::-webkit-scrollbar-track {
@@ -100,12 +190,13 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.5);
+  background: hsl(var(--muted-foreground) / 0.7); /* Đậm hơn */
   border-radius: 4px;
+  border: 2px solid hsl(var(--secondary)); /* Thêm viền */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.5);
+  background: hsl(var(--primary) / 0.7); /* Đậm hơn */
 }
 
 /* Animations */
@@ -159,46 +250,57 @@
 
 .card-hover:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Thêm bóng khi hover */
 }
 
-/* Glass effect */
+.dark .card-hover:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Bóng đậm hơn trong dark mode */
+}
+
+/* Glass effect với độ tương phản cao hơn */
 .glass {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.15); /* Đậm hơn */
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Thêm viền */
 }
 
 .dark .glass {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3); /* Đậm hơn */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Thêm viền */
 }
 
 /* Modern shadows */
 .shadow-modern {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.03), 0 8px 16px
-    rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.05), 0 4px 8px rgba(0, 0, 0, 0.05), 0 8px 16px
+    rgba(0, 0, 0, 0.05);
 }
 
 .dark .shadow-modern {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 2px 4px rgba(0, 0, 0, 0.2), 0 4px 8px rgba(0, 0, 0, 0.2), 0 8px 16px
-    rgba(0, 0, 0, 0.2);
-}
-
-.shadow-modern-lg {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04), 0 4px 8px rgba(0, 0, 0, 0.04), 0 8px 16px rgba(0, 0, 0, 0.04), 0 16px 32px
-    rgba(0, 0, 0, 0.04);
-}
-
-.dark .shadow-modern-lg {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.3), 0 16px 32px
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.3), 0 8px 16px
     rgba(0, 0, 0, 0.3);
 }
 
-/* Gradient text */
-.gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600;
+.shadow-modern-lg {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.06), 0 16px 32px
+    rgba(0, 0, 0, 0.06);
 }
 
-/* Gradient borders */
+.dark .shadow-modern-lg {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.4), 0 16px 32px
+    rgba(0, 0, 0, 0.4);
+}
+
+/* Gradient text với độ tương phản cao hơn */
+.gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-blue-500; /* Màu đậm hơn */
+}
+
+.dark .gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500; /* Màu sáng hơn cho dark mode */
+}
+
+/* Gradient borders với độ tương phản cao hơn */
 .gradient-border {
   position: relative;
   border-radius: var(--radius);

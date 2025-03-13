@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Menu, X, User, LogOut, ChevronDown, Settings, Folder, Home } from "lucide-react"
+import { Menu, X, User, LogOut, ChevronDown, Folder, Home } from "lucide-react"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
 
 export default function Header() {
@@ -38,7 +38,7 @@ export default function Header() {
     >
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-2">
-          <Link href={user ? "/projects" : "/"} className="flex items-center">
+          <Link href={"/"} className="flex items-center">
             <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground w-8 h-8 rounded-md flex items-center justify-center font-bold text-lg">
               T
             </div>
@@ -95,14 +95,6 @@ export default function Header() {
                       >
                         <User className="mr-2 h-4 w-4" />
                         Profile
-                      </Link>
-                      <Link
-                        href="/settings"
-                        className="flex items-center px-3 py-2 text-sm rounded-md hover:bg-muted transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        Settings
                       </Link>
                       <div className="h-px bg-border my-1"></div>
                       <button
@@ -198,14 +190,6 @@ export default function Header() {
                 >
                   <User className="mr-2 h-4 w-4" />
                   Profile
-                </Link>
-                <Link
-                  href="/settings"
-                  className="flex items-center py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
                 </Link>
                 <div className="h-px bg-border"></div>
                 <button

@@ -2,22 +2,22 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
+import { useTheme } from "@/components/theme-provider"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { useAuth } from "@/contexts/auth-context"
+import { formatDate } from "@/lib/utils"
 import {
-  updateProfile,
-  updateEmail,
-  updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
+  updateEmail,
+  updatePassword,
+  updateProfile,
 } from "firebase/auth"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { useTheme } from "@/components/theme-provider"
-import { ArrowLeft, Save, Moon, Sun, CreditCard } from "lucide-react"
-import { formatDate } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
+import { ArrowLeft, CreditCard, Moon, Save, Sun } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
@@ -134,6 +134,10 @@ export default function ProfilePage() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleUpgradeClick = () => {
+    router.push("/profile/upgrade")
   }
 
   if (loading) {
@@ -346,7 +350,9 @@ export default function ProfilePage() {
                   <p className="font-medium">
                     Current Plan:{" "}
                     <span className="text-primary">
-                      {userData?.packageId ? userData.packageId.charAt(0).toUpperCase() + userData.packageId.slice(1) : "N/A"}
+                      {userData?.packageId
+                        ? userData.packageId.charAt(0).toUpperCase() + userData.packageId.slice(1)
+                        : "N/A"}
                     </span>
                   </p>
                   <p className="text-sm text-muted-foreground">
@@ -354,12 +360,10 @@ export default function ProfilePage() {
                   </p>
                 </div>
 
-                <Link href="/upgrade">
-                  <Button variant="outline">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Upgrade Plan
-                  </Button>
-                </Link>
+                <Button variant="outline" onClick={handleUpgradeClick}>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Upgrade Plan
+                </Button>
               </div>
 
               <div className="bg-muted p-4 rounded-md">
@@ -433,8 +437,7 @@ export default function ProfilePage() {
           </Card>
         </div>
       </main>
-  </div>
-
+    </div>
   )
 }
 

@@ -42,60 +42,60 @@ export function truncateText(text: string, length: number) {
 export function getStatusColor(status: string) {
   switch (status) {
     case TASK_STATUS.TODO:
-      return 'bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground"oreground'
+      return "status-todo"
     case TASK_STATUS.IN_PROGRESS:
-      return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+      return "status-in-progress"
     case TASK_STATUS.RESOLVED:
-      return "bg-success/10 text-success dark:bg-success/20 dark:text-success"
+      return "status-resolved"
     case TASK_STATUS.CLOSED:
-      return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+      return "status-closed"
     default:
-      return "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground"
+      return "status-todo"
   }
 }
 
 export function getPriorityColor(priority: string) {
   switch (priority) {
     case TASK_PRIORITY.LOW:
-      return "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground"
+      return "priority-low"
     case TASK_PRIORITY.MEDIUM:
-      return "bg-warning/10 text-warning dark:bg-warning/20 dark:text-warning"
+      return "priority-medium"
     case TASK_PRIORITY.HIGH:
-      return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
+      return "priority-high"
     case TASK_PRIORITY.CRITICAL:
-      return "bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive"
+      return "priority-critical"
     default:
-      return "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground"
+      return "priority-low"
   }
 }
 
 export function getTypeColor(type: string) {
   switch (type) {
     case TASK_TYPE.BUG:
-      return "bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive"
+      return "type-bug"
     case TASK_TYPE.FEATURE:
-      return "bg-success/10 text-success dark:bg-success/20 dark:text-success"
+      return "type-feature"
     case TASK_TYPE.ENHANCEMENT:
-      return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+      return "type-enhancement"
     case TASK_TYPE.DOCUMENTATION:
-      return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+      return "type-documentation"
     default:
-      return "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground"
+      return "type-feature"
   }
 }
 
 export function getRoleColor(role: string) {
   switch (role) {
     case USER_ROLES.ADMIN:
-      return "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-foreground"
+      return "role-admin"
     case USER_ROLES.DEVELOPER:
-      return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+      return "role-dev"
     case USER_ROLES.TESTER:
-      return "bg-success/10 text-success dark:bg-success/20 dark:text-success"
+      return "role-tester"
     case USER_ROLES.DOCUMENT_WRITER:
-      return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+      return "role-documentWriter"
     default:
-      return "bg-secondary text-secondary-foreground dark:bg-secondary dark:text-secondary-foreground"
+      return "role-dev"
   }
 }
 

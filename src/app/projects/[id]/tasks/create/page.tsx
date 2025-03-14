@@ -1,87 +1,57 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { useForm } from "react-hook-form"
-import { ref, get, push, set, query, orderByChild, equalTo } from "firebase/database"
-import { database } from "@/lib/firebase"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import {
-  ArrowLeft,
-  Save,
-  Calendar,
-  Clock,
-  Tag,
-  ChevronDown,
-  AlertCircle,
-  GitBranch
-} from "lucide-react"
-import { TASK_STATUS, TASK_PRIORITY, TASK_TYPE } from "@/lib/utils"
 import Header from "@/components/layout/header"
+import { PageHeader } from "@/components/layout/page-header"
+import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import type { User } from "@/types"
-
-type TaskFormValues = {
-  title: string
-  description: string
-  type: string
-  priority: string
-  assignedTo: string[]
-  dueDate: string
-  estimatedTime?: number
-  parentTaskId?: string
-}
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase"
+import type { Project } from "@/types"
+import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
+import { equalTo, get, orderByChild, push, query, ref, set } from "firebase/database"
+import { AlertCircle, ArrowLeft, Save } from "lucide-react"
+import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 
 export default function CreateTaskPage() {
-  const [isLoading, setIsLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [projectMembers, setProjectMembers] = useState<User[]>([])
-  const [projectTasks, setProjectTasks] = useState<
-    { id: string; title: string; assignedTo?: string[] }[]
-  >([])
-  const [isLoadingData, setIsLoadingData] = useState(true)
-  const router = useRouter()
+  const [success, setSuccess] = useState<string | null>(null)
+  const [project, setProject] = useState<Project | null>(null)
+  const [availableMembers, setAvailableMembers] = useState<Record<string, any>>({})
+  const [projectTasks, setProjectTasks] = useState<{ id: string; title: string; assignedTo?: string[] }[]>([])
   const { user } = useAuth()
   const params = useParams()
+  const router = useRouter()
   const projectId = params.id as string
 
-  // State cho Parent Task combobox
-  const [parentSearch, setParentSearch] = useState("")
-  const [showParentDropdown, setShowParentDropdown] = useState(false)
-  const [selectedParentTask, setSelectedParentTask] = useState<
-    { id: string; title: string; assignedTo?: string[] } | null
-  >(null)
-  const parentTaskRef = useRef<HTMLDivElement>(null)
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch,
-  } = useForm<TaskFormValues>({
-    defaultValues: {
-      title: "",
-      description: "",
-      type: TASK_TYPE.FEATURE,
-      priority: TASK_PRIORITY.MEDIUM,
-      assignedTo: [],
-      dueDate: "",
-      estimatedTime: undefined,
-      parentTaskId: "",
-    },
-  })
-
-  const assignedToWatch = watch("assignedTo")
+  // Form state
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [type, setType] = useState(TASK_TYPE.FEATURE)
+  const [priority, setPriority] = useState(TASK_PRIORITY.MEDIUM)
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
+  const [percentDone, setPercentDone] = useState(0)
+  const [estimatedTime, setEstimatedTime] = useState<number | undefined>(undefined)
+  const [assignedTo, setAssignedTo] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState<string>("")
+  const [parentTaskId, setParentTaskId] = useState<string | null>(null)
+  const [parentTaskTitle, setParentTaskTitle] = useState<string>("")
+  const [parentTaskSearch, setParentTaskSearch] = useState("")
 
   useEffect(() => {
-    const fetchProjectData = async () => {
+    const fetchData = async () => {
       if (!user || !projectId) return
 
       try {
-        // Lấy thông tin dự án và kiểm tra quyền thành viên
+        // Fetch project details
         const projectRef = ref(database, `projects/${projectId}`)
         const projectSnapshot = await get(projectRef)
 
@@ -90,31 +60,47 @@ export default function CreateTaskPage() {
           return
         }
 
-        const projectData = projectSnapshot.val()
-        if (!projectData.members || !projectData.members[user.uid]) {
-          router.push("/projects")
+        const projectData = {
+          id: projectId,
+          ...projectSnapshot.val(),
+        } as Project
+
+        setProject(projectData)
+
+        // Check if user has permission to create tasks
+        const userRoles = projectData.members?.[user.uid]?.roles || []
+        const canCreateTask = userRoles.some((role) => ["admin", "dev", "tester"].includes(role))
+
+        if (!canCreateTask) {
+          router.push(`/projects/${projectId}`)
           return
         }
 
-        // Lấy danh sách thành viên dự án
-        const userIds = Object.keys(projectData.members)
-        const membersData: User[] = []
-        for (const userId of userIds) {
-          const userRef = ref(database, `users/${userId}`)
-          const userSnapshot = await get(userRef)
-          if (userSnapshot.exists()) {
-            membersData.push({
-              id: userId,
-              ...userSnapshot.val(),
-            })
-          }
-        }
-        setProjectMembers(membersData)
+        // Fetch project members for assignment
+        if (projectData.members) {
+          const members: Record<string, any> = {}
 
-        // Lấy danh sách task cho Parent Task
+          for (const [memberId, memberData] of Object.entries(projectData.members)) {
+            const userRef = ref(database, `users/${memberId}`)
+            const userSnapshot = await get(userRef)
+
+            if (userSnapshot.exists()) {
+              members[memberId] = {
+                id: memberId,
+                ...userSnapshot.val(),
+                roles: memberData.roles,
+              }
+            }
+          }
+
+          setAvailableMembers(members)
+        }
+
+        // Fetch project tasks for parent task selection
         const tasksRef = ref(database, "tasks")
         const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
         const tasksSnapshot = await get(tasksQuery)
+
         if (tasksSnapshot.exists()) {
           const tasksData = tasksSnapshot.val()
           const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
@@ -124,59 +110,51 @@ export default function CreateTaskPage() {
           }))
           setProjectTasks(tasksList)
         }
+
       } catch (error) {
-        console.error("Error fetching project data:", error)
-        setError("Failed to load project data. Please try again.")
+        console.error("Error fetching data:", error)
+        setError("Failed to load project data")
       } finally {
-        setIsLoadingData(false)
+        setLoading(false)
       }
     }
-    fetchProjectData()
+
+    fetchData()
   }, [user, projectId, router])
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        parentTaskRef.current &&
-        !parentTaskRef.current.contains(event.target as Node)
-      ) {
-        setShowParentDropdown(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const onSubmit = async (data: TaskFormValues) => {
     if (!user || !projectId) return
 
-    setIsLoading(true)
+    setIsSaving(true)
     setError(null)
+    setSuccess(null)
 
     try {
-      // Tạo task mới
+      // Create new task
       const newTaskRef = push(ref(database, "tasks"))
       const newTask = {
         projectId,
-        title: data.title,
-        description: data.description || "",
-        type: data.type,
+        title,
+        description: description || "",
+        type,
         status: TASK_STATUS.TODO,
-        priority: data.priority,
-        assignedTo: data.assignedTo || [],
+        priority,
+        assignedTo: assignedTo || [],
         createdBy: user.uid,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        dueDate: data.dueDate || null,
+        dueDate: dueDate ? dueDate.toISOString() : null,
         percentDone: 0,
-        estimatedTime: data.estimatedTime || null,
-        parentTaskId: data.parentTaskId || null,
+        estimatedTime: estimatedTime !== undefined ? estimatedTime : null,
+        parentTaskId: parentTaskId || null,
+        tags,
       }
+
       await set(newTaskRef, newTask)
 
-      // Tạo lịch sử task
+      // Create task history
       const historyRef = push(ref(database, "taskHistory"))
       const historyEntry = {
         taskId: newTaskRef.key,
@@ -187,16 +165,16 @@ export default function CreateTaskPage() {
       }
       await set(historyRef, historyEntry)
 
-      // Tạo thông báo cho các thành viên được phân công
-      if (data.assignedTo && data.assignedTo.length > 0) {
-        for (const assignedUserId of data.assignedTo) {
+      // Create notifications for assigned members
+      if (assignedTo && assignedTo.length > 0) {
+        for (const assignedUserId of assignedTo) {
           if (assignedUserId !== user.uid) {
             const notificationRef = push(ref(database, "notifications"))
             const notification = {
               userId: assignedUserId,
               eventType: "CREATE_TASK",
               referenceId: newTaskRef.key,
-              message: `You have been assigned to task "${data.title}"`,
+              message: `You have been assigned to task "${title}"`,
               status: "unread",
               createdAt: new Date().toISOString(),
             }
@@ -205,16 +183,26 @@ export default function CreateTaskPage() {
         }
       }
 
-      router.push(`/projects/${projectId}/tasks/${newTaskRef.key}`)
+      setSuccess("Task created successfully")
+
+      setTimeout(() => {
+        router.push(`/projects/${projectId}/tasks/${newTaskRef.key}`)
+      }, 1500)
     } catch (error) {
       console.error("Error creating task:", error)
-      setError("An error occurred while creating the task. Please try again.")
+      setError("Failed to create task")
     } finally {
-      setIsLoading(false)
+      setIsSaving(false)
     }
   }
 
-  if (isLoadingData) {
+  const filteredTasks = useMemo(() => {
+    return projectTasks.filter(task =>
+      task.title.toLowerCase().includes(parentTaskSearch.toLowerCase())
+    );
+  }, [parentTaskSearch, projectTasks]);
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Header />
@@ -225,252 +213,280 @@ export default function CreateTaskPage() {
     )
   }
 
-  const getResponsibleName = (task: { assignedTo?: string[] }) => {
-    if (task.assignedTo && task.assignedTo.length > 0) {
-      const member = projectMembers.find((m) => m.id === (task.assignedTo ?? [])[0])
-      return member ? member.displayName || member.email : "Unassigned"
-    }
-    return "Unassigned"
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">Project not found</h2>
+            <p className="text-muted-foreground mb-6">
+              The project you're looking for doesn't exist or you don't have access to it.
+            </p>
+            <Link href="/projects">
+              <Button>Go to Projects</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+
+      <main className="container mx-auto px-4 py-8">
         <Link
           href={`/projects/${projectId}`}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
         </Link>
-        <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn">
-          <div className="p-6 border-b border-border bg-muted/50">
-            <h1 className="text-2xl font-bold">Create New Task</h1>
-            <p className="text-muted-foreground mt-1">Add a new task to your project</p>
+
+        <PageHeader title="Create Task" description={`Add a new task to ${project.name}`} />
+
+        {error && (
+          <div className="bg-destructive/10 text-destructive p-4 rounded-xl mb-6 flex items-start">
+            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+            <span>{error}</span>
           </div>
-          {error && (
-            <div className="p-4 bg-destructive/10 border-t border-destructive/20 flex items-start space-x-2">
-              <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-destructive">{error}</span>
-            </div>
-          )}
-          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-            {/* Task Details */}
-            <fieldset className="space-y-4">
-              <legend className="sr-only">Task Details</legend>
-              <div className="space-y-4">
+        )}
+
+        {success && (
+          <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-4 rounded-xl mb-6 flex items-start">
+            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+            <span>{success}</span>
+          </div>
+        )}
+
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <form onSubmit={handleSubmit} className="p-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4 md:col-span-2">
                 <label htmlFor="title" className="block text-sm font-medium">
                   Task Title <span className="text-destructive">*</span>
                 </label>
-                <input
+                <Input
                   id="title"
-                  type="text"
-                  {...register("title", { required: "Title is required" })}
-                  className="w-full p-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  disabled={isLoading}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  disabled={isSaving}
+                  className="w-full"
                   placeholder="Enter task title"
                 />
-                {errors.title && <p className="text-destructive text-sm mt-1">{errors.title.message}</p>}
               </div>
-              <div className="space-y-4">
+
+              <div className="space-y-4 md:col-span-2">
                 <label htmlFor="description" className="block text-sm font-medium">
                   Description
                 </label>
-                <textarea
+                <Textarea
                   id="description"
-                  rows={4}
-                  {...register("description")}
-                  className="w-full p-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors resize-y"
-                  disabled={isLoading}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={5}
+                  disabled={isSaving}
+                  className="w-full"
                   placeholder="Describe the task in detail..."
                 />
               </div>
-            </fieldset>
-            {/* Task Settings */}
-            <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
-              <legend className="sr-only">Task Settings</legend>
-              <div>
+
+              <div className="space-y-4">
                 <label htmlFor="type" className="block text-sm font-medium">
                   Type <span className="text-destructive">*</span>
                 </label>
-                <div className="relative">
-                  <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <select
-                    id="type"
-                    {...register("type")}
-                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none"
-                    disabled={isLoading}
-                  >
-                    <option value={TASK_TYPE.BUG}>Bug</option>
-                    <option value={TASK_TYPE.FEATURE}>Feature</option>
-                    <option value={TASK_TYPE.ENHANCEMENT}>Enhancement</option>
-                    <option value={TASK_TYPE.DOCUMENTATION}>Documentation</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
+                <Select value={type} onValueChange={setType} disabled={isSaving}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TASK_TYPE.BUG}>Bug</SelectItem>
+                    <SelectItem value={TASK_TYPE.FEATURE}>Feature</SelectItem>
+                    <SelectItem value={TASK_TYPE.ENHANCEMENT}>Enhancement</SelectItem>
+                    <SelectItem value={TASK_TYPE.DOCUMENTATION}>Documentation</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
+
+              <div className="space-y-4">
+                <label htmlFor="status" className="block text-sm font-medium">
+                  Status
+                </label>
+                <Select value={TASK_STATUS.TODO} disabled={true}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="To Do" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TASK_STATUS.TODO}>To Do</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">New tasks are set to "To Do" by default</p>
+              </div>
+
+              <div className="space-y-4">
                 <label htmlFor="priority" className="block text-sm font-medium">
                   Priority <span className="text-destructive">*</span>
                 </label>
-                <div className="relative">
-                  <AlertCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <select
-                    id="priority"
-                    {...register("priority")}
-                    className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none"
-                    disabled={isLoading}
-                  >
-                    <option value={TASK_PRIORITY.LOW}>Low</option>
-                    <option value={TASK_PRIORITY.MEDIUM}>Medium</option>
-                    <option value={TASK_PRIORITY.HIGH}>High</option>
-                    <option value={TASK_PRIORITY.CRITICAL}>Critical</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
+                <Select value={priority} onValueChange={setPriority} disabled={isSaving}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={TASK_PRIORITY.LOW}>Low</SelectItem>
+                    <SelectItem value={TASK_PRIORITY.MEDIUM}>Medium</SelectItem>
+                    <SelectItem value={TASK_PRIORITY.HIGH}>High</SelectItem>
+                    <SelectItem value={TASK_PRIORITY.CRITICAL}>Critical</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </fieldset>
-            {/* Assignment & Schedule */}
-            <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-border pt-4">
-              <legend className="sr-only">Assignment and Schedule</legend>
+
+              <div className="space-y-4">
+                <label htmlFor="dueDate" className="block text-sm font-medium">
+                  Due Date
+                </label>
+                <DatePicker date={dueDate} setDate={setDueDate} disabled={isSaving} />
+              </div>
+
+              <div className="space-y-4">
+                <label htmlFor="estimatedTime" className="block text-sm font-medium">
+                  Estimated Time (hours)
+                </label>
+                <Input
+                  id="estimatedTime"
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={estimatedTime || ""}
+                  onChange={(e) =>
+                    setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)
+                  }
+                  disabled={isSaving}
+                  className="w-full"
+                  placeholder="0"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <label htmlFor="parentTask" className="block text-sm font-medium">
+                  Parent Task (optional)
+                </label>
+                <Select
+                  value={parentTaskId || ""}
+                  onValueChange={(value) => {
+                    setParentTaskId(value || null)
+                    const taskTitle = projectTasks.find(task => task.id === value)?.title || ""
+                    setParentTaskTitle(taskTitle)
+                  }}
+                  disabled={isSaving}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select parent task" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {/* Thanh tìm kiếm tích hợp trong dropdown */}
+                    <div className="p-2">
+                      <Input
+                        autoFocus
+                        value={parentTaskSearch}
+                        onChange={(e) => setParentTaskSearch(e.target.value)}
+                        placeholder="Search tasks..."
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                    <SelectItem value="none">None</SelectItem>
+                    {filteredTasks.map((task) => (
+                      <SelectItem key={task.id} value={task.id}>
+                        {task.title}{" "}
+                        {(task.assignedTo ?? []).length > 0 &&
+                          `- ${(task.assignedTo ?? [])
+                            .map(id => availableMembers[id]?.displayName || availableMembers[id]?.email)
+                            .join(", ")}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-4 md:col-span-2">
                 <label className="block text-sm font-medium">Assigned To</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {projectMembers.map((member) => (
-                    <div key={member.id} className="flex items-center space-x-2">
+                  {Object.entries(availableMembers).map(([memberId, memberData]: [string, any]) => (
+                    <div key={memberId} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        id={`member-${member.id}`}
-                        checked={assignedToWatch.includes(member.id)}
+                        id={`member-${memberId}`}
+                        checked={assignedTo.includes(memberId)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setValue("assignedTo", [...assignedToWatch, member.id])
+                            setAssignedTo([...assignedTo, memberId])
                           } else {
-                            setValue(
-                              "assignedTo",
-                              assignedToWatch.filter((id: string) => id !== member.id)
-                            )
+                            setAssignedTo(assignedTo.filter((id) => id !== memberId))
                           }
                         }}
-                        disabled={isLoading}
+                        disabled={isSaving}
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
-                      <label htmlFor={`member-${member.id}`} className="text-sm truncate">
-                        {member.displayName || member.email}
+                      <label htmlFor={`member-${memberId}`} className="text-sm">
+                        {memberData.displayName || memberData.email}
                       </label>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label htmlFor="dueDate" className="block text-sm font-medium">
-                    Due Date
-                  </label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      id="dueDate"
-                      type="date"
-                      {...register("dueDate")}
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      disabled={isLoading}
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="estimatedTime" className="block text-sm font-medium">
-                    Estimated Time (hours)
-                  </label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <input
-                      id="estimatedTime"
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      {...register("estimatedTime", { valueAsNumber: true })}
-                      className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                      disabled={isLoading}
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              </div>
-            </fieldset>
-            {/* Parent Task với combobox search */}
-            <fieldset className="border-t border-border pt-4">
-              <legend className="block text-sm font-medium mb-1">Parent Task (optional)</legend>
-              <div className="relative" ref={parentTaskRef}>
-                <GitBranch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search Parent Task..."
-                  value={selectedParentTask ? selectedParentTask.title : parentSearch}
-                  onFocus={() => setShowParentDropdown(true)}
-                  onChange={(e) => {
-                    setParentSearch(e.target.value)
-                    setShowParentDropdown(true)
-                    setSelectedParentTask(null)
-                    setValue("parentTaskId", "")
-                  }}
-                  className="w-full pl-10 pr-10 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                  disabled={isLoading}
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                </div>
-                {showParentDropdown && (
-                  <div className="absolute z-10 mt-1 w-full bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                    <div className="p-2">
-                      {projectTasks
-                        .filter((task) =>
-                          task.title.toLowerCase().includes((parentSearch || "").toLowerCase())
-                        )
-                        .map((task) => {
-                          const responsible = getResponsibleName(task)
-                          return (
-                            <div
-                              key={task.id}
-                              className="cursor-pointer hover:bg-muted/20 p-2 rounded-md flex justify-between items-center"
-                              onClick={() => {
-                                setSelectedParentTask(task)
-                                setValue("parentTaskId", task.id)
-                                setShowParentDropdown(false)
-                                setParentSearch("")
-                              }}
-                            >
-                              <span className="font-medium truncate">{task.title}</span>
-                              <span className="text-xs text-muted-foreground truncate ml-2">
-                                {responsible}
-                              </span>
-                            </div>
-                          )
-                        })}
-                      {projectTasks.filter((task) =>
-                        task.title.toLowerCase().includes((parentSearch || "").toLowerCase())
-                      ).length === 0 && (
-                        <div className="p-2 text-sm text-muted-foreground">No matching tasks</div>
-                      )}
+
+              <div className="space-y-4 md:col-span-2">
+                <label htmlFor="tagInput" className="block text-sm font-medium">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center bg-gray-200 px-2 py-1 rounded-full text-sm"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => setTags(tags.filter((t) => t !== tag))}
+                        className="ml-2 text-red-500"
+                        disabled={isSaving}
+                      >
+                        &times;
+                      </button>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
+                <Input
+                  id="tagInput"
+                  placeholder="Enter tag and press Enter"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && tagInput.trim() !== "") {
+                      e.preventDefault()
+                      if (!tags.includes(tagInput.trim())) {
+                        setTags([...tags, tagInput.trim()])
+                      }
+                      setTagInput("")
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="w-full mt-2"
+                />
               </div>
-            </fieldset>
-            {/* Footer Actions */}
+            </div>
+
             <div className="flex justify-end space-x-4 pt-4 border-t border-border">
               <Link href={`/projects/${projectId}`}>
-                <Button type="button" variant="outline" disabled={isLoading} className="rounded-lg">
+                <Button type="button" variant="outline" disabled={isSaving}>
                   Cancel
                 </Button>
               </Link>
-              <Button type="submit" disabled={isLoading} className="rounded-lg">
+              <Button type="submit" disabled={isSaving}>
                 <Save className="mr-2 h-4 w-4" />
-                {isLoading ? "Creating..." : "Create Task"}
+                {isSaving ? "Creating..." : "Create Task"}
               </Button>
             </div>
           </form>
@@ -479,4 +495,3 @@ export default function CreateTaskPage() {
     </div>
   )
 }
-

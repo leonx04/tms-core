@@ -13,11 +13,10 @@ import { formatDate, getPriorityColor, getStatusColor, getStatusLabel, getTypeCo
 import type { Project, Task, User } from "@/types"
 import { equalTo, get, orderByChild, query, ref } from "firebase/database"
 import {
-  ArrowUpDown,
   Calendar,
   ChevronDown,
   ChevronRight,
-  CornerDownRight,
+  Clock,
   Filter,
   Grid,
   Layers,
@@ -25,8 +24,7 @@ import {
   Plus,
   Search,
   Settings,
-  Users,
-  Clock
+  Users
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -118,7 +116,6 @@ export default function ProjectDetailPage() {
     fetchProjectData()
   }, [user, projectId, router])
 
-  // Lọc các task theo status và type trước
   const baseFilteredTasks = tasks.filter((task) => {
     if (statusFilter && task.status !== statusFilter) {
       return false
@@ -129,12 +126,10 @@ export default function ProjectDetailPage() {
     return true
   })
 
-  // Cải tiến logic tìm kiếm: loại bỏ khoảng trắng thừa và đảm bảo nếu task hoặc task con phù hợp sẽ được hiển thị
   let filteredTasks = baseFilteredTasks
   if (searchQuery.trim() !== "") {
     const trimmedQuery = searchQuery.trim().toLowerCase()
 
-    // Xây dựng children map dựa trên các task đã lọc
     const childrenMap: Record<string, Task[]> = {}
     baseFilteredTasks.forEach(task => {
       const parentId = task.parentTaskId || ''
@@ -144,7 +139,7 @@ export default function ProjectDetailPage() {
 
     const taskMatchesSearch = (task: Task) => {
       return task.title.trim().toLowerCase().includes(trimmedQuery) ||
-             task.description.trim().toLowerCase().includes(trimmedQuery)
+        task.description.trim().toLowerCase().includes(trimmedQuery)
     }
 
     const hasDescendantMatching = (task: Task): boolean => {

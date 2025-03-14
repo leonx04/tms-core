@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -8,7 +8,16 @@ import { ref, get, push, set, query, orderByChild, equalTo } from "firebase/data
 import { database } from "@/lib/firebase"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Save, Calendar, Clock, Tag, ChevronDown, AlertCircle } from "lucide-react"
+import {
+  ArrowLeft,
+  Save,
+  Calendar,
+  Clock,
+  Tag,
+  ChevronDown,
+  AlertCircle,
+  GitBranch
+} from "lucide-react"
 import { TASK_STATUS, TASK_PRIORITY, TASK_TYPE } from "@/lib/utils"
 import Header from "@/components/layout/header"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -29,12 +38,22 @@ export default function CreateTaskPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [projectMembers, setProjectMembers] = useState<User[]>([])
-  const [projectTasks, setProjectTasks] = useState<{ id: string; title: string }[]>([])
+  const [projectTasks, setProjectTasks] = useState<
+    { id: string; title: string; assignedTo?: string[] }[]
+  >([])
   const [isLoadingData, setIsLoadingData] = useState(true)
   const router = useRouter()
   const { user } = useAuth()
   const params = useParams()
   const projectId = params.id as string
+
+  // State cho Parent Task combobox
+  const [parentSearch, setParentSearch] = useState("")
+  const [showParentDropdown, setShowParentDropdown] = useState(false)
+  const [selectedParentTask, setSelectedParentTask] = useState<
+    { id: string; title: string; assignedTo?: string[] } | null
+  >(null)
+  const parentTaskRef = useRef<HTMLDivElement>(null)
 
   const {
     register,
@@ -92,7 +111,7 @@ export default function CreateTaskPage() {
         }
         setProjectMembers(membersData)
 
-        // Lấy danh sách task của dự án (cho phần chọn task cha)
+        // Lấy danh sách task cho Parent Task
         const tasksRef = ref(database, "tasks")
         const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
         const tasksSnapshot = await get(tasksQuery)
@@ -101,6 +120,7 @@ export default function CreateTaskPage() {
           const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
             id,
             title: data.title,
+            assignedTo: data.assignedTo || [],
           }))
           setProjectTasks(tasksList)
         }
@@ -111,9 +131,23 @@ export default function CreateTaskPage() {
         setIsLoadingData(false)
       }
     }
-
     fetchProjectData()
   }, [user, projectId, router])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        parentTaskRef.current &&
+        !parentTaskRef.current.contains(event.target as Node)
+      ) {
+        setShowParentDropdown(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   const onSubmit = async (data: TaskFormValues) => {
     if (!user || !projectId) return
@@ -129,7 +163,7 @@ export default function CreateTaskPage() {
         title: data.title,
         description: data.description || "",
         type: data.type,
-        status: TASK_STATUS.TODO, // Mặc định cho task mới
+        status: TASK_STATUS.TODO,
         priority: data.priority,
         assignedTo: data.assignedTo || [],
         createdBy: user.uid,
@@ -153,7 +187,7 @@ export default function CreateTaskPage() {
       }
       await set(historyRef, historyEntry)
 
-      // Gửi thông báo cho các thành viên được phân công (ngoại trừ người tạo)
+      // Tạo thông báo cho các thành viên được phân công
       if (data.assignedTo && data.assignedTo.length > 0) {
         for (const assignedUserId of data.assignedTo) {
           if (assignedUserId !== user.uid) {
@@ -191,6 +225,14 @@ export default function CreateTaskPage() {
     )
   }
 
+  const getResponsibleName = (task: { assignedTo?: string[] }) => {
+    if (task.assignedTo && task.assignedTo.length > 0) {
+      const member = projectMembers.find((m) => m.id === (task.assignedTo ?? [])[0])
+      return member ? member.displayName || member.email : "Unassigned"
+    }
+    return "Unassigned"
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -216,7 +258,7 @@ export default function CreateTaskPage() {
             {/* Task Details */}
             <fieldset className="space-y-4">
               <legend className="sr-only">Task Details</legend>
-              <div className="space-y-4 md:col-span-2">
+              <div className="space-y-4">
                 <label htmlFor="title" className="block text-sm font-medium">
                   Task Title <span className="text-destructive">*</span>
                 </label>
@@ -230,7 +272,7 @@ export default function CreateTaskPage() {
                 />
                 {errors.title && <p className="text-destructive text-sm mt-1">{errors.title.message}</p>}
               </div>
-              <div className="space-y-4 md:col-span-2">
+              <div className="space-y-4">
                 <label htmlFor="description" className="block text-sm font-medium">
                   Description
                 </label>
@@ -308,7 +350,10 @@ export default function CreateTaskPage() {
                           if (e.target.checked) {
                             setValue("assignedTo", [...assignedToWatch, member.id])
                           } else {
-                            setValue("assignedTo", assignedToWatch.filter((id: string) => id !== member.id))
+                            setValue(
+                              "assignedTo",
+                              assignedToWatch.filter((id: string) => id !== member.id)
+                            )
                           }
                         }}
                         disabled={isLoading}
@@ -357,27 +402,63 @@ export default function CreateTaskPage() {
                 </div>
               </div>
             </fieldset>
-            {/* Parent Task */}
+            {/* Parent Task với combobox search */}
             <fieldset className="border-t border-border pt-4">
               <legend className="block text-sm font-medium mb-1">Parent Task (optional)</legend>
-              <div className="relative">
-                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <select
-                  id="parentTaskId"
-                  {...register("parentTaskId")}
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors appearance-none"
+              <div className="relative" ref={parentTaskRef}>
+                <GitBranch className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search Parent Task..."
+                  value={selectedParentTask ? selectedParentTask.title : parentSearch}
+                  onFocus={() => setShowParentDropdown(true)}
+                  onChange={(e) => {
+                    setParentSearch(e.target.value)
+                    setShowParentDropdown(true)
+                    setSelectedParentTask(null)
+                    setValue("parentTaskId", "")
+                  }}
+                  className="w-full pl-10 pr-10 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                   disabled={isLoading}
-                >
-                  <option value="">None</option>
-                  {projectTasks.map((task) => (
-                    <option key={task.id} value={task.id}>
-                      {task.title}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </div>
+                {showParentDropdown && (
+                  <div className="absolute z-10 mt-1 w-full bg-background border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    <div className="p-2">
+                      {projectTasks
+                        .filter((task) =>
+                          task.title.toLowerCase().includes((parentSearch || "").toLowerCase())
+                        )
+                        .map((task) => {
+                          const responsible = getResponsibleName(task)
+                          return (
+                            <div
+                              key={task.id}
+                              className="cursor-pointer hover:bg-muted/20 p-2 rounded-md flex justify-between items-center"
+                              onClick={() => {
+                                setSelectedParentTask(task)
+                                setValue("parentTaskId", task.id)
+                                setShowParentDropdown(false)
+                                setParentSearch("")
+                              }}
+                            >
+                              <span className="font-medium truncate">{task.title}</span>
+                              <span className="text-xs text-muted-foreground truncate ml-2">
+                                {responsible}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      {projectTasks.filter((task) =>
+                        task.title.toLowerCase().includes((parentSearch || "").toLowerCase())
+                      ).length === 0 && (
+                        <div className="p-2 text-sm text-muted-foreground">No matching tasks</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </fieldset>
             {/* Footer Actions */}
@@ -398,3 +479,4 @@ export default function CreateTaskPage() {
     </div>
   )
 }
+

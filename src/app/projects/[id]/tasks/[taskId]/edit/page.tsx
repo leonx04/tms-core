@@ -404,7 +404,6 @@ export default function EditTaskPage() {
                 </div>
               </div>
 
-              {/* Phần Tags: Nhập từng tag một */}
               <div className="space-y-4 md:col-span-2">
                 <label htmlFor="tagInput" className="block text-sm font-medium">
                   Tags
@@ -431,7 +430,7 @@ export default function EditTaskPage() {
                 </div>
                 <Input
                   id="tagInput"
-                  placeholder="Nhập tag và nhấn Enter"
+                  placeholder="Enter tag and press Enter"
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value)}
                   onKeyDown={(e) => {

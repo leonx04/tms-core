@@ -16,8 +16,8 @@ import { EmptyState } from "@/components/ui/empty-state"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Project } from "@/types"
-// Import these at the top of the file
-import { GitBranch, Shield, Code, TestTube, FileText } from "lucide-react"
+import { Github , Shield, Code, TestTube, FileText } from "lucide-react"
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([])
@@ -31,7 +31,7 @@ export default function ProjectsPage() {
       if (!user) return
 
       try {
-        // Get all projects where the user is a member
+        // Lấy tất cả các dự án mà user là thành viên
         const projectsRef = ref(database, "projects")
         const snapshot = await get(projectsRef)
 
@@ -39,7 +39,6 @@ export default function ProjectsPage() {
           const allProjects = snapshot.val()
           const userProjects = Object.entries(allProjects)
             .filter(([_, projectData]: [string, any]) => {
-              // Check if user is a member of this project
               return projectData.members && projectData.members[user.uid] !== undefined
             })
             .map(([id, data]: [string, any]) => ({
@@ -76,7 +75,7 @@ export default function ProjectsPage() {
   const canCreateProject = () => {
     if (!userData) return false
 
-    // Check if user can create more projects based on their package
+    // Kiểm tra xem user có thể tạo thêm dự án hay không dựa trên gói cước của họ
     const packageLimits = {
       basic: 3,
       plus: 10,
@@ -171,85 +170,92 @@ export default function ProjectsPage() {
 
 function ProjectCard({ project }: { project: Project }) {
   const { user } = useAuth()
+  const router = useRouter()
   const memberCount = project.members ? Object.keys(project.members).length : 0
   const userRoles = user && project.members && project.members[user.uid] ? project.members[user.uid].roles : []
   const isOwner = user && project.ownerId === user.uid
 
   return (
-    <Link href={`/projects/${project.id}`}>
-      <Card className="h-full shadow-modern card-hover transition-all animate-fadeIn">
-        <CardContent className="p-6 flex flex-col h-full">
-          <div className="flex-1">
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-xl font-semibold truncate">{project.name}</h3>
-              {isOwner && (
-                <Badge variant="primary" className="ml-2 flex-shrink-0">
-                  <Star className="h-3 w-3 mr-1" /> Owner
+    <Card
+      onClick={() => router.push(`/projects/${project.id}`)}
+      className="h-full shadow-modern card-hover transition-all animate-fadeIn cursor-pointer"
+      role="link"
+      tabIndex={0}
+      onKeyPress={(e) => {
+        if (e.key === "Enter") router.push(`/projects/${project.id}`)
+      }}
+    >
+      <CardContent className="p-6 flex flex-col h-full">
+        <div className="flex-1">
+          <div className="flex justify-between items-start mb-2">
+            <h3 className="text-xl font-semibold truncate">{project.name}</h3>
+            {isOwner && (
+              <Badge variant="primary" className="ml-2 flex-shrink-0">
+                <Star className="h-3 w-3 mr-1" /> Owner
+              </Badge>
+            )}
+          </div>
+          <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
+            {project.description || "No description provided"}
+          </p>
+
+          <div className="flex flex-col space-y-2 text-sm">
+            <div className="flex items-center text-muted-foreground">
+              <Calendar className="h-4 w-4 mr-2" />
+              <span>Created: {formatDate(project.createdAt)}</span>
+            </div>
+            <div className="flex items-center text-muted-foreground">
+              <Users className="h-4 w-4 mr-2" />
+              <span>
+                {memberCount} {memberCount === 1 ? "member" : "members"}
+              </span>
+            </div>
+            {project.githubRepo && (
+              <div className="flex items-center text-muted-foreground">
+                <Github  className="h-4 w-4 mr-2" />
+                <span className="truncate">
+                  {project.githubRepo.replace(/^https?:\/\/(www\.)?github\.com\//, "")}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <CardFooter className="px-0 pt-4 mt-4 border-t border-border/10">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex flex-wrap gap-1">
+              {userRoles.includes("admin") && (
+                <Badge variant="primary">
+                  <Shield className="mr-1 h-3 w-3" /> Admin
+                </Badge>
+              )}
+              {userRoles.includes("dev") && (
+                <Badge variant="info">
+                  <Code className="mr-1 h-3 w-3" /> Dev
+                </Badge>
+              )}
+              {userRoles.includes("tester") && (
+                <Badge variant="success">
+                  <TestTube className="mr-1 h-3 w-3" /> Tester
+                </Badge>
+              )}
+              {userRoles.includes("documentWriter") && (
+                <Badge variant="warning">
+                  <FileText className="mr-1 h-3 w-3" /> Doc
                 </Badge>
               )}
             </div>
-            <p className="text-muted-foreground text-sm mb-4 line-clamp-2">
-              {project.description || "No description provided"}
-            </p>
-
-            <div className="flex flex-col space-y-2 text-sm">
-              <div className="flex items-center text-muted-foreground">
-                <Calendar className="h-4 w-4 mr-2" />
-                <span>Created: {formatDate(project.createdAt)}</span>
-              </div>
-              <div className="flex items-center text-muted-foreground">
-                <Users className="h-4 w-4 mr-2" />
-                <span>
-                  {memberCount} {memberCount === 1 ? "member" : "members"}
-                </span>
-              </div>
-              {project.githubRepo && (
-                <div className="flex items-center text-muted-foreground">
-                  <GitBranch className="h-4 w-4 mr-2" />
-                  <span className="truncate">
-                    {project.githubRepo.replace(/^https?:\/\/(www\.)?github\.com\//, "")}
-                  </span>
-                </div>
-              )}
-            </div>
+            <Link
+              href={`/projects/${project.id}/settings`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button variant="ghost" size="sm" className="ml-auto rounded-full">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </Link>
           </div>
-
-          <CardFooter className="px-0 pt-4 mt-4 border-t border-border/10">
-            <div className="flex items-center justify-between w-full">
-              <div className="flex flex-wrap gap-1">
-                {userRoles.includes("admin") && (
-                  <Badge variant="primary">
-                    <Shield className="mr-1 h-3 w-3" /> Admin
-                  </Badge>
-                )}
-                {userRoles.includes("dev") && (
-                  <Badge variant="info">
-                    <Code className="mr-1 h-3 w-3" /> Dev
-                  </Badge>
-                )}
-                {userRoles.includes("tester") && (
-                  <Badge variant="success">
-                    <TestTube className="mr-1 h-3 w-3" /> Tester
-                  </Badge>
-                )}
-                {userRoles.includes("documentWriter") && (
-                  <Badge variant="warning">
-                    <FileText className="mr-1 h-3 w-3" /> Doc
-                  </Badge>
-                )}
-              </div>
-              <Link href={`/projects/${project.id}/settings`}>
-                <Button variant="ghost" size="sm" className="ml-auto rounded-full">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-          </CardFooter>
-        </CardContent>
-      </Card>
-    </Link>
+        </CardFooter>
+      </CardContent>
+    </Card>
   )
 }
-
-
-

@@ -116,46 +116,26 @@ export default function ProjectDetailPage() {
     fetchProjectData()
   }, [user, projectId, router])
 
-  const baseFilteredTasks = tasks.filter((task) => {
+  // Apply filters to tasks
+  const filteredTasks = tasks.filter((task) => {
+    // Apply status filter if set
     if (statusFilter && task.status !== statusFilter) {
       return false
     }
+    // Apply type filter if set
     if (typeFilter && task.type !== typeFilter) {
       return false
     }
+    // Apply search query if present
+    if (searchQuery.trim() !== "") {
+      const query = searchQuery.trim().toLowerCase()
+      return (
+        task.title.toLowerCase().includes(query) ||
+        task.description.toLowerCase().includes(query)
+      )
+    }
     return true
   })
-
-  let filteredTasks = baseFilteredTasks
-  if (searchQuery.trim() !== "") {
-    const trimmedQuery = searchQuery.trim().toLowerCase()
-
-    const childrenMap: Record<string, Task[]> = {}
-    baseFilteredTasks.forEach(task => {
-      const parentId = task.parentTaskId || ''
-      if (!childrenMap[parentId]) childrenMap[parentId] = []
-      childrenMap[parentId].push(task)
-    })
-
-    const taskMatchesSearch = (task: Task) => {
-      return task.title.trim().toLowerCase().includes(trimmedQuery) ||
-        task.description.trim().toLowerCase().includes(trimmedQuery)
-    }
-
-    const hasDescendantMatching = (task: Task): boolean => {
-      const children = childrenMap[task.id] || []
-      for (const child of children) {
-        if (taskMatchesSearch(child) || hasDescendantMatching(child)) {
-          return true
-        }
-      }
-      return false
-    }
-
-    filteredTasks = baseFilteredTasks.filter(task => {
-      return taskMatchesSearch(task) || hasDescendantMatching(task)
-    })
-  }
 
   const userRoles = user && project?.members && project.members[user.uid] ? project.members[user.uid].roles : []
 
@@ -166,16 +146,19 @@ export default function ProjectDetailPage() {
     }));
   };
 
-  const groupTasksByParent = (tasks: Task[]) => {
+  // Improved task grouping logic
+  const groupTasksByParent = () => {
     const taskMap: Record<string, Task> = {};
     const rootTasks: Task[] = [];
 
-    tasks.forEach(task => {
+    // First, create a map of all tasks by ID
+    filteredTasks.forEach(task => {
       taskMap[task.id] = task;
     });
 
-    tasks.forEach(task => {
-      if (!task.parentTaskId) {
+    // Then identify root tasks (those without a parent or with a parent that doesn't exist)
+    filteredTasks.forEach(task => {
+      if (!task.parentTaskId || !taskMap[task.parentTaskId]) {
         rootTasks.push(task);
       }
     });
@@ -183,8 +166,8 @@ export default function ProjectDetailPage() {
     return { taskMap, rootTasks };
   };
 
-  const findChildTasks = (taskId: string, tasks: Task[]) => {
-    return tasks.filter(task => task.parentTaskId === taskId);
+  const findChildTasks = (taskId: string) => {
+    return filteredTasks.filter(task => task.parentTaskId === taskId);
   };
 
   if (loading) {
@@ -218,6 +201,10 @@ export default function ProjectDetailPage() {
     )
   }
 
+  // Get grouped tasks
+  const { rootTasks } = groupTasksByParent();
+  const autoExpand = searchQuery.trim() !== "";
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -241,11 +228,12 @@ export default function ProjectDetailPage() {
         </PageHeader>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
+            {/* Consistent height with the search input */}
+            <div className="relative h-10">
               <Button
                 variant="outline"
-                className="w-full sm:w-auto rounded-lg shadow-sm"
+                className="w-full sm:w-40 h-10 rounded-lg shadow-sm"
                 onClick={() => {
                   setShowStatusFilter(!showStatusFilter)
                   setShowTypeFilter(false)
@@ -307,10 +295,10 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
-            <div className="relative">
+            <div className="relative h-10">
               <Button
                 variant="outline"
-                className="w-full sm:w-auto rounded-lg shadow-sm"
+                className="w-full sm:w-40 h-10 rounded-lg shadow-sm"
                 onClick={() => {
                   setShowTypeFilter(!showTypeFilter)
                   setShowStatusFilter(false)
@@ -374,12 +362,12 @@ export default function ProjectDetailPage() {
             </div>
 
             <div className="relative flex-1 min-w-[200px]">
-              <div className="relative">
+              <div className="relative h-10">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
                   placeholder="Search tasks..."
-                  className="w-full pl-10 pr-4 py-2 rounded-lg shadow-sm bg-background focus:ring-2 focus:ring-primary/10 transition-colors"
+                  className="w-full h-10 pl-10 pr-4 py-2 rounded-lg shadow-sm bg-background focus:ring-2 focus:ring-primary/10 transition-colors"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -387,17 +375,17 @@ export default function ProjectDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="flex items-center border border-border/10 rounded-lg overflow-hidden shadow-sm">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+            <div className="flex items-center border border-border/10 rounded-lg overflow-hidden shadow-sm h-10">
               <button
-                className={`p-2 ${viewMode === "list" ? "bg-muted" : "hover:bg-muted/50"} transition-colors`}
+                className={`p-2 h-full ${viewMode === "list" ? "bg-muted" : "hover:bg-muted/50"} transition-colors`}
                 onClick={() => setViewMode("list")}
                 aria-label="List view"
               >
                 <List className="h-4 w-4" />
               </button>
               <button
-                className={`p-2 ${viewMode === "grid" ? "bg-muted" : "hover:bg-muted/50"} transition-colors`}
+                className={`p-2 h-full ${viewMode === "grid" ? "bg-muted" : "hover:bg-muted/50"} transition-colors`}
                 onClick={() => setViewMode("grid")}
                 aria-label="Grid view"
               >
@@ -405,8 +393,8 @@ export default function ProjectDetailPage() {
               </button>
             </div>
 
-            <Link href={`/projects/${projectId}/tasks/create`}>
-              <Button className="rounded-lg shadow-sm">
+            <Link href={`/projects/${projectId}/tasks/create`} className="w-full sm:w-auto">
+              <Button className="rounded-lg shadow-sm h-10 w-full">
                 <Plus className="mr-2 h-4 w-4" /> Create Task
               </Button>
             </Link>
@@ -431,7 +419,6 @@ export default function ProjectDetailPage() {
         ) : viewMode === "list" ? (
           <Card className="shadow-modern animate-fadeIn overflow-hidden">
             <div className="overflow-x-auto">
-              {/* Sử dụng "table-fixed" để cố định chiều rộng cột */}
               <table className="w-full table-fixed table-vercel">
                 <thead>
                   <tr className="bg-muted/50">
@@ -445,23 +432,19 @@ export default function ProjectDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-border/10">
                   {(() => {
-                    const { rootTasks } = groupTasksByParent(filteredTasks);
-                    // Nếu có tìm kiếm, tự động mở rộng tất cả các task để hiển thị task con
-                    const autoExpand = searchQuery.trim() !== "";
+                    // Fixed rendering logic for tasks
                     const renderTaskRow = (task: Task, level: number = 0): JSX.Element => {
-                      const childTasks = findChildTasks(task.id, filteredTasks);
+                      const childTasks = findChildTasks(task.id);
                       const hasChildren = childTasks.length > 0;
-                      // Sử dụng autoExpand khi tìm kiếm
-                      const isExpanded = autoExpand ? true : expandedTasks[task.id];
+                      const isExpanded = autoExpand || expandedTasks[task.id];
 
                       return (
                         <React.Fragment key={task.id}>
                           <tr className="hover:bg-muted/30 transition-colors">
                             <td className="px-4 py-3">
                               <div className="flex items-center">
-                                {/* Render vertical connectors cho mỗi cấp */}
                                 {Array.from({ length: level }).map((_, index) => (
-                                  <div key={index} className="flex items-center mr-2">
+                                  <div key={index} className="flex items-center justify-center w-6">
                                     <div className="w-0.5 h-6 bg-gray-300"></div>
                                   </div>
                                 ))}
@@ -473,7 +456,7 @@ export default function ProjectDetailPage() {
                                         toggleTaskExpansion(task.id);
                                       }
                                     }}
-                                    className="mr-2 focus:outline-none"
+                                    className="mr-2 focus:outline-none flex-shrink-0"
                                   >
                                     {isExpanded ? (
                                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -482,7 +465,7 @@ export default function ProjectDetailPage() {
                                     )}
                                   </button>
                                 ) : (
-                                  <div className="w-4 mr-2"></div>
+                                  <div className="w-6 mr-2"></div>
                                 )}
                                 <Link
                                   href={`/projects/${projectId}/tasks/${task.id}`}
@@ -540,6 +523,7 @@ export default function ProjectDetailPage() {
                       );
                     };
 
+                    // Render all root tasks first
                     return rootTasks.map(task => renderTaskRow(task));
                   })()}
                 </tbody>
@@ -588,19 +572,20 @@ export default function ProjectDetailPage() {
                         )}
                       </div>
 
-                      {task.dueDate && (
-                        <div className="flex items-center text-xs text-muted-foreground truncate">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {formatDate(task.dueDate)}
-                        </div>
-                      )}
-                      {task.percentDone !== undefined && (
-                        <div className="flex items-center col-span-1 sm:col-span-2">
-                          <Clock className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
-                          <span className="text-sm text-muted-foreground">Progress:</span>
-                          <span className="text-xs ml-2 truncate">{task.percentDone}%</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {task.dueDate && (
+                          <div className="flex items-center text-xs text-muted-foreground truncate">
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {formatDate(task.dueDate)}
+                          </div>
+                        )}
+                        {task.percentDone !== undefined && (
+                          <div className="flex items-center">
+                            <Clock className="h-3 w-3 text-muted-foreground mr-1 flex-shrink-0" />
+                            <span className="text-xs text-muted-foreground truncate">{task.percentDone}%</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Card>

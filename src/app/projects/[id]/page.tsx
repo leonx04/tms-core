@@ -1,33 +1,35 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
-import { ref, get, query, orderByChild, equalTo } from "firebase/database"
-import { database } from "@/lib/firebase"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import {
-  Plus,
-  Users,
-  Settings,
-  ChevronDown,
-  Search,
-  Filter,
-  Calendar,
-  ArrowUpDown,
-  List,
-  Grid,
-  Layers,
-} from "lucide-react"
-import { formatDate, getStatusColor, getPriorityColor, getTypeColor, getStatusLabel } from "@/lib/utils"
 import Header from "@/components/layout/header"
 import { PageHeader } from "@/components/layout/page-header"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { EmptyState } from "@/components/ui/empty-state"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase"
+import { formatDate, getPriorityColor, getStatusColor, getStatusLabel, getTypeColor } from "@/lib/utils"
 import type { Project, Task, User } from "@/types"
+import { equalTo, get, orderByChild, query, ref } from "firebase/database"
+import {
+  ArrowUpDown,
+  Calendar,
+  ChevronDown,
+  CornerDownRight,
+  Filter,
+  Grid,
+  Layers,
+  List,
+  Plus,
+  Search,
+  Settings,
+  Users,
+  Clock
+} from "lucide-react"
+import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
+import React, { JSX, useEffect, useState } from "react"
 
 export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null)
@@ -44,6 +46,7 @@ export default function ProjectDetailPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -136,6 +139,33 @@ export default function ProjectDetailPage() {
 
   const userRoles = user && project?.members && project.members[user.uid] ? project.members[user.uid].roles : []
 
+  const toggleTaskExpansion = (taskId: string) => {
+    setExpandedTasks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
+
+  const groupTasksByParent = (tasks: Task[]) => {
+    const taskMap: Record<string, Task> = {};
+    const rootTasks: Task[] = [];
+
+    tasks.forEach(task => {
+      taskMap[task.id] = task;
+    });
+
+    tasks.forEach(task => {
+      if (!task.parentTaskId) {
+        rootTasks.push(task);
+      }
+    });
+
+    return { taskMap, rootTasks };
+  };
+
+  const findChildTasks = (taskId: string, tasks: Task[]) => {
+    return tasks.filter(task => task.parentTaskId === taskId);
+  };
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -396,58 +426,98 @@ export default function ProjectDetailPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/10">
-                  {filteredTasks.map((task) => (
-                    <tr key={task.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/projects/${projectId}/tasks/${task.id}`}
-                          className="hover:text-primary transition-colors"
-                        >
-                          {task.title}
-                        </Link>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge className={getTypeColor(task.type)}>
-                          {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge className={getPriorityColor(task.priority)}>
-                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex -space-x-2">
-                          {task.assignedTo && task.assignedTo.length > 0 ? (
-                            task.assignedTo.map((userId) => (
-                              <div
-                                key={userId}
-                                className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background"
-                                title={users[userId]?.displayName || "Unknown user"}
-                              >
-                                {users[userId]?.displayName?.charAt(0) || "?"}
+                  {(() => {
+                    const { taskMap, rootTasks } = groupTasksByParent(filteredTasks);
+
+                    const renderTaskRow = (task: Task, level: number = 0): JSX.Element => {
+                      const childTasks = findChildTasks(task.id, filteredTasks);
+                      const hasChildren = childTasks.length > 0;
+                      const isExpanded = expandedTasks[task.id];
+
+                      return (
+                        <React.Fragment key={task.id}>
+                          <tr key={task.id} className="hover:bg-muted/30 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center">
+                                <div style={{ width: `${level * 20}px` }} />
+                                {hasChildren && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      toggleTaskExpansion(task.id);
+                                    }}
+                                    className="mr-2 focus:outline-none"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground transform -rotate-90" />
+                                    )}
+                                  </button>
+                                )}
+
+                                {level > 0 && (
+                                  <div className="text-muted-foreground mr-2">
+                                    <CornerDownRight />
+                                  </div>
+                                )}
+
+                                <Link
+                                  href={`/projects/${projectId}/tasks/${task.id}`}
+                                  className="hover:text-primary transition-colors"
+                                >
+                                  {task.title}
+                                </Link>
                               </div>
-                            ))
-                          ) : (
-                            <span className="text-sm text-muted-foreground">Unassigned</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        {task.dueDate ? (
-                          <div className="flex items-center">
-                            <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                            {formatDate(task.dueDate)}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge className={getTypeColor(task.type)}>
+                                {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge className={getPriorityColor(task.priority)}>
+                                {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex -space-x-2">
+                                {task.assignedTo && task.assignedTo.length > 0 ? (
+                                  task.assignedTo.map((userId) => (
+                                    <div
+                                      key={userId}
+                                      className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background"
+                                      title={users[userId]?.displayName || "Unknown user"}
+                                    >
+                                      {users[userId]?.displayName?.charAt(0) || "?"}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">Unassigned</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {task.dueDate ? (
+                                <div className="flex items-center">
+                                  <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                  {formatDate(task.dueDate)}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </td>
+                          </tr>
+                          {hasChildren && isExpanded && childTasks.map(childTask => renderTaskRow(childTask, level + 1))}
+                        </React.Fragment>
+                      );
+                    };
+
+                    return rootTasks.map(task => renderTaskRow(task));
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -498,6 +568,13 @@ export default function ProjectDetailPage() {
                         <div className="flex items-center text-xs text-muted-foreground">
                           <Calendar className="h-3 w-3 mr-1" />
                           {formatDate(task.dueDate)}
+                        </div>
+                      )}
+                      {task.percentDone !== undefined && (
+                        <div className="flex items-center col-span-1 sm:col-span-2">
+                          <Clock className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
+                          <span className="text-sm text-muted-foreground">Progress:</span>
+                          <span className="text-xs ml-2">{task.percentDone}%</span>
                         </div>
                       )}
                     </div>

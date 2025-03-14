@@ -238,9 +238,11 @@ function ProjectCard({ project }: { project: Project }) {
                   </Badge>
                 )}
               </div>
-              <Button variant="ghost" size="sm" className="ml-auto rounded-full">
-                <Settings className="h-4 w-4" />
-              </Button>
+              <Link href={`/projects/${project.id}/settings`}>
+                <Button variant="ghost" size="sm" className="ml-auto rounded-full">
+                  <Settings className="h-4 w-4" />
+                </Button>
+              </Link>
             </div>
           </CardFooter>
         </CardContent>

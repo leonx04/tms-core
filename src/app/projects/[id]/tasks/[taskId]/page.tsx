@@ -46,6 +46,71 @@ export default function TaskDetailPage() {
   const taskId = params.taskId as string
   const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({});
 
+  // Thêm hàm tính toán percentDone dựa trên task con
+  const calculatePercentDone = (tasks: Task[]) => {
+    if (!tasks || tasks.length === 0) return 0;
+
+    const totalPercent = tasks.reduce((sum, task) => {
+      return sum + (task.percentDone || 0);
+    }, 0);
+
+    return Math.round(totalPercent / tasks.length);
+  };
+
+  // Thêm hàm cập nhật percentDone cho task cha
+  const updateParentTaskProgress = async (parentTaskId: string, childTasks: Task[]) => {
+    if (!parentTaskId || childTasks.length === 0) return;
+
+    try {
+      const newPercentDone = calculatePercentDone(childTasks);
+
+      // Cập nhật task cha trong database
+      const parentTaskRef = ref(database, `tasks/${parentTaskId}`);
+      await update(parentTaskRef, {
+        percentDone: newPercentDone,
+        updatedAt: new Date().toISOString(),
+      });
+
+      // Nếu đang xem task cha, cập nhật state
+      if (task && task.id === parentTaskId) {
+        setTask(prev => prev ? { ...prev, percentDone: newPercentDone, updatedAt: new Date().toISOString() } : prev);
+      }
+
+      // Tạo history entry
+      if (user) {
+        const historyRef = push(ref(database, "taskHistory"));
+        const historyEntry = {
+          taskId: parentTaskId,
+          userId: user.uid,
+          timestamp: new Date().toISOString(),
+          changes: [
+            {
+              field: "percentDone",
+              oldValue: task?.percentDone?.toString() || "0",
+              newValue: newPercentDone.toString(),
+            },
+          ],
+          comment: "Progress updated automatically based on subtasks",
+        };
+
+        await set(historyRef, historyEntry);
+
+        // Cập nhật history state nếu đang xem task cha
+        if (task && task.id === parentTaskId) {
+          setHistory([
+            {
+              id: historyRef.key as string,
+              ...historyEntry,
+            },
+            ...history,
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error("Error updating parent task progress:", error);
+    }
+  };
+
   useEffect(() => {
     const fetchTaskData = async () => {
       if (!user || !projectId || !taskId) return
@@ -205,6 +270,27 @@ export default function TaskDetailPage() {
           }))
 
           setChildTasks(childTasksList)
+
+          // Kiểm tra nếu task này không có percentDone được thiết lập từ trước
+          // hoặc nếu có percentDone khác với giá trị tính toán từ các task con
+          // thì cập nhật percentDone dựa trên task con
+          if (childTasksList.length > 0) {
+            const calculatedPercent = calculatePercentDone(childTasksList);
+            if (taskData.percentDone === undefined || taskData.percentDone !== calculatedPercent) {
+              const taskRef = ref(database, `tasks/${taskId}`);
+              await update(taskRef, {
+                percentDone: calculatedPercent,
+                updatedAt: new Date().toISOString()
+              });
+
+              // Cập nhật task trong state
+              setTask({
+                ...taskData,
+                percentDone: calculatedPercent,
+                updatedAt: new Date().toISOString()
+              });
+            }
+          }
         }
 
         setUsers(usersData)
@@ -622,7 +708,7 @@ export default function TaskDetailPage() {
                   </div>
                 </div>
               )}
-              
+
               {task.gitCommitId && (
                 <div className="flex items-center col-span-1 sm:col-span-2">
                   <GitCommit className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
@@ -687,6 +773,7 @@ export default function TaskDetailPage() {
                           <th className="px-4 py-2 text-left text-sm font-medium">Title</th>
                           <th className="px-4 py-2 text-left text-sm font-medium">Status</th>
                           <th className="px-4 py-2 text-left text-sm font-medium">Assigned To</th>
+                          <th className="px-4 py-2 text-left text-sm font-medium">Progress</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -717,19 +804,34 @@ export default function TaskDetailPage() {
                                     }
 
                                     return (
-                                      <div
-                                        key={userId}
-                                        className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-muted"
-                                        title={users[userId]?.displayName || "Loading user..."}
-                                      >
-                                        {users[userId]?.displayName?.charAt(0) || "?"}
+                                      <div key={userId} className="flex items-center gap-2">
+                                        <div
+                                          className="h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-muted"
+                                          title={users[userId]?.displayName || "Loading user..."}
+                                        >
+                                          {users[userId]?.displayName?.charAt(0) || "?"}
+                                        </div>
+                                        <span className="text-sm font-medium">
+                                          {users[userId]?.displayName || "Loading user..."}
+                                        </span>
                                       </div>
                                     );
                                   })}
+
                                 </div>
                               ) : (
                                 <span className="text-sm text-muted-foreground italic">Unassigned</span>
                               )}
+                            </td>
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-2">
+                                {childTask.percentDone !== undefined && (
+                                  <div className="flex items-center col-span-1 sm:col-span-2">
+                                    <Clock className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
+                                    <span className="text-xs ml-2">{childTask.percentDone}%</span>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

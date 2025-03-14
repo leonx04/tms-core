@@ -46,7 +46,7 @@ export type Task = {
   createdBy: string
   createdAt: string
   updatedAt: string
-  dueDate?: string
+  dueDate?: string | null
   percentDone: number
   estimatedTime?: number
   parentTaskId?: string

@@ -170,11 +170,14 @@ export default function EditTaskPage() {
         taskId,
         userId: user.uid,
         timestamp: new Date().toISOString(),
-        changes: Object.entries(updates).map(([field, newValue]) => ({
-          field,
-          oldValue: task[field as keyof Task],
-          newValue,
-        })),
+        changes: Object.entries(updates).map(([field, newValue]) => {
+          const oldValue = task[field as keyof Task];
+          return {
+            field,
+            oldValue: oldValue !== undefined ? oldValue : null,
+            newValue: newValue !== undefined ? newValue : null,
+          };
+        }),
         comment: "Task updated",
       })
 

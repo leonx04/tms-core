@@ -412,7 +412,7 @@ export default function EditTaskPage() {
                   {tags.map((tag, index) => (
                     <div
                       key={index}
-                      className="flex items-center bg-gray-200 px-2 py-1 rounded-full text-sm"
+                      className="flex items-center border border-spacing-3 px-2 py-1 rounded-full text-sm"
                     >
                       <span>{tag}</span>
                       <button

@@ -44,6 +44,8 @@ export default function EditTaskPage() {
   const [percentDone, setPercentDone] = useState(0)
   const [estimatedTime, setEstimatedTime] = useState<number | undefined>(undefined)
   const [assignedTo, setAssignedTo] = useState<string[]>([])
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState<string>("")
   const [availableMembers, setAvailableMembers] = useState<Record<string, any>>({})
 
   useEffect(() => {
@@ -83,6 +85,7 @@ export default function EditTaskPage() {
         setPercentDone(taskData.percentDone)
         setEstimatedTime(taskData.estimatedTime ?? undefined)
         setAssignedTo(taskData.assignedTo || [])
+        setTags(taskData.tags ?? [])
 
         // Fetch project details
         const projectRef = ref(database, `projects/${projectId}`)
@@ -159,6 +162,7 @@ export default function EditTaskPage() {
         percentDone,
         estimatedTime: estimatedTime !== undefined ? estimatedTime : null,
         assignedTo,
+        tags,
         updatedAt: new Date().toISOString(),
       }
 
@@ -171,12 +175,12 @@ export default function EditTaskPage() {
         userId: user.uid,
         timestamp: new Date().toISOString(),
         changes: Object.entries(updates).map(([field, newValue]) => {
-          const oldValue = task[field as keyof Task];
+          const oldValue = task[field as keyof Task]
           return {
             field,
             oldValue: oldValue !== undefined ? oldValue : null,
             newValue: newValue !== undefined ? newValue : null,
-          };
+          }
         }),
         comment: "Task updated",
       })
@@ -365,7 +369,9 @@ export default function EditTaskPage() {
                   min={0}
                   step={0.5}
                   value={estimatedTime || ""}
-                  onChange={(e) => setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)}
+                  onChange={(e) =>
+                    setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)
+                  }
                   disabled={isSaving}
                   className="w-full"
                 />
@@ -397,6 +403,50 @@ export default function EditTaskPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Phần Tags: Nhập từng tag một */}
+              <div className="space-y-4 md:col-span-2">
+                <label htmlFor="tagInput" className="block text-sm font-medium">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center bg-gray-200 px-2 py-1 rounded-full text-sm"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setTags(tags.filter((t) => t !== tag))
+                        }
+                        className="ml-2 text-red-500"
+                        disabled={isSaving}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <Input
+                  id="tagInput"
+                  placeholder="Nhập tag và nhấn Enter"
+                  value={tagInput}
+                  onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && tagInput.trim() !== "") {
+                      e.preventDefault()
+                      if (!tags.includes(tagInput.trim())) {
+                        setTags([...tags, tagInput.trim()])
+                      }
+                      setTagInput("")
+                    }
+                  }}
+                  disabled={isSaving}
+                  className="w-full mt-2"
+                />
+              </div>
             </div>
 
             <div className="flex justify-end space-x-4 pt-4 border-t border-border">
@@ -416,4 +466,3 @@ export default function EditTaskPage() {
     </div>
   )
 }
-

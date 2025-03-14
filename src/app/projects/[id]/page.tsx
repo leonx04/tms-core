@@ -16,6 +16,7 @@ import {
   ArrowUpDown,
   Calendar,
   ChevronDown,
+  ChevronRight,
   CornerDownRight,
   Filter,
   Grid,
@@ -117,25 +118,49 @@ export default function ProjectDetailPage() {
     fetchProjectData()
   }, [user, projectId, router])
 
-  const filteredTasks = tasks.filter((task) => {
-    // Apply status filter
+  // Lọc các task theo status và type trước
+  const baseFilteredTasks = tasks.filter((task) => {
     if (statusFilter && task.status !== statusFilter) {
       return false
     }
-
-    // Apply type filter
     if (typeFilter && task.type !== typeFilter) {
       return false
     }
-
-    // Apply search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      return task.title.toLowerCase().includes(query) || task.description.toLowerCase().includes(query)
-    }
-
     return true
   })
+
+  // Cải tiến logic tìm kiếm: loại bỏ khoảng trắng thừa và đảm bảo nếu task hoặc task con phù hợp sẽ được hiển thị
+  let filteredTasks = baseFilteredTasks
+  if (searchQuery.trim() !== "") {
+    const trimmedQuery = searchQuery.trim().toLowerCase()
+
+    // Xây dựng children map dựa trên các task đã lọc
+    const childrenMap: Record<string, Task[]> = {}
+    baseFilteredTasks.forEach(task => {
+      const parentId = task.parentTaskId || ''
+      if (!childrenMap[parentId]) childrenMap[parentId] = []
+      childrenMap[parentId].push(task)
+    })
+
+    const taskMatchesSearch = (task: Task) => {
+      return task.title.trim().toLowerCase().includes(trimmedQuery) ||
+             task.description.trim().toLowerCase().includes(trimmedQuery)
+    }
+
+    const hasDescendantMatching = (task: Task): boolean => {
+      const children = childrenMap[task.id] || []
+      for (const child of children) {
+        if (taskMatchesSearch(child) || hasDescendantMatching(child)) {
+          return true
+        }
+      }
+      return false
+    }
+
+    filteredTasks = baseFilteredTasks.filter(task => {
+      return taskMatchesSearch(task) || hasDescendantMatching(task)
+    })
+  }
 
   const userRoles = user && project?.members && project.members[user.uid] ? project.members[user.uid].roles : []
 
@@ -166,6 +191,7 @@ export default function ProjectDetailPage() {
   const findChildTasks = (taskId: string, tasks: Task[]) => {
     return tasks.filter(task => task.parentTaskId === taskId);
   };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -410,80 +436,83 @@ export default function ProjectDetailPage() {
         ) : viewMode === "list" ? (
           <Card className="shadow-modern animate-fadeIn overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full table-vercel">
+              {/* Sử dụng "table-fixed" để cố định chiều rộng cột */}
+              <table className="w-full table-fixed table-vercel">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="px-4 py-3 text-left text-sm font-medium">
-                      <div className="flex items-center">
-                        Title <ArrowUpDown className="ml-1 h-3 w-3 text-muted-foreground" />
-                      </div>
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Priority</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Assigned To</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Due Date</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Title</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Priority</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[200px] truncate">Assigned To</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Due Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/10">
                   {(() => {
-                    const { taskMap, rootTasks } = groupTasksByParent(filteredTasks);
-
+                    const { rootTasks } = groupTasksByParent(filteredTasks);
+                    // Nếu có tìm kiếm, tự động mở rộng tất cả các task để hiển thị task con
+                    const autoExpand = searchQuery.trim() !== "";
                     const renderTaskRow = (task: Task, level: number = 0): JSX.Element => {
                       const childTasks = findChildTasks(task.id, filteredTasks);
                       const hasChildren = childTasks.length > 0;
-                      const isExpanded = expandedTasks[task.id];
+                      // Sử dụng autoExpand khi tìm kiếm
+                      const isExpanded = autoExpand ? true : expandedTasks[task.id];
 
                       return (
                         <React.Fragment key={task.id}>
-                          <tr key={task.id} className="hover:bg-muted/30 transition-colors">
+                          <tr className="hover:bg-muted/30 transition-colors">
                             <td className="px-4 py-3">
                               <div className="flex items-center">
-                                <div style={{ width: `${level * 20}px` }} />
-                                {hasChildren && (
+                                {/* Render vertical connectors cho mỗi cấp */}
+                                {Array.from({ length: level }).map((_, index) => (
+                                  <div key={index} className="flex items-center mr-2">
+                                    <div className="w-0.5 h-6 bg-gray-300"></div>
+                                  </div>
+                                ))}
+                                {hasChildren ? (
                                   <button
                                     onClick={(e) => {
-                                      e.preventDefault();
-                                      toggleTaskExpansion(task.id);
+                                      if (!autoExpand) {
+                                        e.preventDefault();
+                                        toggleTaskExpansion(task.id);
+                                      }
                                     }}
                                     className="mr-2 focus:outline-none"
                                   >
                                     {isExpanded ? (
                                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
                                     ) : (
-                                      <ChevronDown className="h-4 w-4 text-muted-foreground transform -rotate-90" />
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                     )}
                                   </button>
+                                ) : (
+                                  <div className="w-4 mr-2"></div>
                                 )}
-
-                                {level > 0 && (
-                                  <div className="text-muted-foreground mr-2">
-                                    <CornerDownRight />
-                                  </div>
-                                )}
-
                                 <Link
                                   href={`/projects/${projectId}/tasks/${task.id}`}
-                                  className="hover:text-primary transition-colors"
+                                  className="hover:text-primary transition-colors block truncate"
                                 >
                                   {task.title}
                                 </Link>
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <Badge className={getTypeColor(task.type)}>
+                            <td className="px-4 py-3 w-[150px] truncate">
+                              <Badge className={`${getTypeColor(task.type)} truncate`}>
                                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3">
-                              <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
+                            <td className="px-4 py-3 w-[150px] truncate">
+                              <Badge className={`${getStatusColor(task.status)} truncate`}>
+                                {getStatusLabel(task.status)}
+                              </Badge>
                             </td>
-                            <td className="px-4 py-3">
-                              <Badge className={getPriorityColor(task.priority)}>
+                            <td className="px-4 py-3 w-[150px] truncate">
+                              <Badge className={`${getPriorityColor(task.priority)} truncate`}>
                                 {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 w-[200px] truncate">
                               <div className="flex -space-x-2">
                                 {task.assignedTo && task.assignedTo.length > 0 ? (
                                   task.assignedTo.map((userId) => (
@@ -496,15 +525,15 @@ export default function ProjectDetailPage() {
                                     </div>
                                   ))
                                 ) : (
-                                  <span className="text-sm text-muted-foreground">Unassigned</span>
+                                  <span className="text-sm text-muted-foreground truncate">Unassigned</span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-4 py-3 text-sm w-[150px] truncate">
                               {task.dueDate ? (
-                                <div className="flex items-center">
+                                <div className="flex items-center truncate">
                                   <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                                  {formatDate(task.dueDate)}
+                                  <span className="truncate">{formatDate(task.dueDate)}</span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
@@ -529,20 +558,20 @@ export default function ProjectDetailPage() {
                 <Card className="h-full shadow-modern card-hover transition-all animate-fadeIn">
                   <div className="p-4">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium line-clamp-1">{task.title}</h3>
-                      <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
+                      <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
+                      <Badge className={`${getStatusColor(task.status)} truncate`}>{getStatusLabel(task.status)}</Badge>
                     </div>
 
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2 truncate">
                       {task.description || "No description provided"}
                     </p>
 
                     <div className="flex flex-wrap gap-2 mb-3">
-                      <Badge className={getTypeColor(task.type)}>
+                      <Badge className={`${getTypeColor(task.type)} truncate`}>
                         {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
                       </Badge>
 
-                      <Badge className={getPriorityColor(task.priority)}>
+                      <Badge className={`${getPriorityColor(task.priority)} truncate`}>
                         {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                       </Badge>
                     </div>
@@ -560,12 +589,12 @@ export default function ProjectDetailPage() {
                             </div>
                           ))
                         ) : (
-                          <span className="text-xs text-muted-foreground">Unassigned</span>
+                          <span className="text-xs text-muted-foreground truncate">Unassigned</span>
                         )}
                       </div>
 
                       {task.dueDate && (
-                        <div className="flex items-center text-xs text-muted-foreground">
+                        <div className="flex items-center text-xs text-muted-foreground truncate">
                           <Calendar className="h-3 w-3 mr-1" />
                           {formatDate(task.dueDate)}
                         </div>
@@ -574,7 +603,7 @@ export default function ProjectDetailPage() {
                         <div className="flex items-center col-span-1 sm:col-span-2">
                           <Clock className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
                           <span className="text-sm text-muted-foreground">Progress:</span>
-                          <span className="text-xs ml-2">{task.percentDone}%</span>
+                          <span className="text-xs ml-2 truncate">{task.percentDone}%</span>
                         </div>
                       )}
                     </div>
@@ -588,4 +617,3 @@ export default function ProjectDetailPage() {
     </div>
   )
 }
-

@@ -2,28 +2,28 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { ref, get, set, push, update, query, orderByChild, equalTo } from "firebase/database"
-import { database } from "@/lib/firebase"
-import { useAuth } from "@/contexts/auth-context"
+import Header from "@/components/layout/header"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit, Clock, Calendar, User, MessageSquare, GitCommit, ChevronRight, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase"
+import { formatTextWithLinks } from "@/lib/format-text-with-links"
 import {
   formatDate,
   formatDateTime,
-  getStatusColor,
   getPriorityColor,
+  getStatusColor,
+  getStatusLabel,
   getTypeColor,
   TASK_STATUS,
-  getStatusLabel,
 } from "@/lib/utils"
-import { formatTextWithLinks } from "@/lib/format-text-with-links"
-import Header from "@/components/layout/header"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Badge } from "@/components/ui/badge"
-import type { Task, User as FirebaseUser, Comment, TaskHistory } from "@/types"
+import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
+import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
+import { ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit, ExternalLink, GitCommit, MessageSquare, User } from 'lucide-react'
+import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null)
@@ -595,7 +595,34 @@ export default function TaskDetailPage() {
                   <span className="text-sm ml-2">{task.estimatedTime} hours</span>
                 </div>
               )}
+              {task.percentDone !== undefined && (
+                <div className="flex items-center col-span-1 sm:col-span-2">
+                  <Clock className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
+                  <span className="text-sm text-muted-foreground">Progress:</span>
+                  <div className="ml-2 w-full max-w-xs bg-muted rounded-full h-2.5 dark:bg-muted overflow-hidden">
+                    <div
+                      className="bg-primary h-2.5 rounded-full"
+                      style={{ width: `${task.percentDone}%` }}
+                      title={`${task.percentDone}% complete`}
+                    ></div>
+                  </div>
+                  <span className="text-xs ml-2">{task.percentDone}%</span>
+                </div>
+              )}
 
+              {task.tags && task.tags.length > 0 && (
+                <div className="flex items-center col-span-1 sm:col-span-2">
+                  <span className="text-sm text-muted-foreground mr-2">Tags:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {task.tags.map((tag, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {task.gitCommitId && (
                 <div className="flex items-center col-span-1 sm:col-span-2">
                   <GitCommit className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />

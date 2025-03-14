@@ -2,605 +2,471 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
+/* --- Base Styles & Variables --- */
+@layer base {
+  /* Biến toàn cục cho Light Mode */
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 92%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 92%;
+    --muted-foreground: 0 0% 20%;
+    --accent: 0 0% 92%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 100% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 80%;
+    --input: 0 0% 80%;
+    --ring: 0 0% 0%;
+    --chart-1: 12 85% 55%;
+    --chart-2: 173 68% 35%;
+    --chart-3: 197 47% 20%;
+    --chart-4: 43 84% 60%;
+    --chart-5: 27 97% 60%;
+    --radius: 0.5rem;
+    --sidebar-background: 0 0% 96%;
+    --sidebar-foreground: 240 5.3% 20%;
+    --sidebar-primary: 240 5.9% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 90%;
+    --sidebar-accent-foreground: 240 5.9% 0%;
+    --sidebar-border: 220 13% 80%;
+    --sidebar-ring: 217.2 91.2% 50%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+  }
+  
+  /* Biến toàn cục cho Dark Mode */
+  .dark {
+    --background: 240 10% 0%;
+    --foreground: 0 0% 100%;
+    --card: 240 10% 3%;
+    --card-foreground: 0 0% 100%;
+    --popover: 240 10% 3%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 240 5.9% 0%;
+    --secondary: 240 3.7% 20%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 240 3.7% 20%;
+    --muted-foreground: 240 5% 90%;
+    --accent: 240 3.7% 20%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 0%;
+    --border: 240 3.7% 30%;
+    --input: 240 3.7% 30%;
+    --ring: 240 4.9% 90%;
+    --sidebar-background: 240 5.9% 0%;
+    --sidebar-foreground: 240 4.8% 100%;
+    --sidebar-primary: 224.3 76.3% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 25%;
+    --sidebar-accent-foreground: 240 4.8% 100%;
+    --sidebar-border: 240 3.7% 25%;
+    --sidebar-ring: 217.2 91.2% 70%;
+  }
+  
+  /* Reset & Base Rules */
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    @apply bg-background text-foreground;
+  }
 }
 
+/* --- Utilities --- */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
 }
 
-@layer base {
-  :root {
-    /* Light mode với độ tương phản cao hơn */
-    --background: 0 0% 100%;
-    --foreground: 0 0% 0%; /* Tối hơn (đen hoàn toàn) */
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 0%; /* Tối hơn */
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%; /* Tối hơn */
-    --primary: 0 0% 0%; /* Tối hơn */
-    --primary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-    --secondary: 0 0% 92%; /* Sáng hơn một chút */
-    --secondary-foreground: 0 0% 0%; /* Tối hơn */
-    --muted: 0 0% 92%; /* Sáng hơn một chút */
-    --muted-foreground: 0 0% 20%; /* Tối hơn để dễ đọc */
-    --accent: 0 0% 92%; /* Sáng hơn một chút */
-    --accent-foreground: 0 0% 0%; /* Tối hơn */
-    --destructive: 0 100% 50%; /* Đỏ hơn và sáng hơn */
-    --destructive-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-    --border: 0 0% 80%; /* Đậm hơn */
-    --input: 0 0% 80%; /* Đậm hơn */
-    --ring: 0 0% 0%; /* Tối hơn */
-    --chart-1: 12 85% 55%; /* Đậm hơn */
-    --chart-2: 173 68% 35%; /* Đậm hơn */
-    --chart-3: 197 47% 20%; /* Đậm hơn */
-    --chart-4: 43 84% 60%; /* Đậm hơn */
-    --chart-5: 27 97% 60%; /* Đậm hơn */
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 96%;
-    --sidebar-foreground: 240 5.3% 20%; /* Tối hơn */
-    --sidebar-primary: 240 5.9% 0%; /* Tối hơn */
-    --sidebar-primary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-    --sidebar-accent: 240 4.8% 90%;
-    --sidebar-accent-foreground: 240 5.9% 0%; /* Tối hơn */
-    --sidebar-border: 220 13% 80%; /* Đậm hơn */
-    --sidebar-ring: 217.2 91.2% 50%; /* Đậm hơn */
-    --success: 142 76% 36%; /* Xanh lá cây đậm hơn */
-    --success-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-    --warning: 38 92% 50%; /* Vàng đậm hơn */
-    --warning-foreground: 0 0% 0%; /* Đen hoàn toàn */
+/* --- Components & Custom Styles --- */
+@layer components {
+  /* --- Form Elements --- */
+  input,
+  select,
+  textarea {
+    @apply border-2 border-input;
+  }
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply ring-2 ring-primary/80 border-primary;
+  }
+  button,
+  .btn {
+    @apply font-medium;
+  }
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+  label {
+    @apply font-medium text-foreground;
   }
   
-  .dark {
-    /* Dark mode với độ tương phản cao hơn */
-    --background: 240 10% 0%; /* Đen hơn */
-    --foreground: 0 0% 100%; /* Trắng hoàn toàn */
-
-    --card: 240 10% 3%; /* Tối hơn */
-    --card-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-
-    --popover: 240 10% 3%; /* Tối hơn */
-    --popover-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-
-    --primary: 0 0% 100%; /* Trắng hoàn toàn */
-    --primary-foreground: 240 5.9% 0%; /* Đen hoàn toàn */
-
-    --secondary: 240 3.7% 20%; /* Sáng hơn một chút */
-    --secondary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-
-    --muted: 240 3.7% 20%; /* Sáng hơn một chút */
-    --muted-foreground: 240 5% 90%; /* Sáng hơn */
-
-    --accent: 240 3.7% 20%; /* Sáng hơn một chút */
-    --accent-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-
-    --destructive: 0 70% 50%; /* Đỏ sáng hơn */
-    --destructive-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-
-    --success: 142 76% 45%; /* Xanh lá cây sáng hơn */
-    --success-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-
-    --warning: 38 92% 60%; /* Vàng sáng hơn */
-    --warning-foreground: 0 0% 0%; /* Đen hoàn toàn */
-
-    --border: 240 3.7% 30%; /* Sáng hơn */
-    --input: 240 3.7% 30%; /* Sáng hơn */
-    --ring: 240 4.9% 90%; /* Sáng hơn */
-    
-    --sidebar-background: 240 5.9% 0%; /* Tối hơn */
-    --sidebar-foreground: 240 4.8% 100%; /* Sáng hơn */
-    --sidebar-primary: 224.3 76.3% 60%; /* Sáng hơn */
-    --sidebar-primary-foreground: 0 0% 100%; /* Trắng hoàn toàn */
-    --sidebar-accent: 240 3.7% 25%; /* Sáng hơn */
-    --sidebar-accent-foreground: 240 4.8% 100%; /* Sáng hơn */
-    --sidebar-border: 240 3.7% 25%; /* Sáng hơn */
-    --sidebar-ring: 217.2 91.2% 70%; /* Sáng hơn */
+  /* --- Dark Mode Overrides cho một số components --- */
+  .dark .bg-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
   }
-}
-
-@layer base {
-  * {
-    @apply border-border;
+  .dark .border {
+    border-color: rgba(255, 255, 255, 0.2);
   }
-  body {
-    @apply bg-background text-foreground;
+  .dark a {
+    text-decoration-color: rgba(255, 255, 255, 0.4);
   }
-}
-
-/* Cải thiện độ tương phản cho các phần tử form */
-input, select, textarea {
-  @apply border-2 border-input;
-}
-
-input:focus, select:focus, textarea:focus {
-  @apply ring-2 ring-primary/80 border-primary;
-}
-
-/* Cải thiện độ tương phản cho buttons */
-button, .btn {
-  @apply font-medium;
-}
-
-/* Thiết lập focus rings rõ ràng hơn */
-*:focus-visible {
-  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
-}
-
-/* Cải thiện độ tương phản cho labels */
-label {
-  @apply font-medium text-foreground;
-}
-
-/* Dark mode improvements */
-.dark .bg-card {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5); /* Bóng đậm hơn */
-}
-
-.dark .border {
-  border-color: rgba(255, 255, 255, 0.2); /* Đường viền sáng hơn */
-}
-
-.dark a {
-  text-decoration-color: rgba(255, 255, 255, 0.4); /* Màu gạch chân đậm hơn */
-}
-
-/* Cải thiện độ tương phản cho văn bản prose trong dark mode */
-.dark .prose {
-  color: hsl(var(--foreground));
-}
-
-.dark .prose a {
-  color: hsl(var(--primary));
-  text-decoration: underline;
-  text-decoration-thickness: 2px; /* Đường gạch chân dày hơn */
-  text-underline-offset: 2px;
-}
-
-.dark .prose strong {
-  color: hsl(var(--foreground));
-  font-weight: 700; /* Đậm hơn */
-}
-
-.dark .prose code {
-  background-color: hsl(var(--muted));
-  color: hsl(var(--foreground));
-  padding: 0.2em 0.4em;
-  border-radius: 0.25rem;
-  font-weight: 500; /* Đậm hơn */
-}
-
-.dark .prose blockquote {
-  border-color: hsl(var(--border));
-  border-left-width: 4px; /* Đậm hơn */
-  color: hsl(var(--muted-foreground));
-}
-
-/* Custom Scrollbar với độ tương phản cao hơn */
-::-webkit-scrollbar {
-  width: 10px; /* Lớn hơn */
-  height: 10px; /* Lớn hơn */
-}
-
-::-webkit-scrollbar-track {
-  background: hsl(var(--secondary));
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: hsl(var(--muted-foreground) / 0.7); /* Đậm hơn */
-  border-radius: 4px;
-  border: 2px solid hsl(var(--secondary)); /* Thêm viền */
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--primary) / 0.7); /* Đậm hơn */
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+  .dark .prose {
+    color: hsl(var(--foreground));
   }
-  to {
-    opacity: 1;
+  .dark .prose a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 2px;
   }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-@keyframes slideInFromRight {
-  from {
-    transform: translateX(20px);
-    opacity: 0;
+  .dark .prose strong {
+    color: hsl(var(--foreground));
+    font-weight: 700;
   }
-  to {
-    transform: translateX(0);
-    opacity: 1;
+  .dark .prose code {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--foreground));
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-weight: 500;
   }
-}
-
-.animate-slideIn {
-  animation: slideInFromRight 0.3s ease-out;
-}
-
-@keyframes slideInFromBottom {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
+  .dark .prose blockquote {
+    border-color: hsl(var(--border));
+    border-left-width: 4px;
+    color: hsl(var(--muted-foreground));
   }
-  to {
-    transform: translateY(0);
-    opacity: 1;
+  
+  /* --- Custom Scrollbar --- */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
   }
-}
-
-.animate-slideInFromBottom {
-  animation: slideInFromBottom 0.3s ease-out;
-}
-
-/* Card hover effect */
-.card-hover {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Thêm bóng khi hover */
-}
-
-.dark .card-hover:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); /* Bóng đậm hơn trong dark mode */
-}
-
-/* Glass effect với độ tương phản cao hơn */
-.glass {
-  background: rgba(255, 255, 255, 0.15); /* Đậm hơn */
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Thêm viền */
-}
-
-.dark .glass {
-  background: rgba(0, 0, 0, 0.3); /* Đậm hơn */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Thêm viền */
-}
-
-/* Modern shadows */
-.shadow-modern {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.05), 0 4px 8px rgba(0, 0, 0, 0.05), 0 8px 16px
-    rgba(0, 0, 0, 0.05);
-}
-
-.dark .shadow-modern {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.3), 0 4px 8px rgba(0, 0, 0, 0.3), 0 8px 16px
-    rgba(0, 0, 0, 0.3);
-}
-
-.shadow-modern-lg {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(0, 0, 0, 0.06), 0 8px 16px rgba(0, 0, 0, 0.06), 0 16px 32px
-    rgba(0, 0, 0, 0.06);
-}
-
-.dark .shadow-modern-lg {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.4), 0 16px 32px
-    rgba(0, 0, 0, 0.4);
-}
-
-/* Gradient text với độ tương phản cao hơn */
-.gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-blue-500; /* Màu đậm hơn */
-}
-
-.dark .gradient-text {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500; /* Màu sáng hơn cho dark mode */
-}
-
-/* Gradient borders với độ tương phản cao hơn */
-.gradient-border {
-  position: relative;
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.gradient-border::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* Vercel-like button styles */
-.btn-vercel {
-  @apply bg-foreground text-background hover:bg-foreground/90 transition-colors;
-}
-
-.dark .btn-vercel {
-  @apply bg-background text-foreground hover:bg-background/90;
-}
-
-/* Vercel-like card styles */
-.card-vercel {
-  @apply bg-card shadow-modern rounded-lg overflow-hidden;
-  border: 1px solid hsl(var(--border) / 0.1);
-}
-
-.dark .card-vercel {
-  border: 1px solid hsl(var(--border) / 0.1);
-}
-
-/* Vercel-like input styles */
-.input-vercel {
-  @apply bg-background border-0 shadow-sm focus:ring-2 focus:ring-primary/10 transition-all;
-}
-
-/* Vercel-like table styles */
-.table-vercel {
-  @apply w-full;
-}
-
-.table-vercel th {
-  @apply text-left text-sm font-medium text-muted-foreground px-4 py-3;
-}
-
-.table-vercel td {
-  @apply px-4 py-3 border-t border-border/10;
-}
-
-.table-vercel tr:hover {
-  @apply bg-muted/30;
-}
-
-/* Vercel-like badge styles */
-.badge-vercel {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-
-/* Grid pattern for backgrounds */
-.bg-grid-pattern {
-  background-image: linear-gradient(to right, hsl(var(--border) / 0.1) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-
-.dark .bg-grid-pattern {
-  background-image: linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px);
-}
-
-/* Status Colors với độ tương phản cao */
-.status-todo {
-  @apply bg-blue-100 text-blue-800 border-blue-300;
-}
-
-.dark .status-todo {
-  @apply bg-blue-900 text-blue-100 border-blue-700;
-}
-
-.status-in-progress {
-  @apply bg-yellow-100 text-yellow-800 border-yellow-300;
-}
-
-.dark .status-in-progress {
-  @apply bg-yellow-900 text-yellow-100 border-yellow-700;
-}
-
-.status-resolved {
-  @apply bg-green-100 text-green-800 border-green-300;
-}
-
-.dark .status-resolved {
-  @apply bg-green-900 text-green-100 border-green-700;
-}
-
-.status-closed {
-  @apply bg-gray-100 text-gray-800 border-gray-300;
-}
-
-.dark .status-closed {
-  @apply bg-gray-800 text-gray-100 border-gray-600;
-}
-
-/* Priority Colors với độ tương phản cao */
-.priority-low {
-  @apply bg-blue-50 text-blue-800 border-blue-200;
-}
-
-.dark .priority-low {
-  @apply bg-blue-900 text-blue-50 border-blue-700;
-}
-
-.priority-medium {
-  @apply bg-yellow-50 text-yellow-800 border-yellow-200;
-}
-
-.dark .priority-medium {
-  @apply bg-yellow-900 text-yellow-50 border-yellow-700;
-}
-
-.priority-high {
-  @apply bg-orange-50 text-orange-800 border-orange-200;
-}
-
-.dark .priority-high {
-  @apply bg-orange-900 text-orange-50 border-orange-700;
-}
-
-.priority-critical {
-  @apply bg-red-50 text-red-800 border-red-200;
-}
-
-.dark .priority-critical {
-  @apply bg-red-900 text-red-50 border-red-700;
-}
-
-/* Type Colors với độ tương phản cao */
-.type-bug {
-  @apply bg-red-50 text-red-800 border-red-200;
-}
-
-.dark .type-bug {
-  @apply bg-red-900 text-red-50 border-red-700;
-}
-
-.type-feature {
-  @apply bg-purple-50 text-purple-800 border-purple-200;
-}
-
-.dark .type-feature {
-  @apply bg-purple-900 text-purple-50 border-purple-700;
-}
-
-.type-enhancement {
-  @apply bg-indigo-50 text-indigo-800 border-indigo-200;
-}
-
-.dark .type-enhancement {
-  @apply bg-indigo-900 text-indigo-50 border-indigo-700;
-}
-
-.type-documentation {
-  @apply bg-emerald-50 text-emerald-800 border-emerald-200;
-}
-
-.dark .type-documentation {
-  @apply bg-emerald-900 text-emerald-50 border-emerald-700;
-}
-
-/* Role Colors với độ tương phản cao */
-.role-admin {
-  @apply bg-purple-50 text-purple-800 border-purple-200;
-}
-
-.dark .role-admin {
-  @apply bg-purple-900 text-purple-50 border-purple-700;
-}
-
-.role-dev {
-  @apply bg-blue-50 text-blue-800 border-blue-200;
-}
-
-.dark .role-dev {
-  @apply bg-blue-900 text-blue-50 border-blue-700;
-}
-
-.role-tester {
-  @apply bg-green-50 text-green-800 border-green-200;
-}
-
-.dark .role-tester {
-  @apply bg-green-900 text-green-50 border-green-700;
-}
-
-.role-documentWriter {
-  @apply bg-amber-50 text-amber-800 border-amber-200;
-}
-
-.dark .role-documentWriter {
-  @apply bg-amber-900 text-amber-50 border-amber-700;
-}
-
-/* Styles cho badges/tags */
-.status-badge, .priority-badge, .type-badge, .role-badge {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border;
-}
-
-/* Tăng cường độ tương phản bằng cách thêm viền */
-.status-todo, .status-in-progress, .status-resolved, .status-closed,
-.priority-low, .priority-medium, .priority-high, .priority-critical,
-.type-bug, .type-feature, .type-enhancement, .type-documentation,
-.role-admin, .role-dev, .role-tester, .role-documentWriter {
-  @apply border border-solid;
-}
-
-/* Tăng cường độ tương phản bằng cách thêm icons */
-.status-todo::before,
-.status-in-progress::before,
-.status-resolved::before,
-.status-closed::before,
-.priority-low::before,
-.priority-medium::before,
-.priority-high::before,
-.priority-critical::before,
-.type-bug::before,
-.type-feature::before,
-.type-enhancement::before,
-.type-documentation::before {
-  @apply mr-1 inline-block w-2 h-2 rounded-full;
-  content: "";
-}
-
-.status-todo::before {
-  @apply bg-blue-500;
-}
-
-.status-in-progress::before {
-  @apply bg-yellow-500;
-}
-
-.status-resolved::before {
-  @apply bg-green-500;
-}
-
-.status-closed::before {
-  @apply bg-gray-500;
-}
-
-.priority-low::before {
-  @apply bg-blue-500;
-}
-
-.priority-medium::before {
-  @apply bg-yellow-500;
-}
-
-.priority-high::before {
-  @apply bg-orange-500;
-}
-
-.priority-critical::before {
-  @apply bg-red-500;
-}
-
-.type-bug::before {
-  @apply bg-red-500;
-}
-
-.type-feature::before {
-  @apply bg-purple-500;
-}
-
-.type-enhancement::before {
-  @apply bg-indigo-500;
-}
-
-.type-documentation::before {
-  @apply bg-emerald-500;
-}
-
-/* Đảm bảo text không bị mờ */
-.status-badge, .priority-badge, .type-badge, .role-badge {
-  @apply font-semibold;
-}
-
-/* Khi các badge nhỏ hơn, tăng kích thước font */
-@media (max-width: 640px) {
-  .status-badge, .priority-badge, .type-badge, .role-badge {
-    @apply text-xs py-1 px-3;
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--secondary));
+    border-radius: 4px;
   }
-}
-
-/* Hiệu ứng hover cho các badge */
-.status-badge:hover, .priority-badge:hover, .type-badge:hover, .role-badge:hover {
-  @apply opacity-90 shadow-sm;
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.7);
+    border-radius: 4px;
+    border: 2px solid hsl(var(--secondary));
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.7);
+  }
+  
+  /* --- Animations --- */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  @keyframes slideInFromRight {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  .animate-slideIn {
+    animation: slideInFromRight 0.3s ease-out;
+  }
+  @keyframes slideInFromBottom {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .animate-slideInFromBottom {
+    animation: slideInFromBottom 0.3s ease-out;
+  }
+  
+  /* --- Card & Glass Effects --- */
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  .dark .card-hover:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+  .glass {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  .dark .glass {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* --- Shadows --- */
+  .shadow-modern {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05),
+                0 2px 4px rgba(0, 0, 0, 0.05),
+                0 4px 8px rgba(0, 0, 0, 0.05),
+                0 8px 16px rgba(0, 0, 0, 0.05);
+  }
+  .dark .shadow-modern {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3),
+                0 2px 4px rgba(0, 0, 0, 0.3),
+                0 4px 8px rgba(0, 0, 0, 0.3),
+                0 8px 16px rgba(0, 0, 0, 0.3);
+  }
+  .shadow-modern-lg {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06),
+                0 4px 8px rgba(0, 0, 0, 0.06),
+                0 8px 16px rgba(0, 0, 0, 0.06),
+                0 16px 32px rgba(0, 0, 0, 0.06);
+  }
+  .dark .shadow-modern-lg {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4),
+                0 4px 8px rgba(0, 0, 0, 0.4),
+                0 8px 16px rgba(0, 0, 0, 0.4),
+                0 16px 32px rgba(0, 0, 0, 0.4);
+  }
+  
+  /* --- Gradient Text & Borders --- */
+  .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-blue-500;
+  }
+  .dark .gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500;
+  }
+  .gradient-border {
+    position: relative;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  
+  /* --- Vercel-like Components --- */
+  .btn-vercel {
+    @apply bg-foreground text-background hover:bg-foreground/90 transition-colors;
+  }
+  .dark .btn-vercel {
+    @apply bg-background text-foreground hover:bg-background/90;
+  }
+  .card-vercel {
+    @apply bg-card shadow-modern rounded-lg overflow-hidden;
+    border: 1px solid hsl(var(--border) / 0.1);
+  }
+  .dark .card-vercel {
+    border: 1px solid hsl(var(--border) / 0.1);
+  }
+  .input-vercel {
+    @apply bg-background border-0 shadow-sm focus:ring-2 focus:ring-primary/10 transition-all;
+  }
+  .table-vercel {
+    @apply w-full;
+  }
+  .table-vercel th {
+    @apply text-left text-sm font-medium text-muted-foreground px-4 py-3;
+  }
+  .table-vercel td {
+    @apply px-4 py-3 border-t border-border/10;
+  }
+  .table-vercel tr:hover {
+    @apply bg-muted/30;
+  }
+  .badge-vercel {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  /* --- Grid Pattern Background --- */
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, hsl(var(--border) / 0.1) 1px, transparent 1px),
+                      linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+  .dark .bg-grid-pattern {
+    background-image: linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),
+                      linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px);
+  }
+  
+  /* --- Status Colors --- */
+  .status-todo {
+    @apply bg-blue-100 text-blue-800 border-blue-300;
+  }
+  .dark .status-todo {
+    @apply bg-blue-900 text-blue-100 border-blue-700;
+  }
+  .status-in-progress {
+    @apply bg-yellow-100 text-yellow-800 border-yellow-300;
+  }
+  .dark .status-in-progress {
+    @apply bg-yellow-900 text-yellow-100 border-yellow-700;
+  }
+  .status-resolved {
+    @apply bg-green-100 text-green-800 border-green-300;
+  }
+  .dark .status-resolved {
+    @apply bg-green-900 text-green-100 border-green-700;
+  }
+  .status-closed {
+    @apply bg-gray-100 text-gray-800 border-gray-300;
+  }
+  .dark .status-closed {
+    @apply bg-gray-800 text-gray-100 border-gray-600;
+  }
+  
+  /* --- Priority Colors --- */
+  .priority-low {
+    @apply bg-blue-50 text-blue-800 border-blue-200;
+  }
+  .dark .priority-low {
+    @apply bg-blue-900 text-blue-50 border-blue-700;
+  }
+  .priority-medium {
+    @apply bg-yellow-50 text-yellow-800 border-yellow-200;
+  }
+  .dark .priority-medium {
+    @apply bg-yellow-900 text-yellow-50 border-yellow-700;
+  }
+  .priority-high {
+    @apply bg-orange-50 text-orange-800 border-orange-200;
+  }
+  .dark .priority-high {
+    @apply bg-orange-900 text-orange-50 border-orange-700;
+  }
+  .priority-critical {
+    @apply bg-red-50 text-red-800 border-red-200;
+  }
+  .dark .priority-critical {
+    @apply bg-red-900 text-red-50 border-red-700;
+  }
+  
+  /* --- Type Colors --- */
+  .type-bug {
+    @apply bg-red-50 text-red-800 border-red-200;
+  }
+  .dark .type-bug {
+    @apply bg-red-900 text-red-50 border-red-700;
+  }
+  .type-feature {
+    @apply bg-purple-50 text-purple-800 border-purple-200;
+  }
+  .dark .type-feature {
+    @apply bg-purple-900 text-purple-50 border-purple-700;
+  }
+  .type-enhancement {
+    @apply bg-indigo-50 text-indigo-800 border-indigo-200;
+  }
+  .dark .type-enhancement {
+    @apply bg-indigo-900 text-indigo-50 border-indigo-700;
+  }
+  .type-documentation {
+    @apply bg-emerald-50 text-emerald-800 border-emerald-200;
+  }
+  .dark .type-documentation {
+    @apply bg-emerald-900 text-emerald-50 border-emerald-700;
+  }
+  
+  /* --- Role Colors --- */
+  .role-admin {
+    @apply bg-purple-50 text-purple-800 border-purple-200;
+  }
+  .dark .role-admin {
+    @apply bg-purple-900 text-purple-50 border-purple-700;
+  }
+  .role-dev {
+    @apply bg-blue-50 text-blue-800 border-blue-200;
+  }
+  .dark .role-dev {
+    @apply bg-blue-900 text-blue-50 border-blue-700;
+  }
+  .role-tester {
+    @apply bg-green-50 text-green-800 border-green-200;
+  }
+  .dark .role-tester {
+    @apply bg-green-900 text-green-50 border-green-700;
+  }
+  .role-documentWriter {
+    @apply bg-amber-50 text-amber-800 border-amber-200;
+  }
+  .dark .role-documentWriter {
+    @apply bg-amber-900 text-amber-50 border-amber-700;
+  }
+  
+  /* --- Badges chung & Icon --- */
+  .status-badge,
+  .priority-badge,
+  .type-badge,
+  .role-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-solid font-semibold;
+  }
+  @media (max-width: 640px) {
+    .status-badge,
+    .priority-badge,
+    .type-badge,
+    .role-badge {
+      @apply text-xs py-1 px-3;
+    }
+  }
+  .status-badge:hover,
+  .priority-badge:hover,
+  .type-badge:hover,
+  .role-badge:hover {
+    @apply opacity-90 shadow-sm;
+  }
+  /* Thêm icon nhỏ vào trước nội dung badge */
+  .status-todo::before,
+  .status-in-progress::before,
+  .status-resolved::before,
+  .status-closed::before,
+  .priority-low::before,
+  .priority-medium::before,
+  .priority-high::before,
+  .priority-critical::before,
+  .type-bug::before,
+  .type-feature::before,
+  .type-enhancement::before,
+  .type-documentation::before {
+    @apply mr-1 inline-block w-2 h-2 rounded-full;
+    content: "";
+  }
+  .status-todo::before { @apply bg-blue-500; }
+  .status-in-progress::before { @apply bg-yellow-500; }
+  .status-resolved::before { @apply bg-green-500; }
+  .status-closed::before { @apply bg-gray-500; }
+  .priority-low::before { @apply bg-blue-500; }
+  .priority-medium::before { @apply bg-yellow-500; }
+  .priority-high::before { @apply bg-orange-500; }
+  .priority-critical::before { @apply bg-red-500; }
+  .type-bug::before { @apply bg-red-500; }
+  .type-feature::before { @apply bg-purple-500; }
+  .type-enhancement::before { @apply bg-indigo-500; }
+  .type-documentation::before { @apply bg-emerald-500; }
 }

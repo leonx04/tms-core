@@ -411,7 +411,7 @@ export default function ProjectDetailPage() {
             action={
               <Link href={`/projects/${projectId}/tasks/create`}>
                 <Button className="rounded-lg">
-                  <Plus className="mr-2 h-4 w-4" /> Create Task
+                  <Plus className="mr-2 h-4 w-2" /> Create Task
                 </Button>
               </Link>
             }
@@ -419,20 +419,32 @@ export default function ProjectDetailPage() {
         ) : viewMode === "list" ? (
           <Card className="shadow-modern animate-fadeIn overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full table-fixed table-vercel">
+              <table className="min-w-[900px] table-auto table-vercel">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="px-4 py-3 text-left text-sm font-medium">Title</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Type</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Priority</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium w-[200px] truncate">Assigned To</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium w-[150px] truncate">Due Date</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[200px]">
+                      Title
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
+                      Type
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
+                      Priority
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[150px]">
+                      Assigned To
+                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
+                      Due Date
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/10">
                   {(() => {
-                    // Fixed rendering logic for tasks
+                    // renderTaskRow logic
                     const renderTaskRow = (task: Task, level: number = 0): JSX.Element => {
                       const childTasks = findChildTasks(task.id);
                       const hasChildren = childTasks.length > 0;
@@ -467,30 +479,31 @@ export default function ProjectDetailPage() {
                                 ) : (
                                   <div className="w-6 mr-2"></div>
                                 )}
+                                {/* Bỏ truncate để không cắt ngắn tiêu đề */}
                                 <Link
                                   href={`/projects/${projectId}/tasks/${task.id}`}
-                                  className="hover:text-primary transition-colors block truncate"
+                                  className="hover:text-primary transition-colors block"
                                 >
                                   {task.title}
                                 </Link>
                               </div>
                             </td>
-                            <td className="px-4 py-3 w-[150px] truncate">
-                              <Badge className={`${getTypeColor(task.type)} truncate`}>
+                            <td className="px-4 py-3">
+                              <Badge className={getTypeColor(task.type)}>
                                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3 w-[150px] truncate">
-                              <Badge className={`${getStatusColor(task.status)} truncate`}>
+                            <td className="px-4 py-3">
+                              <Badge className={getStatusColor(task.status)}>
                                 {getStatusLabel(task.status)}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3 w-[150px] truncate">
-                              <Badge className={`${getPriorityColor(task.priority)} truncate`}>
+                            <td className="px-4 py-3">
+                              <Badge className={getPriorityColor(task.priority)}>
                                 {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3 w-[200px] truncate">
+                            <td className="px-4 py-3">
                               <div className="flex -space-x-2">
                                 {task.assignedTo && task.assignedTo.length > 0 ? (
                                   task.assignedTo.map((userId) => (
@@ -503,15 +516,15 @@ export default function ProjectDetailPage() {
                                     </div>
                                   ))
                                 ) : (
-                                  <span className="text-sm text-muted-foreground truncate">Unassigned</span>
+                                  <span className="text-sm text-muted-foreground">Unassigned</span>
                                 )}
                               </div>
                             </td>
-                            <td className="px-4 py-3 text-sm w-[150px] truncate">
+                            <td className="px-4 py-3 text-sm">
                               {task.dueDate ? (
-                                <div className="flex items-center truncate">
+                                <div className="flex items-center">
                                   <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                                  <span className="truncate">{formatDate(task.dueDate)}</span>
+                                  <span>{formatDate(task.dueDate)}</span>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
@@ -523,13 +536,13 @@ export default function ProjectDetailPage() {
                       );
                     };
 
-                    // Render all root tasks first
                     return rootTasks.map(task => renderTaskRow(task));
                   })()}
                 </tbody>
               </table>
             </div>
           </Card>
+
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredTasks.map((task) => (

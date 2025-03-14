@@ -46,7 +46,6 @@ export default function TaskDetailPage() {
   const taskId = params.taskId as string
   const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({});
 
-  // Thêm hàm tính toán percentDone dựa trên task con
   const calculatePercentDone = (tasks: Task[]) => {
     if (!tasks || tasks.length === 0) return 0;
 
@@ -57,26 +56,22 @@ export default function TaskDetailPage() {
     return Math.round(totalPercent / tasks.length);
   };
 
-  // Thêm hàm cập nhật percentDone cho task cha
   const updateParentTaskProgress = async (parentTaskId: string, childTasks: Task[]) => {
     if (!parentTaskId || childTasks.length === 0) return;
 
     try {
       const newPercentDone = calculatePercentDone(childTasks);
 
-      // Cập nhật task cha trong database
       const parentTaskRef = ref(database, `tasks/${parentTaskId}`);
       await update(parentTaskRef, {
         percentDone: newPercentDone,
         updatedAt: new Date().toISOString(),
       });
 
-      // Nếu đang xem task cha, cập nhật state
       if (task && task.id === parentTaskId) {
         setTask(prev => prev ? { ...prev, percentDone: newPercentDone, updatedAt: new Date().toISOString() } : prev);
       }
 
-      // Tạo history entry
       if (user) {
         const historyRef = push(ref(database, "taskHistory"));
         const historyEntry = {
@@ -95,7 +90,6 @@ export default function TaskDetailPage() {
 
         await set(historyRef, historyEntry);
 
-        // Cập nhật history state nếu đang xem task cha
         if (task && task.id === parentTaskId) {
           setHistory([
             {
@@ -271,9 +265,6 @@ export default function TaskDetailPage() {
 
           setChildTasks(childTasksList)
 
-          // Kiểm tra nếu task này không có percentDone được thiết lập từ trước
-          // hoặc nếu có percentDone khác với giá trị tính toán từ các task con
-          // thì cập nhật percentDone dựa trên task con
           if (childTasksList.length > 0) {
             const calculatedPercent = calculatePercentDone(childTasksList);
             if (taskData.percentDone === undefined || taskData.percentDone !== calculatedPercent) {
@@ -283,7 +274,6 @@ export default function TaskDetailPage() {
                 updatedAt: new Date().toISOString()
               });
 
-              // Cập nhật task trong state
               setTask({
                 ...taskData,
                 percentDone: calculatedPercent,

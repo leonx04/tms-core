@@ -81,7 +81,7 @@ export default function EditTaskPage() {
         setPriority(taskData.priority)
         setDueDate(taskData.dueDate ? new Date(taskData.dueDate) : undefined)
         setPercentDone(taskData.percentDone)
-        setEstimatedTime(taskData.estimatedTime)
+        setEstimatedTime(taskData.estimatedTime ?? undefined)
         setAssignedTo(taskData.assignedTo || [])
 
         // Fetch project details
@@ -157,7 +157,7 @@ export default function EditTaskPage() {
         priority,
         dueDate: dueDate ? dueDate.toISOString() : null,
         percentDone,
-        estimatedTime,
+        estimatedTime: estimatedTime !== undefined ? estimatedTime : null,
         assignedTo,
         updatedAt: new Date().toISOString(),
       }

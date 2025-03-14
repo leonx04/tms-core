@@ -48,7 +48,7 @@ export type Task = {
   updatedAt: string
   dueDate?: string | null
   percentDone: number
-  estimatedTime?: number
+  estimatedTime?: number | null
   parentTaskId?: string
   gitCommitId?: string
   tags?: string[]

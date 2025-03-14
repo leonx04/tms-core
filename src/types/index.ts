@@ -8,7 +8,7 @@ export type UserData = {
   packageExpiry: string
   lastActive: string
   preferences: {
-    darkMode: boolean
+    darkMode?: boolean
     emailNotifications: boolean
     inAppNotifications: boolean
   }

@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
-import { useAuth } from "@/contexts/auth-context"
 
 type Theme = "dark" | "light" | "system"
 
@@ -26,16 +25,14 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme)
-  const { userData, updateUserData } = useAuth()
 
   useEffect(() => {
-    // Load theme from user preferences if available
-    if (userData?.preferences?.darkMode) {
-      setTheme("dark")
-    } else if (userData?.preferences?.darkMode === false) {
-      setTheme("light")
+    // Load theme from localStorage if available
+    const storedTheme = localStorage.getItem("theme") as Theme | null
+    if (storedTheme && ["dark", "light", "system"].includes(storedTheme)) {
+      setTheme(storedTheme)
     }
-  }, [userData])
+  }, [])
 
   useEffect(() => {
     const root = window.document.documentElement
@@ -54,15 +51,8 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
     theme,
     setTheme: (newTheme: Theme) => {
       setTheme(newTheme)
-      // Update user preferences in database
-      if (newTheme !== "system" && userData) {
-        updateUserData({
-          preferences: {
-            ...userData.preferences,
-            darkMode: newTheme === "dark",
-          },
-        })
-      }
+      // Store theme in localStorage
+      localStorage.setItem("theme", newTheme)
     },
   }
 
@@ -76,4 +66,3 @@ export const useTheme = () => {
   }
   return context
 }
-

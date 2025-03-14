@@ -4,13 +4,73 @@ import { useState, useEffect, useRef } from "react"
 import { Bell, Check, CheckCheck, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { useNotifications } from "@/hooks/use-notifications"
+import { useAuth } from "@/contexts/auth-context"
 import { formatDistanceToNow } from "date-fns"
+import { ref, onValue, update, remove } from "firebase/database"
+import { database } from "@/lib/firebase"
+
+// Define the notification type
+type NotificationType = {
+  id: string
+  userId: string
+  eventType: string
+  referenceId: string
+  message: string
+  status: string
+  createdAt: string
+  readAt?: string
+}
 
 export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false)
+  const [notifications, setNotifications] = useState<NotificationType[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
+  const [loading, setLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { notifications, unreadCount, loading, markAsRead, markAllAsRead, deleteNotification } = useNotifications()
+  const { user } = useAuth()
+
+  // Fetch notifications from Firebase
+  useEffect(() => {
+    if (!user) {
+      setNotifications([])
+      setUnreadCount(0)
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    const notificationsRef = ref(database, "notifications")
+
+    const unsubscribe = onValue(notificationsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const notificationsData = snapshot.val()
+        const notificationsArray: NotificationType[] = []
+
+        // Convert object to array and filter by current user
+        Object.entries(notificationsData).forEach(([id, data]: [string, any]) => {
+          if (data.userId === user.uid) {
+            notificationsArray.push({
+              id,
+              ...data,
+            })
+          }
+        })
+
+        // Sort by creation date (newest first)
+        notificationsArray.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+        setNotifications(notificationsArray)
+        setUnreadCount(notificationsArray.filter((n) => n.status === "unread").length)
+      } else {
+        setNotifications([])
+        setUnreadCount(0)
+      }
+
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [user])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -26,10 +86,52 @@ export function NotificationDropdown() {
     }
   }, [])
 
-  const handleNotificationClick = (notificationId: string) => {
-    markAsRead(notificationId)
+  // Mark a notification as read
+  const markAsRead = (notificationId: string) => {
+    if (!user) return
+
+    const notificationRef = ref(database, `notifications/${notificationId}`)
+    update(notificationRef, {
+      status: "read",
+      readAt: new Date().toISOString(),
+    })
+      .then(() => {
+        // Update is handled by the onValue listener
+      })
+      .catch((error) => {
+        console.error("Error marking notification as read:", error)
+      })
   }
 
+  // Mark all notifications as read
+  const markAllAsRead = () => {
+    if (!user || notifications.length === 0) return
+
+    const updates: Record<string, any> = {}
+
+    notifications.forEach((notification) => {
+      if (notification.status === "unread") {
+        updates[`notifications/${notification.id}/status`] = "read"
+        updates[`notifications/${notification.id}/readAt`] = new Date().toISOString()
+      }
+    })
+
+    update(ref(database), updates).catch((error) => {
+      console.error("Error marking all notifications as read:", error)
+    })
+  }
+
+  // Delete a notification
+  const deleteNotification = (notificationId: string) => {
+    if (!user) return
+
+    const notificationRef = ref(database, `notifications/${notificationId}`)
+    remove(notificationRef).catch((error) => {
+      console.error("Error deleting notification:", error)
+    })
+  }
+
+  // Get icon based on notification type
   const getNotificationIcon = (eventType: string) => {
     switch (eventType) {
       case "CREATE_TASK":
@@ -60,12 +162,6 @@ export function NotificationDropdown() {
         return (
           <div className="h-8 w-8 rounded-full bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-200 flex items-center justify-center">
             W
-          </div>
-        )
-      case "CLOUDINARY_EVENT":
-        return (
-          <div className="h-8 w-8 rounded-full bg-cyan-100 text-cyan-600 dark:bg-cyan-900 dark:text-cyan-200 flex items-center justify-center">
-            C
           </div>
         )
       default:

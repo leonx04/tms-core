@@ -155,18 +155,16 @@ export default function EditTaskPage() {
         type,
         status,
         priority,
-        dueDate: dueDate ? dueDate.toISOString() : undefined,
+        dueDate: dueDate ? dueDate.toISOString() : null,
         percentDone,
         estimatedTime,
         assignedTo,
         updatedAt: new Date().toISOString(),
       }
 
-      // Update task in database
       const taskRef = ref(database, `tasks/${taskId}`)
       await update(taskRef, updates)
 
-      // Create task history entry
       const historyRef = ref(database, `taskHistory/${taskId}/${Date.now()}`)
       await update(historyRef, {
         taskId,
@@ -182,7 +180,6 @@ export default function EditTaskPage() {
 
       setSuccess("Task updated successfully")
 
-      // Redirect after a short delay
       setTimeout(() => {
         router.push(`/projects/${projectId}/tasks/${taskId}`)
       }, 1500)

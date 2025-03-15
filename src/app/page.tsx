@@ -1,6 +1,5 @@
 "use client"
 
-import Footer from "@/components/layout/footer"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -53,16 +52,16 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
-      
+
 
       <main className="flex-1">
         {/* Hero Section */}
         <section ref={heroRef} className="relative overflow-hidden bg-gradient-to-b from-background to-muted/30 dark:from-background dark:to-muted/10 py-20 md:py-32">
           <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-          
+
           {/* Animated background elements */}
           <div className="absolute inset-0 overflow-hidden">
-            <motion.div 
+            <motion.div
               className="absolute -top-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"
               animate={{
                 x: [0, 20, 0],
@@ -74,7 +73,7 @@ export default function Home() {
                 ease: "easeInOut"
               }}
             />
-            <motion.div 
+            <motion.div
               className="absolute top-1/4 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl"
               animate={{
                 x: [0, -30, 0],
@@ -86,7 +85,7 @@ export default function Home() {
                 ease: "easeInOut"
               }}
             />
-            <motion.div 
+            <motion.div
               className="absolute bottom-0 left-1/3 w-80 h-80 bg-primary/5 rounded-full blur-3xl"
               animate={{
                 x: [0, 40, 0],
@@ -99,7 +98,7 @@ export default function Home() {
               }}
             />
           </div>
-          
+
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-4xl mx-auto text-center">
               <motion.div
@@ -111,8 +110,8 @@ export default function Home() {
                   <Star className="h-3.5 w-3.5 mr-1.5 text-primary" /> Trusted by over 5,000 development teams
                 </Badge>
               </motion.div>
-              
-              <motion.h1 
+
+              <motion.h1
                 className="text-4xl md:text-6xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -120,8 +119,8 @@ export default function Home() {
               >
                 Streamline Your Software Development Workflow
               </motion.h1>
-              
-              <motion.p 
+
+              <motion.p
                 className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-3xl mx-auto"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -130,16 +129,16 @@ export default function Home() {
                 TMC is a comprehensive task management system designed for software development teams to track bugs,
                 develop features, and manage documentation.
               </motion.p>
-              
-              <motion.div 
+
+              <motion.div
                 className="flex flex-col sm:flex-row justify-center gap-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <Link href="/upgrade">
+                <Link href="/login">
                   <Button size="lg" className="w-full sm:w-auto rounded-full shadow-modern group">
-                    Get Started Free 
+                    Get Started Free
                     <motion.div
                       animate={{ x: [0, 5, 0] }}
                       transition={{ duration: 1, repeat: Infinity, repeatType: "reverse" }}
@@ -156,7 +155,7 @@ export default function Home() {
               </motion.div>
             </div>
 
-            <motion.div 
+            <motion.div
               className="mt-16 max-w-6xl mx-auto relative"
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
@@ -166,7 +165,7 @@ export default function Home() {
               <div className="relative bg-card border border-border/40 rounded-xl overflow-hidden shadow-modern-lg">
                 {/* Dashboard Preview SVG */}
                 <img src="/project-demo.jpg" alt="Project List" />
-                
+
                 <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
               </div>
 
@@ -183,73 +182,73 @@ export default function Home() {
             <p className="text-center text-muted-foreground mb-8">
               Trusted by teams from leading companies
             </p>
-            <motion.div 
+            <motion.div
               className="flex flex-wrap justify-center items-center gap-8 md:gap-16"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               transition={{ duration: 0.8 }}
               viewport={{ once: true, margin: "-100px" }}
             >
-              <motion.img 
-                src="https://cdn.simpleicons.org/trello/0079BF" 
-                alt="Trello" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/trello/0079BF"
+                alt="Trello"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/asana/273347" 
-                alt="Asana" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/asana/273347"
+                alt="Asana"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/jira/0052CC" 
-                alt="Jira" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/jira/0052CC"
+                alt="Jira"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/clickup/7B68EE" 
-                alt="ClickUp" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/clickup/7B68EE"
+                alt="ClickUp"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/notion/000000" 
-                alt="Notion" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/notion/000000"
+                alt="Notion"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/github/181717" 
-                alt="GitHub" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/github/181717"
+                alt="GitHub"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/firebase/FFCA28" 
-                alt="Firebase" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/firebase/FFCA28"
+                alt="Firebase"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/slack/4A154B" 
-                alt="Slack" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/slack/4A154B"
+                alt="Slack"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
-              <motion.img 
-                src="https://cdn.simpleicons.org/linear/5E6AD2" 
-                alt="Linear" 
-                className="h-8 w-auto" 
+              <motion.img
+                src="https://cdn.simpleicons.org/linear/5E6AD2"
+                alt="Linear"
+                className="h-8 w-auto"
                 whileHover={{ scale: 1.1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 10 }}
               />
@@ -260,7 +259,7 @@ export default function Home() {
         {/* Features Section */}
         <section id="features" className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -323,7 +322,7 @@ export default function Home() {
         {/* How It Works Section */}
         <section className="py-20 bg-muted/30 dark:bg-muted/10">
           <div className="container mx-auto px-4">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -365,7 +364,7 @@ export default function Home() {
         {/* Product Screenshots Section */}
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -382,7 +381,7 @@ export default function Home() {
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-              <motion.div 
+              <motion.div
                 className="bg-card border border-border rounded-xl overflow-hidden shadow-modern"
                 initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -393,11 +392,11 @@ export default function Home() {
                   <h3 className="text-lg font-semibold">Cloudinary Config</h3>
                 </div>
                 <div className="p-0">
-                <img src="/cloudinary.jpg" alt="Cloudinary Config" />
+                  <img src="/cloudinary.jpg" alt="Cloudinary Config" />
                 </div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="bg-card border border-border rounded-xl overflow-hidden shadow-modern"
                 initial={{ opacity: 0, x: 20 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -408,13 +407,13 @@ export default function Home() {
                   <h3 className="text-lg font-semibold">Task Details</h3>
                 </div>
                 <div className="p-0">
-                <img src="/task-detail.jpg" alt="Task Details" />
+                  <img src="/task-detail.jpg" alt="Task Details" />
                 </div>
               </motion.div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <motion.div 
+              <motion.div
                 className="bg-card border border-border rounded-xl overflow-hidden shadow-modern"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -425,11 +424,11 @@ export default function Home() {
                   <h3 className="text-lg font-semibold">Team Management</h3>
                 </div>
                 <div className="p-0">
-                <img src="/member-setting.jpg" alt="Team Management" />
+                  <img src="/member-setting.jpg" alt="Team Management" />
                 </div>
               </motion.div>
-              
-              <motion.div 
+
+              <motion.div
                 className="bg-card border border-border rounded-xl overflow-hidden shadow-modern"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -440,7 +439,7 @@ export default function Home() {
                   <h3 className="text-lg font-semibold">Webhook support</h3>
                 </div>
                 <div className="p-0">
-                <img src="/webhook.jpg" alt="Webhook support" />
+                  <img src="/webhook.jpg" alt="Webhook support" />
                 </div>
               </motion.div>
             </div>
@@ -450,7 +449,7 @@ export default function Home() {
         {/* Testimonials Section */}
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -495,7 +494,7 @@ export default function Home() {
         {/* Pricing Section */}
         <section id="pricing" className="py-20 bg-muted/30 dark:bg-muted/10">
           <div className="container mx-auto px-4">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -565,7 +564,7 @@ export default function Home() {
         {/* FAQ Section */}
         <section className="py-20 bg-background">
           <div className="container mx-auto px-4">
-            <motion.div 
+            <motion.div
               className="text-center mb-16"
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -619,9 +618,9 @@ export default function Home() {
               <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
                 Join thousands of teams who use TMC to manage their projects efficiently
               </p>
-              <Link href="/upgrade">
+              <Link href="/login">
                 <Button size="lg" variant="secondary" className="rounded-full shadow-modern group">
-                  Get Started Free 
+                  Get Started Free
                   <motion.div
                     animate={{ x: [0, 5, 0] }}
                     transition={{ duration: 1, repeat: Infinity, repeatType: "reverse" }}
@@ -635,19 +634,18 @@ export default function Home() {
         </section>
       </main>
 
-      <Footer />
     </div>
   )
 }
 
-function FeatureCard({ 
-  title, 
-  description, 
-  icon, 
-  delay = 0 
-}: { 
-  title: string; 
-  description: string; 
+function FeatureCard({
+  title,
+  description,
+  icon,
+  delay = 0
+}: {
+  title: string;
+  description: string;
   icon: React.ReactNode;
   delay?: number;
 }) {
@@ -660,7 +658,7 @@ function FeatureCard({
     >
       <Card className="shadow-modern card-hover h-full border border-border/40 transition-all duration-300">
         <CardContent className="p-6">
-          <motion.div 
+          <motion.div
             className="mb-4 bg-primary/5 w-16 h-16 rounded-lg flex items-center justify-center"
             whileHover={{ scale: 1.05, rotate: 5 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -675,26 +673,26 @@ function FeatureCard({
   )
 }
 
-function WorkflowStep({ 
-  number, 
-  title, 
+function WorkflowStep({
+  number,
+  title,
   description,
   delay = 0
-}: { 
-  number: string; 
-  title: string; 
+}: {
+  number: string;
+  title: string;
   description: string;
   delay?: number;
 }) {
   return (
-    <motion.div 
+    <motion.div
       className="flex flex-col items-center text-center"
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay }}
       viewport={{ once: true, margin: "-100px" }}
     >
-      <motion.div 
+      <motion.div
         className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl mb-4"
         whileHover={{ scale: 1.1 }}
         transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -713,10 +711,10 @@ function TestimonialCard({
   role,
   company,
   delay = 0
-}: { 
-  quote: string; 
-  author: string; 
-  role: string; 
+}: {
+  quote: string;
+  author: string;
+  role: string;
   company: string;
   delay?: number;
 }) {
@@ -729,7 +727,7 @@ function TestimonialCard({
     >
       <Card className="shadow-modern h-full border border-border/40">
         <CardContent className="p-6">
-          <motion.div 
+          <motion.div
             className="mb-4 text-primary"
             initial={{ scale: 1 }}
             whileHover={{ scale: 1.1, rotate: 5 }}
@@ -803,8 +801,8 @@ function PricingCard({
           <p className="text-muted-foreground mb-6">{description}</p>
           <ul className="space-y-3 mb-6">
             {features.map((feature, index) => (
-              <motion.li 
-                key={index} 
+              <motion.li
+                key={index}
                 className="flex items-start"
                 initial={{ opacity: 0, x: -10 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -832,7 +830,7 @@ function PricingCard({
 
 function FaqItem({ question, answer }: { question: string; answer: string }) {
   return (
-    <motion.div 
+    <motion.div
       className="border border-border/40 rounded-lg overflow-hidden shadow-sm"
       initial={{ opacity: 0, y: 10 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -842,14 +840,14 @@ function FaqItem({ question, answer }: { question: string; answer: string }) {
       <details className="group">
         <summary className="flex justify-between items-center p-6 cursor-pointer list-none">
           <h3 className="text-lg font-medium">{question}</h3>
-          <motion.div 
+          <motion.div
             className="transition-transform duration-300 group-open:rotate-180"
             whileTap={{ scale: 0.9 }}
           >
             <ChevronDown className="h-5 w-5 text-muted-foreground" />
           </motion.div>
         </summary>
-        <motion.div 
+        <motion.div
           className="px-6 pb-6 pt-0"
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: "auto" }}

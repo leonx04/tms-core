@@ -151,22 +151,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border shadow-sm">
-        <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Link href="/projects">
-              <span className="text-2xl font-bold text-primary">TMS</span>
-              <span className="text-sm text-muted-foreground ml-1">v1</span>
-            </Link>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
-      </header>
-
+      
       <main className="container mx-auto px-6 py-10 max-w-6xl">
         <Link
           href="/projects"

@@ -1,10 +1,12 @@
-import type React from "react"
+import LayoutWrapper from "@/components/layout/layout-wrapper"
+import { ThemeProvider } from "@/components/theme-provider"
+import { AuthProvider } from "@/contexts/auth-context"
+import { Analytics } from "@vercel/analytics/react"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
+import type React from "react"
 import "./globals.css"
-import { AuthProvider } from "@/contexts/auth-context"
-import { ThemeProvider } from "@/components/theme-provider"
-import { Analytics } from "@vercel/analytics/react"
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -16,9 +18,8 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "TMS - Task Management System",
-  description: "A comprehensive task management system for software development teams",
-    generator: 'v0.dev'
+  title: "TMC - Task Management Core",
+  description: "A comprehensive task management for software development teams",
 }
 
 export default function RootLayout({
@@ -30,14 +31,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          <ThemeProvider defaultTheme="system">{children}</ThemeProvider>
+          <ThemeProvider defaultTheme="system">
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </ThemeProvider>
         </AuthProvider>
+        <Analytics />
       </body>
-      <Analytics />
     </html>
   )
 }
-
-
-
-import './globals.css'

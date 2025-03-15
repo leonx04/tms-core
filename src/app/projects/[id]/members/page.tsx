@@ -2,21 +2,20 @@
 
 import type React from "react"
 
-import { useState, useEffect } from "react"
-import { useParams, useRouter } from "next/navigation"
-import Link from "next/link"
-import { ref, get, remove, push, set } from "firebase/database"
-import { database } from "@/lib/firebase"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, UserPlus, Trash2, Shield, Code, TestTube, FileText, AlertCircle, CheckCircle, X, Mail, Info } from 'lucide-react'
-import { formatDate, getRoleColor, getRoleLabel } from "@/lib/utils"
-import Header from "@/components/layout/header"
 import { PageHeader } from "@/components/layout/page-header"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase"
+import { formatDate, getRoleColor, getRoleLabel } from "@/lib/utils"
 import type { Project, User } from "@/types"
+import { get, push, ref, remove, set } from "firebase/database"
+import { AlertCircle, ArrowLeft, CheckCircle, Code, FileText, Info, Mail, Shield, TestTube, Trash2, UserPlus, X } from 'lucide-react'
+import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export default function ProjectMembersPage() {
   const [project, setProject] = useState<Project | null>(null)
@@ -280,7 +279,7 @@ export default function ProjectMembersPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -291,7 +290,7 @@ export default function ProjectMembersPage() {
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Project not found</h2>
@@ -309,7 +308,7 @@ export default function ProjectMembersPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
 
       <main className="container mx-auto px-4 py-8">
         <Link

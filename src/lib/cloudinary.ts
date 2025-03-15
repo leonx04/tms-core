@@ -24,7 +24,7 @@ export const getUploadSignature = (config: CloudinaryConfig, params: Record<stri
   // Combine all parameters that should be signed
   const signatureParams = {
     timestamp,
-    folder: config.folderName || "tms",
+    folder: config.folderName || "TMC",
     ...params,
   }
 
@@ -44,7 +44,7 @@ export const getUploadSignature = (config: CloudinaryConfig, params: Record<stri
     timestamp,
     cloudName: config.cloudName,
     apiKey: config.apiKey,
-    folder: config.folderName || "tms",
+    folder: config.folderName || "TMC",
   }
 }
 

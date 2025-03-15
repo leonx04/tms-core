@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
           packageId,
           packageExpiry: expiryDate.toISOString(),
           subscriptionId: session.subscription,
-          billingCycle,
+          billingCycle, // Lưu chu kỳ thanh toán
           lastPayment: new Date().toISOString(),
         })
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
           subscriptionId: session.subscription,
         })
 
-        console.log(`User ${userId} upgraded to ${packageId} package`)
+        console.log(`User ${userId} upgraded to ${packageId} package with ${billingCycle} billing`)
       }
       break
     }

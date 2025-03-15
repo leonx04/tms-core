@@ -1,18 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { loadStripe } from "@stripe/stripe-js"
-import { ArrowLeft, Check, CreditCard, Shield, Zap, Lock, Users } from "lucide-react"
-import { ref, onValue, update } from "firebase/database"
+import { onValue, ref, update } from "firebase/database"
+import { ArrowLeft, Check, CreditCard, Lock, Shield, Users, Zap } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 
 import { useAuth } from "@/contexts/auth-context"
@@ -30,86 +30,93 @@ export default function UpgradePage() {
   const [success, setSuccess] = useState<string | null>(null)
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly")
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
-  const { user, userData, updateUserData } = useAuth()
+  const { user, userData } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
 
-  // Fetch subscription plans from Firebase
+  // Định nghĩa default plans
+  const defaultPlans: SubscriptionPlan[] = [
+    {
+      id: "basic",
+      name: "Basic",
+      description: "Perfect for individuals or small teams",
+      monthlyPrice: 0,
+      yearlyPrice: 0,
+      features: [
+        `Up to ${PACKAGE_LIMITS.basic} projects`,
+        "Basic task management",
+        "Email notifications",
+        "1 year validity",
+      ],
+      popular: false,
+    },
+    {
+      id: "plus",
+      name: "Plus",
+      description: "Ideal for growing teams",
+      monthlyPrice: 9.99,
+      yearlyPrice: 95.9,
+      features: [
+        `Up to ${PACKAGE_LIMITS.plus} projects`,
+        "Advanced task management",
+        "GitHub integration",
+        "Email & in-app notifications",
+        "1 year validity",
+      ],
+      popular: true,
+    },
+    {
+      id: "premium",
+      name: "Premium",
+      description: "For professional development teams",
+      monthlyPrice: 19.99,
+      yearlyPrice: 191.9,
+      features: [
+        "Unlimited projects",
+        "Full task management suite",
+        "Advanced GitHub integration",
+        "Priority support",
+        "Custom Cloudinary configuration",
+        "1 year validity",
+      ],
+      popular: false,
+    },
+  ]
+
+  // Fetch subscription plans từ Firebase. Nếu chưa đăng nhập, dùng luôn default plans
   useEffect(() => {
+    if (!user) {
+      setPlans(defaultPlans)
+      setLoading(false)
+      return
+    }
+
     const plansRef = ref(database, "subscriptionPlans")
 
-    const unsubscribe = onValue(plansRef, (snapshot) => {
-      if (snapshot.exists()) {
-        const plansData = snapshot.val()
-        const plansArray = Object.keys(plansData).map((key) => ({
-          id: key,
-          ...plansData[key],
-        }))
-        setPlans(plansArray)
-      } else {
-        // Fallback to default plans if none exist in database
-        setPlans([
-          {
-            id: "basic",
-            name: "Basic",
-            description: "Perfect for individuals or small teams",
-            monthlyPrice: 0,
-            yearlyPrice: 0,
-            features: [
-              `Up to ${PACKAGE_LIMITS.basic} projects`,
-              "Basic task management",
-              "Email notifications",
-              "1 year validity",
-            ],
-            popular: false,
-          },
-          {
-            id: "plus",
-            name: "Plus",
-            description: "Ideal for growing teams",
-            monthlyPrice: 9.99,
-            yearlyPrice: 95.9,
-            features: [
-              `Up to ${PACKAGE_LIMITS.plus} projects`,
-              "Advanced task management",
-              "GitHub integration",
-              "Email & in-app notifications",
-              "1 year validity",
-            ],
-            popular: true,
-          },
-          {
-            id: "premium",
-            name: "Premium",
-            description: "For professional development teams",
-            monthlyPrice: 19.99,
-            yearlyPrice: 191.9,
-            features: [
-              "Unlimited projects",
-              "Full task management suite",
-              "Advanced GitHub integration",
-              "Priority support",
-              "Custom Cloudinary configuration",
-              "1 year validity",
-            ],
-            popular: false,
-          },
-        ])
+    const unsubscribe = onValue(
+      plansRef,
+      (snapshot) => {
+        if (snapshot.exists()) {
+          const plansData = snapshot.val()
+          const plansArray = Object.keys(plansData).map((key) => ({
+            id: key,
+            ...plansData[key],
+          }))
+          setPlans(plansArray)
+        } else {
+          setPlans(defaultPlans)
+        }
+        setLoading(false)
+      },
+      (error) => {
+        console.error("Error fetching subscription plans:", error)
+        setPlans(defaultPlans)
+        setLoading(false)
       }
-      setLoading(false)
-    })
+    )
 
     return () => unsubscribe()
-  }, [])
-
-  // Check authentication status
-  useEffect(() => {
-    if (!user && !loading) {
-      // Encrypt the current URL to redirect back after login
-      const encryptedReturnUrl = secureRoutes.encryptRoute("/upgrade")
-      router.push(`/login?returnUrl=${encryptedReturnUrl}`)
-    }
-  }, [user, loading, router])
+  }, [user])
 
   // Handle URL parameters for payment status
   useEffect(() => {
@@ -137,8 +144,10 @@ export default function UpgradePage() {
   }, [toast])
 
   const handleUpgrade = async (packageId: string) => {
+    // Yêu cầu đăng nhập trước khi nâng cấp
     if (!user) {
-      router.push("/login")
+      const encryptedReturnUrl = secureRoutes.encryptRoute("/upgrade")
+      router.push(`/login?returnUrl=${encryptedReturnUrl}`)
       return
     }
 
@@ -147,12 +156,21 @@ export default function UpgradePage() {
     setSuccess(null)
 
     try {
-      // Create a checkout session
+      // Xử lý gói miễn phí không cần gọi API
+      if (packageId === "basic") {
+        await handleFreeUpgrade(packageId)
+        return
+      }
+
+      // Lấy auth token
+      const token = await user.getIdToken()
+
+      // Tạo phiên thanh toán
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${await user.getIdToken()}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           packageId,
@@ -163,23 +181,27 @@ export default function UpgradePage() {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || "Failed to create checkout session")
+        const text = await response.text()
+        let errorMessage
+
+        try {
+          const errorData = JSON.parse(text)
+          errorMessage = errorData.error || "Failed to create checkout session"
+        } catch (e) {
+          console.error("Non-JSON response:", text)
+          errorMessage = "Server error. Please try again later."
+        }
+
+        throw new Error(errorMessage)
       }
 
-      const { sessionId, free } = await response.json()
+      const data = await response.json()
 
-      // If it's a free plan, update directly without Stripe
-      if (free) {
-        await handleFreeUpgrade(packageId)
-        return
-      }
-
-      // Redirect to Stripe Checkout
+      // Chuyển hướng đến Stripe Checkout
       const stripe = await stripePromise
       if (!stripe) throw new Error("Failed to load Stripe")
 
-      const { error } = await stripe.redirectToCheckout({ sessionId })
+      const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId })
 
       if (error) {
         throw new Error(error.message || "Failed to redirect to checkout")
@@ -198,26 +220,22 @@ export default function UpgradePage() {
   }
 
   const handleFreeUpgrade = async (packageId: string) => {
-    if (!user) return
+    if (!user) {
+      const encryptedReturnUrl = secureRoutes.encryptRoute("/upgrade")
+      router.push(`/login?returnUrl=${encryptedReturnUrl}`)
+      return
+    }
 
     try {
-      // Calculate expiry date (1 year from now)
+      const userRef = ref(database, `users/${user.uid}`)
       const expiryDate = new Date()
       expiryDate.setFullYear(expiryDate.getFullYear() + 1)
 
-      // Update user package in database
-      const userRef = ref(database, `users/${user.uid}`)
       await update(userRef, {
         packageId,
         packageExpiry: expiryDate.toISOString(),
         billingCycle,
         lastUpdated: new Date().toISOString(),
-      })
-
-      // Update local state
-      await updateUserData({
-        packageId,
-        packageExpiry: expiryDate.toISOString(),
       })
 
       setSuccess(`Successfully switched to ${packageId.charAt(0).toUpperCase() + packageId.slice(1)} package!`)
@@ -227,7 +245,6 @@ export default function UpgradePage() {
         variant: "default",
       })
 
-      // Redirect to projects page after a delay
       setTimeout(() => {
         router.push("/projects")
       }, 2000)
@@ -245,13 +262,6 @@ export default function UpgradePage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <header className="border-b border-border shadow-sm">
-          <div className="container mx-auto px-6 py-4">
-            <div className="h-8 w-24">
-              <Skeleton className="h-full w-full" />
-            </div>
-          </div>
-        </header>
 
         <main className="container mx-auto px-6 py-10 max-w-7xl">
           <div className="flex flex-col items-center space-y-8">
@@ -284,13 +294,6 @@ export default function UpgradePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border shadow-sm">
-        <div className="container mx-auto px-6 py-4">
-          <Link href="/projects" className="text-2xl font-bold text-primary">
-            TMS <span className="text-sm text-muted-foreground">v1</span>
-          </Link>
-        </div>
-      </header>
 
       <main className="container mx-auto px-6 py-10 max-w-7xl">
         <Link
@@ -347,11 +350,17 @@ export default function UpgradePage() {
                     description={plan.description}
                     features={plan.features}
                     buttonText={
-                      userData?.packageId === plan.id ? "Current Plan" : plan.id === "basic" ? "Downgrade" : "Upgrade"
+                      userData?.packageId === plan.id && userData?.billingCycle === "monthly"
+                        ? "Current Plan"
+                        : plan.id === "basic"
+                          ? "Downgrade"
+                          : "Upgrade"
                     }
                     onClick={() => handleUpgrade(plan.id)}
-                    disabled={userData?.packageId === plan.id || processingPayment}
-                    current={userData?.packageId === plan.id}
+                    disabled={
+                      (userData?.packageId === plan.id && userData?.billingCycle === "monthly") || processingPayment
+                    }
+                    current={userData?.packageId === plan.id && userData?.billingCycle === "monthly"}
                     highlighted={plan.popular}
                     processingPayment={processingPayment}
                   />
@@ -369,11 +378,17 @@ export default function UpgradePage() {
                     description={plan.description}
                     features={plan.features}
                     buttonText={
-                      userData?.packageId === plan.id ? "Current Plan" : plan.id === "basic" ? "Downgrade" : "Upgrade"
+                      userData?.packageId === plan.id && userData?.billingCycle === "yearly"
+                        ? "Current Plan"
+                        : plan.id === "basic"
+                          ? "Downgrade"
+                          : "Upgrade"
                     }
                     onClick={() => handleUpgrade(plan.id)}
-                    disabled={userData?.packageId === plan.id || processingPayment}
-                    current={userData?.packageId === plan.id}
+                    disabled={
+                      (userData?.packageId === plan.id && userData?.billingCycle === "yearly") || processingPayment
+                    }
+                    current={userData?.packageId === plan.id && userData?.billingCycle === "yearly"}
                     highlighted={plan.popular}
                     processingPayment={processingPayment}
                   />
@@ -457,11 +472,10 @@ function PricingCard({
 }) {
   return (
     <Card
-      className={`overflow-hidden transition-all duration-200 ${
-        highlighted
+      className={`overflow-hidden transition-all duration-200 ${highlighted
           ? "border-primary shadow-lg dark:shadow-primary/10 scale-105 z-10"
           : "hover:border-border/80 hover:shadow-md"
-      }`}
+        }`}
     >
       {highlighted && (
         <div className="bg-primary text-primary-foreground text-center py-2 text-sm font-medium">Most Popular</div>
@@ -501,4 +515,3 @@ function PricingCard({
     </Card>
   )
 }
-

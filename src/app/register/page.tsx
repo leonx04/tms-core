@@ -1,6 +1,5 @@
 "use client"
 
-import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -106,7 +105,6 @@ export default function RegisterPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Link>
-        <ThemeToggle />
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
@@ -117,7 +115,7 @@ export default function RegisterPage() {
                 <div className="bg-foreground text-background w-10 h-10 rounded-md flex items-center justify-center font-bold text-xl">
                   T
                 </div>
-                <span className="text-2xl font-bold ml-2">TMS</span>
+                <span className="text-2xl font-bold ml-2">TMC</span>
                 <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
               </div>
             </Link>

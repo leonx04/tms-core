@@ -1,17 +1,16 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { get, push, ref, set } from "firebase/database"
+import { ArrowLeft, GitBranch, Save } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { ref, push, set, get } from "firebase/database"
-import { database } from "@/lib/firebase"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Save, GitBranch } from "lucide-react"
-import Header from "@/components/layout/header"
 
 const projectSchema = z.object({
   name: z.string().min(3, { message: "Project name must be at least 3 characters" }),
@@ -104,7 +103,7 @@ export default function CreateProjectPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
 
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Link

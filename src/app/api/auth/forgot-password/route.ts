@@ -1,8 +1,8 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { sendPasswordResetEmail } from "firebase/auth"
+import { emailTemplates, sendEmail } from "@/lib/email"
 import { auth, database } from "@/lib/firebase"
-import { ref, get } from "firebase/database"
-import { sendEmail, emailTemplates } from "@/lib/email"
+import { sendPasswordResetEmail } from "firebase/auth"
+import { get, ref } from "firebase/database"
+import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Also send a custom email with our template
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password`
 
-    await sendEmail(email, "Reset Your Password - TMS", emailTemplates.resetPassword(resetLink, userName))
+    await sendEmail(email, "Reset Your Password - TMC", emailTemplates.resetPassword(resetLink, userName))
 
     return NextResponse.json({ success: true })
   } catch (error) {

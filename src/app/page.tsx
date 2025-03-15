@@ -1,7 +1,6 @@
 "use client"
 
 import Footer from "@/components/layout/footer"
-import Header from "@/components/layout/header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -54,7 +53,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen overflow-hidden">
-      <Header />
+      
 
       <main className="flex-1">
         {/* Hero Section */}
@@ -128,7 +127,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                TMS is a comprehensive task management system designed for software development teams to track bugs,
+                TMC is a comprehensive task management system designed for software development teams to track bugs,
                 develop features, and manage documentation.
               </motion.p>
               
@@ -275,7 +274,7 @@ export default function Home() {
                 Everything you need to manage projects efficiently
               </h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                TMS provides a comprehensive set of tools to help your team collaborate, track progress, and deliver
+                TMC provides a comprehensive set of tools to help your team collaborate, track progress, and deliver
                 high-quality software on time.
               </p>
             </motion.div>
@@ -376,7 +375,7 @@ export default function Home() {
               <Badge variant="outline" className="mb-4 px-3 py-1 text-sm font-medium rounded-full">
                 Product Tour
               </Badge>
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">See TMS in action</h2>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">See TMC in action</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Explore the key features of our task management system designed for software development teams.
               </p>
@@ -463,27 +462,27 @@ export default function Home() {
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">What our users say</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Don't just take our word for it. Here's what teams using TMS have to say.
+                Don't just take our word for it. Here's what teams using TMC have to say.
               </p>
             </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               <TestimonialCard
-                quote="TMS has transformed how our team manages projects. The GitHub integration is seamless, and the task tracking is intuitive. Highly recommended!"
+                quote="TMC has transformed how our team manages projects. The GitHub integration is seamless, and the task tracking is intuitive. Highly recommended!"
                 author="Sarah Johnson"
                 role="Engineering Manager"
                 company="TechCorp"
                 delay={0}
               />
               <TestimonialCard
-                quote="We've tried many project management tools, but TMS stands out with its developer-focused features. Our productivity has increased by 30% since we started using it."
+                quote="We've tried many project management tools, but TMC stands out with its developer-focused features. Our productivity has increased by 30% since we started using it."
                 author="Michael Chen"
                 role="Lead Developer"
                 company="InnovateSoft"
                 delay={0.2}
               />
               <TestimonialCard
-                quote="The role-based access control in TMS is exactly what we needed. It's easy to onboard new team members and ensure everyone has the right permissions."
+                quote="The role-based access control in TMC is exactly what we needed. It's easy to onboard new team members and ensure everyone has the right permissions."
                 author="Emily Rodriguez"
                 role="Product Owner"
                 company="AgileWorks"
@@ -578,14 +577,14 @@ export default function Home() {
               </Badge>
               <h2 className="text-3xl md:text-4xl font-bold mb-4">Frequently Asked Questions</h2>
               <p className="text-muted-foreground max-w-2xl mx-auto">
-                Find answers to common questions about TMS and how it can help your team.
+                Find answers to common questions about TMC and how it can help your team.
               </p>
             </motion.div>
 
             <div className="max-w-3xl mx-auto space-y-6">
               <FaqItem
-                question="How does TMS differ from other project management tools?"
-                answer="TMS is specifically designed for software development teams with features like GitHub integration, role-based access control, and specialized task tracking for bugs, features, and documentation. Unlike general project management tools, TMS understands the software development lifecycle."
+                question="How does TMC differ from other project management tools?"
+                answer="TMC is specifically designed for software development teams with features like GitHub integration, role-based access control, and specialized task tracking for bugs, features, and documentation. Unlike general project management tools, TMC understands the software development lifecycle."
               />
               <FaqItem
                 question="Can I upgrade or downgrade my plan later?"
@@ -597,10 +596,10 @@ export default function Home() {
               />
               <FaqItem
                 question="How does the GitHub integration work?"
-                answer="TMS connects to your GitHub repositories through webhooks. You can link commits to tasks, track pull requests, and receive notifications about repository events directly in TMS. This keeps your code and tasks in sync."
+                answer="TMC connects to your GitHub repositories through webhooks. You can link commits to tasks, track pull requests, and receive notifications about repository events directly in TMC. This keeps your code and tasks in sync."
               />
               <FaqItem
-                question="Can I export my data from TMS?"
+                question="Can I export my data from TMC?"
                 answer="Yes, you can export your project data, tasks, and reports in various formats including CSV, JSON, and PDF. This makes it easy to create backups or share information with stakeholders."
               />
             </div>
@@ -618,7 +617,7 @@ export default function Home() {
             >
               <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to streamline your workflow?</h2>
               <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
-                Join thousands of teams who use TMS to manage their projects efficiently
+                Join thousands of teams who use TMC to manage their projects efficiently
               </p>
               <Link href="/upgrade">
                 <Button size="lg" variant="secondary" className="rounded-full shadow-modern group">

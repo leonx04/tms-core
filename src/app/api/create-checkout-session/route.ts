@@ -1,14 +1,13 @@
+import { database } from "@/lib/firebase"
+import { auth } from "@/lib/firebase-admin"
+import { get, ref } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
-import { auth } from "@/lib/firebase-admin"
-import { database } from "@/lib/firebase"
-import { ref, get } from "firebase/database"
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2025-02-24.acacia",
 })
-
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
@@ -23,10 +22,20 @@ export async function POST(request: NextRequest) {
     try {
       decodedToken = await auth.verifyIdToken(token)
     } catch (error) {
+      console.error("Token verification error:", error)
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
 
-    const { packageId, billingCycle, userId, email } = await request.json()
+    // Parse request body
+    let body
+    try {
+      body = await request.json()
+    } catch (error) {
+      console.error("JSON parsing error:", error)
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 })
+    }
+
+    const { packageId, billingCycle, userId, email } = body
 
     // Validate required fields
     if (!packageId || !billingCycle || !userId || !email) {
@@ -108,7 +117,7 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `TMS ${packageId.charAt(0).toUpperCase() + packageId.slice(1)} Plan (${
+              name: `TMC ${packageId.charAt(0).toUpperCase() + packageId.slice(1)} Plan (${
                 billingCycle === "monthly" ? "Monthly" : "Yearly"
               })`,
               description: `Subscription to the ${packageId} plan`,

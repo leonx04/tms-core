@@ -2,7 +2,6 @@
 
 import type React from "react"
 
-import Header from "@/components/layout/header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -515,7 +514,7 @@ export default function TaskDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -526,7 +525,7 @@ export default function TaskDetailPage() {
   if (!task) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Task not found</h2>
@@ -544,7 +543,7 @@ export default function TaskDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
 
       <main className="container mx-auto px-4 py-8">
         <Link

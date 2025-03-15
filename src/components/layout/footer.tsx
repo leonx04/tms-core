@@ -11,7 +11,7 @@ export default function Footer() {
               <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground w-8 h-8 rounded-md flex items-center justify-center font-bold text-lg">
                 T
               </div>
-              <span className="text-xl font-bold ml-2">TMS</span>
+              <span className="text-xl font-bold ml-2">TMC</span>
               <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">

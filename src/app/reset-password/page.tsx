@@ -110,7 +110,7 @@ export default function ResetPasswordPage() {
                 <div className="bg-foreground text-background w-10 h-10 rounded-md flex items-center justify-center font-bold text-xl">
                   T
                 </div>
-                <span className="text-2xl font-bold ml-2">TMS</span>
+                <span className="text-2xl font-bold ml-2">TMC</span>
                 <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
               </div>
             </Link>

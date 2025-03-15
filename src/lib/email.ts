@@ -20,7 +20,7 @@ const defaultConfig: EmailConfig = {
     user: process.env.EMAIL_USER || "",
     pass: process.env.EMAIL_PASS || "",
   },
-  from: process.env.EMAIL_FROM || "noreply@tms.com",
+  from: process.env.EMAIL_FROM || "noreply@TMC.com",
 }
 
 // Create a transporter with the configuration
@@ -105,10 +105,10 @@ export const emailTemplates = {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">TMS</div>
+          <div class="logo">TMC</div>
         </div>
         <p>Hi ${userName},</p>
-        <p>We received a request to reset your password for your TMS account. If you didn't make this request, you can safely ignore this email.</p>
+        <p>We received a request to reset your password for your TMC account. If you didn't make this request, you can safely ignore this email.</p>
         <p>To reset your password, click the button below:</p>
         <p style="text-align: center;">
           <a href="${resetLink}" class="button">Reset Password</a>
@@ -116,7 +116,7 @@ export const emailTemplates = {
         <p>Or copy and paste this link into your browser:</p>
         <p>${resetLink}</p>
         <p>This link will expire in 1 hour for security reasons.</p>
-        <p>Thanks,<br>The TMS Team</p>
+        <p>Thanks,<br>The TMC Team</p>
         <div class="footer">
           <p>This is an automated email, please do not reply.</p>
         </div>
@@ -173,17 +173,17 @@ export const emailTemplates = {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">TMS</div>
+          <div class="logo">TMC</div>
         </div>
         <p>Hi ${userName},</p>
-        <p>${inviterName} has invited you to join the project "${projectName}" on TMS.</p>
+        <p>${inviterName} has invited you to join the project "${projectName}" on TMC.</p>
         <p>To accept this invitation and join the project, click the button below:</p>
         <p style="text-align: center;">
           <a href="${inviteLink}" class="button">Join Project</a>
         </p>
         <p>Or copy and paste this link into your browser:</p>
         <p>${inviteLink}</p>
-        <p>Thanks,<br>The TMS Team</p>
+        <p>Thanks,<br>The TMC Team</p>
         <div class="footer">
           <p>This is an automated email, please do not reply.</p>
         </div>
@@ -246,7 +246,7 @@ export const emailTemplates = {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">TMS</div>
+          <div class="logo">TMC</div>
         </div>
         <p>Hi ${userName},</p>
         <p>${assignerName} has assigned you a new task in the project "${projectName}".</p>
@@ -257,7 +257,7 @@ export const emailTemplates = {
         </p>
         <p>Or copy and paste this link into your browser:</p>
         <p>${taskLink}</p>
-        <p>Thanks,<br>The TMS Team</p>
+        <p>Thanks,<br>The TMC Team</p>
         <div class="footer">
           <p>This is an automated email, please do not reply.</p>
         </div>
@@ -321,7 +321,7 @@ export const emailTemplates = {
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">TMS</div>
+          <div class="logo">TMC</div>
         </div>
         <p>Hi ${userName},</p>
         <p>There has been an update to a task in the project "${projectName}".</p>
@@ -333,7 +333,7 @@ export const emailTemplates = {
         </p>
         <p>Or copy and paste this link into your browser:</p>
         <p>${taskLink}</p>
-        <p>Thanks,<br>The TMS Team</p>
+        <p>Thanks,<br>The TMC Team</p>
         <div class="footer">
           <p>This is an automated email, please do not reply.</p>
         </div>

@@ -1,6 +1,5 @@
 "use client"
 
-import Header from "@/components/layout/header"
 import { PageHeader } from "@/components/layout/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -173,7 +172,7 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -184,7 +183,7 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+        
         <div className="container mx-auto px-4 py-8">
           <EmptyState
             icon={<Settings className="h-8 w-8 text-primary" />}
@@ -207,7 +206,7 @@ export default function ProjectDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
 
       <main className="container mx-auto px-4 py-8">
         <PageHeader title={project.name} description={project.description || "No description provided"}>

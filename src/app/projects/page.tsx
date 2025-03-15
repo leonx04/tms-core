@@ -1,22 +1,19 @@
 "use client"
-import React from "react"
-import { useState, useEffect } from "react"
+import { PageHeader } from "@/components/layout/page-header"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { EmptyState } from "@/components/ui/empty-state"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase"
+import { formatDate } from "@/lib/utils"
+import type { Project } from "@/types"
+import { get, ref } from "firebase/database"
+import { Calendar, Code, FileText, Github, Plus, Search, Settings, Shield, Star, TestTube, Users } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ref, get } from "firebase/database"
-import { database } from "@/lib/firebase"
-import { useAuth } from "@/contexts/auth-context"
-import { Button } from "@/components/ui/button"
-import { Plus, Calendar, Users, Settings, Search, Star } from "lucide-react"
-import { formatDate } from "@/lib/utils"
-import Header from "@/components/layout/header"
-import { PageHeader } from "@/components/layout/page-header"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { EmptyState } from "@/components/ui/empty-state"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import type { Project } from "@/types"
-import { Github , Shield, Code, TestTube, FileText } from "lucide-react"
+import { useEffect, useState } from "react"
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
@@ -89,7 +86,7 @@ export default function ProjectsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <Header />
+
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -99,7 +96,7 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+
 
       <main className="container mx-auto px-4 py-8">
         <PageHeader
@@ -212,7 +209,7 @@ function ProjectCard({ project }: { project: Project }) {
             </div>
             {project.githubRepo && (
               <div className="flex items-center text-muted-foreground">
-                <Github  className="h-4 w-4 mr-2" />
+                <Github className="h-4 w-4 mr-2" />
                 <span className="truncate">
                   {project.githubRepo.replace(/^https?:\/\/(www\.)?github\.com\//, "")}
                 </span>

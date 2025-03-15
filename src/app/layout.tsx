@@ -32,9 +32,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <head>
         <meta name="google-site-verification" content="uPN5UdwQjwKQot2cX_IHUf696zu9aj__Dx0k7mPHwc4" />
-        
         {/* Google Analytics */}
         {GA_TRACKING_ID && (
           <>
@@ -52,7 +51,8 @@ export default function RootLayout({
             </Script>
           </>
         )}
-
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           <ThemeProvider defaultTheme="system">
             <LayoutWrapper>{children}</LayoutWrapper>

@@ -49,6 +49,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "crypto": "latest",
+    "crypto-js": "^4.2.0",
     "date-fns": "latest",
     "embla-carousel-react": "8.5.1",
     "firebase": "latest",
@@ -75,6 +76,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@types/crypto-js": "^4.2.2",
     "@types/node": "^22",
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^19",

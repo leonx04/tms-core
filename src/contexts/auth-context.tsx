@@ -15,22 +15,9 @@ import {
   signInWithPopup,
 } from "firebase/auth"
 import { auth, database } from "@/lib/firebase"
-import { ref, get, set } from "firebase/database"
-
-type UserData = {
-  id: string
-  email: string
-  displayName: string
-  photoURL?: string
-  packageId: string
-  packageExpiry: string
-  lastActive: string
-  preferences: {
-    darkMode?: boolean
-    emailNotifications: boolean
-    inAppNotifications: boolean
-  }
-}
+import { ref, get, set, update } from "firebase/database"
+import { secureRoutes } from "@/lib/secure-routes"
+import type { UserData } from "@/types"
 
 type AuthContextType = {
   user: User | null
@@ -42,6 +29,9 @@ type AuthContextType = {
   signUp: (email: string, password: string, displayName: string) => Promise<void>
   signOut: () => Promise<void>
   updateUserData: (data: Partial<UserData>) => Promise<void>
+  encryptRoute: (route: string) => string
+  decryptRoute: (encryptedRoute: string) => string
+  obscureUserId: (userId: string, visibleChars?: number) => string
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -73,6 +63,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (snapshot.exists()) {
           setUserData(snapshot.val() as UserData)
+
+          // Update last active timestamp
+          await update(userRef, {
+            lastActive: new Date().toISOString(),
+          })
         } else {
           // Create new user data with basic package
           const newUserData: UserData = {
@@ -105,17 +100,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check for JWT expiry on page load
     const checkTokenExpiry = () => {
       const expiryTime = localStorage.getItem("jwt_expiry")
-      if (expiryTime && Date.now() > parseInt(expiryTime)) {
+      if (expiryTime && Date.now() > Number.parseInt(expiryTime)) {
         // Token expired, sign out
         firebaseSignOut(auth)
       }
     }
-    
+
     checkTokenExpiry()
-    
+
     // Set up interval to check token expiry
     const interval = setInterval(checkTokenExpiry, 60000) // Check every minute
-    
+
     return () => {
       unsubscribe()
       clearInterval(interval)
@@ -124,13 +119,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password)
-    
+
     // Get and store JWT token
     const token = await userCredential.user.getIdToken()
     localStorage.setItem("jwt", token)
     const expiryTime = Date.now() + 30 * 60 * 1000 // 30 minutes
     localStorage.setItem("jwt_expiry", expiryTime.toString())
-    
+
     // Update last active
     if (auth.currentUser) {
       const userRef = ref(database, `users/${auth.currentUser.uid}/lastActive`)
@@ -141,7 +136,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider()
     const result = await signInWithPopup(auth, provider)
-    
+
     // Get and store JWT token
     const token = await result.user.getIdToken()
     localStorage.setItem("jwt", token)
@@ -179,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signInWithGithub = async () => {
     const provider = new GithubAuthProvider()
     const result = await signInWithPopup(auth, provider)
-    
+
     // Get and store JWT token
     const token = await result.user.getIdToken()
     localStorage.setItem("jwt", token)
@@ -217,7 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, displayName: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password)
     await updateProfile(userCredential.user, { displayName })
-    
+
     // Get and store JWT token
     const token = await userCredential.user.getIdToken()
     localStorage.setItem("jwt", token)
@@ -265,6 +260,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUserData((prev) => (prev ? { ...prev, ...data } : null))
   }
 
+  // Route encryption/decryption methods
+  const encryptRoute = (route: string): string => {
+    return secureRoutes.encryptRoute(route)
+  }
+
+  const decryptRoute = (encryptedRoute: string): string => {
+    return secureRoutes.decryptRoute(encryptedRoute)
+  }
+
+  // User ID obscuring method
+  const obscureUserId = (userId: string, visibleChars = 4): string => {
+    return secureRoutes.obscureUserId(userId, visibleChars)
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -277,6 +286,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signOut,
         updateUserData,
+        encryptRoute,
+        decryptRoute,
+        obscureUserId,
       }}
     >
       {children}
@@ -291,3 +303,4 @@ export function useAuth() {
   }
   return context
 }
+

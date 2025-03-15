@@ -32,7 +32,7 @@ export default function Home() {
   const handlePricingClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (user) {
       e.preventDefault()
-      router.push("/profile/upgrade")
+      router.push("/upgrade")
     }
   }
 
@@ -138,7 +138,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <Link href="/register">
+                <Link href="/upgrade">
                   <Button size="lg" className="w-full sm:w-auto rounded-full shadow-modern group">
                     Get Started Free 
                     <motion.div
@@ -519,7 +519,7 @@ export default function Home() {
                 description="Perfect for individuals or small teams"
                 features={["Up to 3 projects", "Basic task management", "Email notifications", "1 year validity"]}
                 buttonText="Get Started"
-                buttonLink="/register"
+                buttonLink="/upgrade"
                 handleClick={handlePricingClick}
                 delay={0}
               />
@@ -536,7 +536,7 @@ export default function Home() {
                   "1 year validity",
                 ]}
                 buttonText="Upgrade Now"
-                buttonLink="/register"
+                buttonLink="/upgrade"
                 handleClick={handlePricingClick}
                 highlighted={true}
                 delay={0.2}
@@ -555,7 +555,7 @@ export default function Home() {
                   "1 year validity",
                 ]}
                 buttonText="Go Premium"
-                buttonLink="/register"
+                buttonLink="/upgrade"
                 handleClick={handlePricingClick}
                 delay={0.4}
               />
@@ -620,7 +620,7 @@ export default function Home() {
               <p className="text-xl text-primary-foreground/90 mb-8 max-w-2xl mx-auto">
                 Join thousands of teams who use TMS to manage their projects efficiently
               </p>
-              <Link href="/register">
+              <Link href="/upgrade">
                 <Button size="lg" variant="secondary" className="rounded-full shadow-modern group">
                   Get Started Free 
                   <motion.div

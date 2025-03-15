@@ -138,7 +138,7 @@ export default function ProfilePage() {
   }
 
   const handleUpgradeClick = () => {
-    router.push("/profile/upgrade")
+    router.push("/upgrade")
   }
 
   if (loading) {

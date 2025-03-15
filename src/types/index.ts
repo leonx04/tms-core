@@ -7,6 +7,11 @@ export type UserData = {
   packageId: string
   packageExpiry: string
   lastActive: string
+  subscriptionId?: string
+  subscriptionStatus?: string
+  billingCycle?: "monthly" | "yearly"
+  cancelAtPeriodEnd?: boolean
+  lastPayment?: string
   preferences: {
     darkMode?: boolean
     emailNotifications: boolean
@@ -130,6 +135,30 @@ export type User = {
   displayName: string
   photoURL?: string
   [key: string]: any
+}
+
+// Subscription plan type
+export type SubscriptionPlan = {
+  id: string
+  name: string
+  description: string
+  monthlyPrice: number
+  yearlyPrice: number
+  features: string[]
+  popular: boolean
+}
+
+// Payment history type
+export type PaymentHistory = {
+  packageId: string
+  billingCycle: "monthly" | "yearly"
+  amount: number
+  currency: string
+  status: string
+  timestamp: string
+  sessionId?: string
+  subscriptionId?: string
+  invoiceId?: string
 }
 
 // Constants

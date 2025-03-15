@@ -25,3 +25,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+task-core-firebase-adminsdk-fbsvc-f2ac20b916.json

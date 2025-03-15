@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server"
+import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"
 import { database } from "@/lib/firebase"
-import { ref, update } from "firebase/database"
+import { ref, update, get, set } from "firebase/database"
 
 // Initialize Stripe with your secret key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
@@ -11,7 +11,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 // This is your Stripe webhook secret for testing your endpoint locally
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const payload = await request.text()
   const signature = request.headers.get("stripe-signature") || ""
 
@@ -53,21 +53,143 @@ export async function POST(request: Request) {
           lastPayment: new Date().toISOString(),
         })
 
+        // Add to payment history
+        const paymentHistoryRef = ref(database, `paymentHistory/${userId}/${Date.now()}`)
+        await set(paymentHistoryRef, {
+          packageId,
+          billingCycle,
+          amount: session.amount_total,
+          currency: session.currency,
+          status: session.payment_status,
+          timestamp: new Date().toISOString(),
+          sessionId: session.id,
+          subscriptionId: session.subscription,
+        })
+
         console.log(`User ${userId} upgraded to ${packageId} package`)
+      }
+      break
+    }
+
+    case "invoice.payment_succeeded": {
+      const invoice = event.data.object as Stripe.Invoice
+      const subscriptionId = invoice.subscription as string
+
+      if (subscriptionId) {
+        // Find user with this subscription ID
+        const usersRef = ref(database, "users")
+        const usersSnapshot = await get(usersRef)
+
+        if (usersSnapshot.exists()) {
+          const users = usersSnapshot.val()
+          let userId = null
+
+          // Find user with matching subscription ID
+          Object.keys(users).forEach((key) => {
+            if (users[key].subscriptionId === subscriptionId) {
+              userId = key
+            }
+          })
+
+          if (userId) {
+            // Update expiry date based on billing cycle
+            const userRef = ref(database, `users/${userId}`)
+            const userSnapshot = await get(userRef)
+
+            if (userSnapshot.exists()) {
+              const userData = userSnapshot.val()
+              const expiryDate = new Date()
+
+              if (userData.billingCycle === "yearly") {
+                expiryDate.setFullYear(expiryDate.getFullYear() + 1)
+              } else {
+                expiryDate.setMonth(expiryDate.getMonth() + 1)
+              }
+
+              await update(userRef, {
+                packageExpiry: expiryDate.toISOString(),
+                lastPayment: new Date().toISOString(),
+              })
+
+              // Add to payment history
+              const paymentHistoryRef = ref(database, `paymentHistory/${userId}/${Date.now()}`)
+              await set(paymentHistoryRef, {
+                packageId: userData.packageId,
+                billingCycle: userData.billingCycle,
+                amount: invoice.amount_paid,
+                currency: invoice.currency,
+                status: invoice.status,
+                timestamp: new Date().toISOString(),
+                invoiceId: invoice.id,
+                subscriptionId,
+              })
+            }
+          }
+        }
       }
       break
     }
 
     case "customer.subscription.updated": {
       const subscription = event.data.object as Stripe.Subscription
-      // Handle subscription updates
+      // Find user with this subscription ID
+      const usersRef = ref(database, "users")
+      const usersSnapshot = await get(usersRef)
+
+      if (usersSnapshot.exists() && subscription.id) {
+        const users = usersSnapshot.val()
+        let userId = null
+
+        // Find user with matching subscription ID
+        Object.keys(users).forEach((key) => {
+          if (users[key].subscriptionId === subscription.id) {
+            userId = key
+          }
+        })
+
+        if (userId) {
+          // Update subscription status
+          const userRef = ref(database, `users/${userId}`)
+          await update(userRef, {
+            subscriptionStatus: subscription.status,
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            lastUpdated: new Date().toISOString(),
+          })
+        }
+      }
       break
     }
 
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription
-      // Handle subscription cancellations
-      // You might want to downgrade the user to the basic plan
+      // Find user with this subscription ID
+      const usersRef = ref(database, "users")
+      const usersSnapshot = await get(usersRef)
+
+      if (usersSnapshot.exists() && subscription.id) {
+        const users = usersSnapshot.val()
+        let userId = null
+
+        // Find user with matching subscription ID
+        Object.keys(users).forEach((key) => {
+          if (users[key].subscriptionId === subscription.id) {
+            userId = key
+          }
+        })
+
+        if (userId) {
+          // Downgrade user to basic plan
+          const userRef = ref(database, `users/${userId}`)
+          await update(userRef, {
+            packageId: "basic",
+            subscriptionId: null,
+            subscriptionStatus: "canceled",
+            lastUpdated: new Date().toISOString(),
+          })
+
+          console.log(`User ${userId} downgraded to basic package due to subscription cancellation`)
+        }
+      }
       break
     }
 

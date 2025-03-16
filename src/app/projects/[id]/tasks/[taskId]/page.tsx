@@ -19,11 +19,33 @@ import {
 } from "@/lib/utils"
 import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
-import { ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit, ExternalLink, GitCommit, MessageSquare, User } from 'lucide-react'
+import { ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit, ExternalLink, GitCommit, MessageSquare, User } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { CommitLink } from "@/components/github/commit-preview";
+
+// Hàm trích xuất commit id từ chuỗi đầu vào.
+// Nếu đầu vào chứa URL commit thì chỉ lấy phần id. Nếu không thì kiểm tra xem chuỗi nhập vào có phải là commit id hợp lệ (7-40 ký tự hexa) hay không.
+const extractCommitId = (input: string): string => {
+  const trimmed = input.trim();
+  const urlRegex = /commit\/([a-f0-9]{7,40})/i;
+  const idRegex = /^[a-f0-9]{7,40}$/i;
+
+  const matchUrl = trimmed.match(urlRegex);
+  if (matchUrl) {
+    return matchUrl[1];
+  }
+  if (idRegex.test(trimmed)) {
+    return trimmed;
+  }
+  return "";
+};
+
+// Hàm loại bỏ phần "https://github.com/" nếu có trong chuỗi repo.
+const getRepoSlug = (repo: string): string => {
+  return repo.replace(/^(https?:\/\/github\.com\/)/i, '');
+};
 
 export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null)
@@ -46,6 +68,7 @@ export default function TaskDetailPage() {
   const taskId = params.taskId as string
   const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({});
 
+  // Hàm tính % hoàn thành dựa trên các child task
   const calculatePercentDone = (tasks: Task[]) => {
     if (!tasks || tasks.length === 0) return 0;
 
@@ -56,6 +79,18 @@ export default function TaskDetailPage() {
     return Math.round(totalPercent / tasks.length);
   };
 
+  // Hàm ghi lại lịch sử của task
+  const logTaskHistory = async (entry: Omit<TaskHistory, "id">) => {
+    try {
+      const historyRef = push(ref(database, "taskHistory"));
+      await set(historyRef, entry);
+      setHistory(prev => [{ id: historyRef.key as string, ...entry }, ...prev]);
+    } catch (error) {
+      console.error("Error logging task history:", error);
+    }
+  };
+
+  // Cập nhật tiến độ cho parent task (nếu có)
   const updateParentTaskProgress = async (parentTaskId: string, childTasks: Task[]) => {
     if (!parentTaskId || childTasks.length === 0) return;
 
@@ -73,8 +108,7 @@ export default function TaskDetailPage() {
       }
 
       if (user) {
-        const historyRef = push(ref(database, "taskHistory"));
-        const historyEntry = {
+        await logTaskHistory({
           taskId: parentTaskId,
           userId: user.uid,
           timestamp: new Date().toISOString(),
@@ -86,19 +120,7 @@ export default function TaskDetailPage() {
             },
           ],
           comment: "Progress updated automatically based on subtasks",
-        };
-
-        await set(historyRef, historyEntry);
-
-        if (task && task.id === parentTaskId) {
-          setHistory([
-            {
-              id: historyRef.key as string,
-              ...historyEntry,
-            },
-            ...history,
-          ]);
-        }
+        });
       }
     } catch (error) {
       console.error("Error updating parent task progress:", error);
@@ -302,7 +324,7 @@ export default function TaskDetailPage() {
     setIsSubmittingComment(true)
 
     try {
-      // Create new comment
+      // Tạo mới comment
       const newCommentRef = push(ref(database, "comments"))
 
       const newComment = {
@@ -314,11 +336,10 @@ export default function TaskDetailPage() {
 
       await set(newCommentRef, newComment)
 
-      // Create notification for task assignees
+      // Tạo thông báo cho các thành viên được giao task
       if (task?.assignedTo) {
         for (const assignedUserId of task.assignedTo) {
           if (assignedUserId !== user.uid) {
-            // Don't notify the commenter
             const notificationRef = push(ref(database, "notifications"))
             const notification = {
               userId: assignedUserId,
@@ -334,7 +355,7 @@ export default function TaskDetailPage() {
         }
       }
 
-      // Add comment to local state
+      // Cập nhật state cho comment mới
       setComments([
         ...comments,
         {
@@ -342,6 +363,18 @@ export default function TaskDetailPage() {
           ...newComment,
         },
       ])
+
+      // Lưu lịch sử hành động "thêm comment"
+      const commentLog = commentText.trim().length <= 100
+        ? commentText.trim()
+        : commentText.trim().slice(0, 100) + "...";
+      await logTaskHistory({
+        taskId,
+        userId: user.uid,
+        timestamp: new Date().toISOString(),
+        changes: [],
+        comment: `Comment added: ${commentLog}`,
+      });
 
       setCommentText("")
     } catch (error) {
@@ -359,7 +392,7 @@ export default function TaskDetailPage() {
     try {
       const oldStatus = task.status
 
-      // Update task status
+      // Cập nhật trạng thái của task
       const taskRef = ref(database, `tasks/${taskId}`)
 
       const updates: { status: string; updatedAt: string; gitCommitId?: string } = {
@@ -367,36 +400,44 @@ export default function TaskDetailPage() {
         updatedAt: new Date().toISOString(),
       }
 
-      // If resolving and there's a commit ID, link it
-      if (newStatus === TASK_STATUS.RESOLVED && commitId.trim()) {
-        updates.gitCommitId = commitId.trim()
+      // Nếu chuyển sang RESOLVED và có commit id, chỉ lưu lại commit id được trích xuất từ link/commit id nhập vào.
+      const parsedCommitId = extractCommitId(commitId);
+      if (newStatus === TASK_STATUS.RESOLVED && parsedCommitId) {
+        updates.gitCommitId = parsedCommitId;
       }
 
       await update(taskRef, updates)
 
-      // Create task history entry
-      const historyRef = push(ref(database, "taskHistory"))
-      const historyEntry = {
+      // Chuẩn bị các thay đổi cần lưu vào lịch sử
+      const changes = [
+        {
+          field: "status",
+          oldValue: oldStatus,
+          newValue: newStatus,
+        },
+      ]
+      if (newStatus === TASK_STATUS.RESOLVED && parsedCommitId) {
+        changes.push({
+          field: "gitCommitId",
+          oldValue: task.gitCommitId || "",
+          newValue: parsedCommitId,
+        })
+      }
+
+      await logTaskHistory({
         taskId,
         userId: user.uid,
         timestamp: new Date().toISOString(),
-        changes: [
-          {
-            field: "status",
-            oldValue: oldStatus,
-            newValue: newStatus,
-          },
-        ],
-        comment: commitId.trim() ? `Status updated with commit: ${commitId.trim()}` : "Status updated",
-      }
+        changes,
+        comment: newStatus === TASK_STATUS.RESOLVED && parsedCommitId
+          ? `Status updated with commit: ${parsedCommitId}`
+          : "Status updated",
+      });
 
-      await set(historyRef, historyEntry)
-
-      // Create notifications for task assignees
+      // Tạo thông báo cho các thành viên được giao task (ngoại trừ người cập nhật)
       if (task.assignedTo) {
         for (const assignedUserId of task.assignedTo) {
           if (assignedUserId !== user.uid) {
-            // Don't notify the updater
             const notificationRef = push(ref(database, "notifications"))
             const notification = {
               userId: assignedUserId,
@@ -412,21 +453,13 @@ export default function TaskDetailPage() {
         }
       }
 
-      // Update local state
+      // Cập nhật state cục bộ
       setTask({
         ...task,
         status: newStatus,
         updatedAt: new Date().toISOString(),
-        gitCommitId: newStatus === TASK_STATUS.RESOLVED && commitId.trim() ? commitId.trim() : task.gitCommitId,
+        gitCommitId: newStatus === TASK_STATUS.RESOLVED && parsedCommitId ? parsedCommitId : task.gitCommitId,
       })
-
-      setHistory([
-        {
-          id: historyRef.key as string,
-          ...historyEntry,
-        },
-        ...history,
-      ])
 
       setCommitId("")
     } catch (error) {
@@ -439,22 +472,16 @@ export default function TaskDetailPage() {
   const canUpdateStatus = () => {
     if (!user || !task || !projectData) return false
 
-    // Get user roles in this project
     const roles = projectData.members?.[user.uid]?.roles || []
 
-    // Check if user can update based on current status and role
     switch (task.status) {
       case TASK_STATUS.TODO:
-        // Anyone assigned to the task or developers can move from Todo to In Progress
         return task.assignedTo?.includes(user.uid) || roles.includes("dev")
       case TASK_STATUS.IN_PROGRESS:
-        // Only developers can move from In Progress to Resolved
         return roles.includes("dev")
       case TASK_STATUS.RESOLVED:
-        // Only testers can move from Resolved to Closed
         return roles.includes("tester")
       case TASK_STATUS.CLOSED:
-        // Only testers can reopen a closed task
         return roles.includes("tester")
       default:
         return false
@@ -470,7 +497,7 @@ export default function TaskDetailPage() {
       case TASK_STATUS.RESOLVED:
         return TASK_STATUS.CLOSED
       case TASK_STATUS.CLOSED:
-        return TASK_STATUS.TODO // Reopen
+        return TASK_STATUS.TODO
       default:
         return null
     }
@@ -515,7 +542,6 @@ export default function TaskDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -526,7 +552,6 @@ export default function TaskDetailPage() {
   if (!task) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Task not found</h2>
@@ -544,8 +569,6 @@ export default function TaskDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-
       <main className="container mx-auto px-4 py-8">
         <Link
           href={`/projects/${projectId}`}
@@ -702,7 +725,7 @@ export default function TaskDetailPage() {
               {task.gitCommitId && projectData?.githubRepo && (
                 <div>
                   <span>Commit ID: </span>
-                  <CommitLink url={`https://github.com/${projectData.githubRepo}/commit/${task.gitCommitId}`} />
+                  <CommitLink url={`https://github.com/${getRepoSlug(projectData.githubRepo)}/commit/${task.gitCommitId}`} />
                 </div>
               )}
             </div>
@@ -713,7 +736,7 @@ export default function TaskDetailPage() {
                 <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
-                    placeholder="Enter commit ID or hash"
+                    placeholder="Enter commit ID or URL"
                     value={commitId}
                     onChange={(e) => setCommitId(e.target.value)}
                     className="flex-1 p-2 text-sm rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
@@ -794,7 +817,6 @@ export default function TaskDetailPage() {
                                       </div>
                                     );
                                   })}
-
                                 </div>
                               ) : (
                                 <span className="text-sm text-muted-foreground italic">Unassigned</span>

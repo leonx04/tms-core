@@ -15,6 +15,7 @@ import {
   Calendar,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   Clock,
   Filter,
   Grid,
@@ -28,6 +29,7 @@ import {
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import React, { JSX, useEffect, useState } from "react"
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination"
 
 export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null)
@@ -36,15 +38,21 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
+  const [memberFilter, setMemberFilter] = useState<string | null>(null)
+  const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [showStatusFilter, setShowStatusFilter] = useState(false)
   const [showTypeFilter, setShowTypeFilter] = useState(false)
+  const [showMemberFilter, setShowMemberFilter] = useState(false)
+  const [showPriorityFilter, setShowPriorityFilter] = useState(false)
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
-  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+  const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -65,7 +73,7 @@ export default function ProjectDetailPage() {
           ...projectSnapshot.val(),
         }
 
-        // Check if user is a member of this project
+        // Check if user là member của project
         if (!projectData.members || !projectData.members[user.uid]) {
           router.push("/projects")
           return
@@ -73,7 +81,7 @@ export default function ProjectDetailPage() {
 
         setProject(projectData)
 
-        // Fetch tasks for this project
+        // Fetch tasks cho project
         const tasksRef = ref(database, "tasks")
         const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
         const tasksSnapshot = await get(tasksQuery)
@@ -84,18 +92,16 @@ export default function ProjectDetailPage() {
             id,
             ...data,
           }))
-
           setTasks(tasksList)
         }
 
-        // Fetch all users who are members of this project
+        // Fetch tất cả users của project
         const userIds = Object.keys(projectData.members)
         const usersData: Record<string, User> = {}
 
         for (const userId of userIds) {
           const userRef = ref(database, `users/${userId}`)
           const userSnapshot = await get(userRef)
-
           if (userSnapshot.exists()) {
             usersData[userId] = {
               id: userId,
@@ -103,7 +109,6 @@ export default function ProjectDetailPage() {
             }
           }
         }
-
         setUsers(usersData)
       } catch (error) {
         console.error("Error fetching project data:", error)
@@ -115,64 +120,64 @@ export default function ProjectDetailPage() {
     fetchProjectData()
   }, [user, projectId, router])
 
-  // Apply filters to tasks
+  // Reset trang khi filter hoặc view mode thay đổi
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusFilter, typeFilter, memberFilter, priorityFilter, searchQuery, viewMode])
+
+  // Lọc task theo các tiêu chí: status, type, member, priority và search (title, description, tags)
   const filteredTasks = tasks.filter((task) => {
-    // Apply status filter if set
-    if (statusFilter && task.status !== statusFilter) {
-      return false
-    }
-    // Apply type filter if set
-    if (typeFilter && task.type !== typeFilter) {
-      return false
-    }
-    // Apply search query if present
+    if (statusFilter && task.status !== statusFilter) return false
+    if (typeFilter && task.type !== typeFilter) return false
+    if (memberFilter && (!task.assignedTo || !task.assignedTo.includes(memberFilter))) return false
+    if (priorityFilter && task.priority !== priorityFilter) return false
     if (searchQuery.trim() !== "") {
-      const query = searchQuery.trim().toLowerCase()
-      return (
-        task.title.toLowerCase().includes(query) ||
-        task.description.toLowerCase().includes(query)
-      )
+      const queryLower = searchQuery.trim().toLowerCase()
+      if (
+        !task.title.toLowerCase().includes(queryLower) &&
+        !task.description.toLowerCase().includes(queryLower) &&
+        !(task.tags && task.tags.some(tag => tag.toLowerCase().includes(queryLower)))
+      ) {
+        return false
+      }
     }
     return true
   })
 
-  const userRoles = user && project?.members && project.members[user.uid] ? project.members[user.uid].roles : []
+  const userRoles = user && project?.members && project.members[user.uid]
+    ? project.members[user.uid].roles
+    : []
 
   const toggleTaskExpansion = (taskId: string) => {
     setExpandedTasks(prev => ({
       ...prev,
       [taskId]: !prev[taskId]
-    }));
-  };
+    }))
+  }
 
-  // Improved task grouping logic
+  // Nhóm task theo parent (dùng cho chế độ list)
   const groupTasksByParent = () => {
-    const taskMap: Record<string, Task> = {};
-    const rootTasks: Task[] = [];
+    const taskMap: Record<string, Task> = {}
+    const rootTasks: Task[] = []
 
-    // First, create a map of all tasks by ID
     filteredTasks.forEach(task => {
-      taskMap[task.id] = task;
-    });
-
-    // Then identify root tasks (those without a parent or with a parent that doesn't exist)
+      taskMap[task.id] = task
+    })
     filteredTasks.forEach(task => {
       if (!task.parentTaskId || !taskMap[task.parentTaskId]) {
-        rootTasks.push(task);
+        rootTasks.push(task)
       }
-    });
-
-    return { taskMap, rootTasks };
-  };
+    })
+    return { taskMap, rootTasks }
+  }
 
   const findChildTasks = (taskId: string) => {
-    return filteredTasks.filter(task => task.parentTaskId === taskId);
-  };
+    return filteredTasks.filter(task => task.parentTaskId === taskId)
+  }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -183,7 +188,6 @@ export default function ProjectDetailPage() {
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
-        
         <div className="container mx-auto px-4 py-8">
           <EmptyState
             icon={<Settings className="h-8 w-8 text-primary" />}
@@ -200,14 +204,23 @@ export default function ProjectDetailPage() {
     )
   }
 
-  // Get grouped tasks
-  const { rootTasks } = groupTasksByParent();
-  const autoExpand = searchQuery.trim() !== "";
+  const { rootTasks } = groupTasksByParent()
+  const autoExpand = searchQuery.trim() !== ""
+
+  // Phân trang: đối với list view thì phân trang theo rootTasks, đối với grid view thì phân trang theo filteredTasks
+  let paginatedData: Task[] = []
+  let totalPages = 0
+
+  if (viewMode === "list") {
+    totalPages = Math.ceil(rootTasks.length / itemsPerPage)
+    paginatedData = rootTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  } else {
+    totalPages = Math.ceil(filteredTasks.length / itemsPerPage)
+    paginatedData = filteredTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      
-
       <main className="container mx-auto px-4 py-8">
         <PageHeader title={project.name} description={project.description || "No description provided"}>
           <div className="flex gap-2">
@@ -228,7 +241,7 @@ export default function ProjectDetailPage() {
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
-            {/* Consistent height with the search input */}
+            {/* Status Filter */}
             <div className="relative h-10">
               <Button
                 variant="outline"
@@ -236,10 +249,17 @@ export default function ProjectDetailPage() {
                 onClick={() => {
                   setShowStatusFilter(!showStatusFilter)
                   setShowTypeFilter(false)
+                  setShowMemberFilter(false)
+                  setShowPriorityFilter(false)
                 }}
               >
-                <Filter className="h-4 w-4 mr-2" />
-                {statusFilter ? getStatusLabel(statusFilter) : "Status"} <ChevronDown className="ml-2 h-4 w-4" />
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <Filter className="h-4 w-4 flex-shrink-0" />
+                    <span className="block truncate">{statusFilter ? getStatusLabel(statusFilter) : "Status"}</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                </div>
               </Button>
               {showStatusFilter && (
                 <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
@@ -294,6 +314,7 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
+            {/* Type Filter */}
             <div className="relative h-10">
               <Button
                 variant="outline"
@@ -301,11 +322,17 @@ export default function ProjectDetailPage() {
                 onClick={() => {
                   setShowTypeFilter(!showTypeFilter)
                   setShowStatusFilter(false)
+                  setShowMemberFilter(false)
+                  setShowPriorityFilter(false)
                 }}
               >
-                <Layers className="h-4 w-4 mr-2" />
-                {typeFilter ? typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1) : "Type"}{" "}
-                <ChevronDown className="ml-2 h-4 w-4" />
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <Layers className="h-4 w-4 flex-shrink-0" />
+                    <span className="block truncate">{typeFilter ? typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1) : "Type"}</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                </div>
               </Button>
               {showTypeFilter && (
                 <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
@@ -360,6 +387,119 @@ export default function ProjectDetailPage() {
               )}
             </div>
 
+            {/* Member Filter */}
+            <div className="relative h-10">
+              <Button
+                variant="outline"
+                className="w-full sm:w-40 h-10 rounded-lg shadow-sm flex items-center justify-between"
+                onClick={() => {
+                  setShowMemberFilter(!showMemberFilter)
+                  setShowStatusFilter(false)
+                  setShowTypeFilter(false)
+                  setShowPriorityFilter(false)
+                }}
+              >
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <Users className="h-4 w-4 flex-shrink-0" />
+                  <span className="block truncate">
+                    {memberFilter ? (users[memberFilter]?.displayName || "Member") : "Assigned To"}
+                  </span>
+                </div>
+                <ChevronDown className="h-4 w-4 flex-shrink-0" />
+              </Button>
+              {showMemberFilter && (
+                <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
+                  <div className="p-1">
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setMemberFilter(null)
+                        setShowMemberFilter(false)
+                      }}
+                    >
+                      All Members
+                    </button>
+                    {Object.values(users).map((member) => (
+                      <button
+                        key={member.id}
+                        className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                        onClick={() => {
+                          setMemberFilter(member.id)
+                          setShowMemberFilter(false)
+                        }}
+                      >
+                        {member.displayName || "Unknown"}
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            {/* Priority Filter */}
+            <div className="relative h-10">
+              <Button
+                variant="outline"
+                className="w-full sm:w-40 h-10 rounded-lg shadow-sm"
+                onClick={() => {
+                  setShowPriorityFilter(!showPriorityFilter)
+                  setShowStatusFilter(false)
+                  setShowTypeFilter(false)
+                  setShowMemberFilter(false)
+                }}
+              >
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="block truncate">{priorityFilter ? priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1) : "Priority"}</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
+                </div>
+              </Button>
+              {showPriorityFilter && (
+                <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
+                  <div className="p-1">
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setPriorityFilter(null)
+                        setShowPriorityFilter(false)
+                      }}
+                    >
+                      All Priorities
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setPriorityFilter("low")
+                        setShowPriorityFilter(false)
+                      }}
+                    >
+                      Low
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setPriorityFilter("medium")
+                        setShowPriorityFilter(false)
+                      }}
+                    >
+                      Medium
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setPriorityFilter("high")
+                        setShowPriorityFilter(false)
+                      }}
+                    >
+                      High
+                    </button>
+                  </div>
+                </Card>
+              )}
+            </div>
+
+            {/* Search Input */}
             <div className="relative flex-1 min-w-[200px]">
               <div className="relative h-10">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -405,7 +545,9 @@ export default function ProjectDetailPage() {
             icon={<Plus className="h-8 w-8 text-primary" />}
             title="No tasks found"
             description={
-              tasks.length === 0 ? "This project doesn't have any tasks yet" : "No tasks match your current filters"
+              tasks.length === 0
+                ? "This project doesn't have any tasks yet"
+                : "No tasks match your current filters"
             }
             action={
               <Link href={`/projects/${projectId}/tasks/create`}>
@@ -421,34 +563,20 @@ export default function ProjectDetailPage() {
               <table className="min-w-[900px] table-auto table-vercel">
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[200px]">
-                      Title
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
-                      Priority
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[150px]">
-                      Assigned To
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">
-                      Due Date
-                    </th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[200px]">Title</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Status</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Priority</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[150px]">Assigned To</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Due Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/10">
-                  {(() => {
-                    // renderTaskRow logic
+                  {paginatedData.map((task) => {
                     const renderTaskRow = (task: Task, level: number = 0): JSX.Element => {
-                      const childTasks = findChildTasks(task.id);
-                      const hasChildren = childTasks.length > 0;
-                      const isExpanded = autoExpand || expandedTasks[task.id];
-
+                      const childTasks = findChildTasks(task.id)
+                      const hasChildren = childTasks.length > 0
+                      const isExpanded = autoExpand || expandedTasks[task.id]
                       return (
                         <React.Fragment key={task.id}>
                           <tr className="hover:bg-muted/30 transition-colors">
@@ -463,8 +591,8 @@ export default function ProjectDetailPage() {
                                   <button
                                     onClick={(e) => {
                                       if (!autoExpand) {
-                                        e.preventDefault();
-                                        toggleTaskExpansion(task.id);
+                                        e.preventDefault()
+                                        toggleTaskExpansion(task.id)
                                       }
                                     }}
                                     className="mr-2 focus:outline-none flex-shrink-0"
@@ -478,11 +606,7 @@ export default function ProjectDetailPage() {
                                 ) : (
                                   <div className="w-6 mr-2"></div>
                                 )}
-                                {/* Bỏ truncate để không cắt ngắn tiêu đề */}
-                                <Link
-                                  href={`/projects/${projectId}/tasks/${task.id}`}
-                                  className="hover:text-primary transition-colors block"
-                                >
+                                <Link href={`/projects/${projectId}/tasks/${task.id}`} className="hover:text-primary transition-colors block">
                                   {task.title}
                                 </Link>
                               </div>
@@ -503,15 +627,17 @@ export default function ProjectDetailPage() {
                               </Badge>
                             </td>
                             <td className="px-4 py-3">
-                              <div className="flex -space-x-2">
+                              <div className="flex flex-col gap-1">
                                 {task.assignedTo && task.assignedTo.length > 0 ? (
                                   task.assignedTo.map((userId) => (
-                                    <div
-                                      key={userId}
-                                      className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background"
-                                      title={users[userId]?.displayName || "Unknown user"}
-                                    >
-                                      {users[userId]?.displayName?.charAt(0) || "?"}
+                                    <div key={userId} className="flex items-center space-x-2">
+                                      <div
+                                        className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background"
+                                        title={users[userId]?.displayName || "Unknown user"}
+                                      >
+                                        {users[userId]?.displayName?.charAt(0) || "?"}
+                                      </div>
+                                      <span className="text-sm">{users[userId]?.displayName || "Unknown"}</span>
                                     </div>
                                   ))
                                 ) : (
@@ -532,78 +658,118 @@ export default function ProjectDetailPage() {
                           </tr>
                           {hasChildren && isExpanded && childTasks.map(childTask => renderTaskRow(childTask, level + 1))}
                         </React.Fragment>
-                      );
-                    };
-
-                    return rootTasks.map(task => renderTaskRow(task));
-                  })()}
+                      )
+                    }
+                    return renderTaskRow(task)
+                  })}
                 </tbody>
               </table>
             </div>
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)} />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <PaginationItem key={page}>
+                      <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    {currentPage < totalPages && (
+                      <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />
+                    )}
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </Card>
-
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredTasks.map((task) => (
-              <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
-                <Card className="h-full shadow-modern card-hover transition-all animate-fadeIn">
-                  <div className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
-                      <Badge className={`${getStatusColor(task.status)} truncate`}>{getStatusLabel(task.status)}</Badge>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2 truncate">
-                      {task.description || "No description provided"}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      <Badge className={`${getTypeColor(task.type)} truncate`}>
-                        {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
-                      </Badge>
-
-                      <Badge className={`${getPriorityColor(task.priority)} truncate`}>
-                        {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                      </Badge>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <div className="flex -space-x-2">
-                        {task.assignedTo && task.assignedTo.length > 0 ? (
-                          task.assignedTo.map((userId) => (
-                            <div
-                              key={userId}
-                              className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background"
-                              title={users[userId]?.displayName || "Unknown user"}
-                            >
-                              {users[userId]?.displayName?.charAt(0) || "?"}
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedData.map((task) => (
+                <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
+                  <Card className="h-full shadow-modern card-hover transition-all animate-fadeIn">
+                    <div className="p-4">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
+                        <Badge className={`${getStatusColor(task.status)} truncate`}>{getStatusLabel(task.status)}</Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2 truncate">
+                        {task.description || "No description provided"}
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        <Badge className={`${getTypeColor(task.type)} truncate`}>
+                          {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
+                        </Badge>
+                        <Badge className={`${getPriorityColor(task.priority)} truncate`}>
+                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <div className="flex flex-col gap-1">
+                          {task.assignedTo && task.assignedTo.length > 0 ? (
+                            task.assignedTo.map((userId) => (
+                              <div
+                                key={userId}
+                                className="flex items-center space-x-2"
+                                title={users[userId]?.displayName || "Unknown user"}
+                              >
+                                <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background">
+                                  {users[userId]?.displayName?.charAt(0) || "?"}
+                                </div>
+                                <span className="text-xs">{users[userId]?.displayName || "Unknown"}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground truncate">Unassigned</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {task.dueDate && (
+                            <div className="flex items-center text-xs text-muted-foreground truncate">
+                              <Calendar className="h-3 w-3 mr-1" />
+                              {formatDate(task.dueDate)}
                             </div>
-                          ))
-                        ) : (
-                          <span className="text-xs text-muted-foreground truncate">Unassigned</span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {task.dueDate && (
-                          <div className="flex items-center text-xs text-muted-foreground truncate">
-                            <Calendar className="h-3 w-3 mr-1" />
-                            {formatDate(task.dueDate)}
-                          </div>
-                        )}
-                        {task.percentDone !== undefined && (
-                          <div className="flex items-center">
-                            <Clock className="h-3 w-3 text-muted-foreground mr-1 flex-shrink-0" />
-                            <span className="text-xs text-muted-foreground truncate">{task.percentDone}%</span>
-                          </div>
-                        )}
+                          )}
+                          {task.percentDone !== undefined && (
+                            <div className="flex items-center">
+                              <Clock className="h-3 w-3 text-muted-foreground mr-1 flex-shrink-0" />
+                              <span className="text-xs text-muted-foreground truncate">{task.percentDone}%</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Card>
-              </Link>
-            ))}
-          </div>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)} />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                    <PaginationItem key={page}>
+                      <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                  <PaginationItem>
+                    {currentPage < totalPages && (
+                      <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />
+                    )}
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
+          </>
         )}
       </main>
     </div>

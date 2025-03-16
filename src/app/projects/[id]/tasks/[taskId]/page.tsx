@@ -23,6 +23,7 @@ import { ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit,
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { CommitLink } from "@/components/github/commit-preview";
 
 export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null)
@@ -514,7 +515,7 @@ export default function TaskDetailPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        
+
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -525,7 +526,7 @@ export default function TaskDetailPage() {
   if (!task) {
     return (
       <div className="min-h-screen bg-background">
-        
+
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Task not found</h2>
@@ -543,7 +544,7 @@ export default function TaskDetailPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      
+
 
       <main className="container mx-auto px-4 py-8">
         <Link
@@ -698,23 +699,10 @@ export default function TaskDetailPage() {
                 </div>
               )}
 
-              {task.gitCommitId && (
-                <div className="flex items-center col-span-1 sm:col-span-2">
-                  <GitCommit className="h-4 w-4 text-muted-foreground mr-2 flex-shrink-0" />
-                  <span className="text-sm text-muted-foreground">Commit ID:</span>
-                  {projectData?.githubRepo ? (
-                    <a
-                      href={`https://github.com/${projectData.githubRepo}/commit/${task.gitCommitId}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm ml-2 font-mono text-primary hover:underline flex items-center"
-                    >
-                      {task.gitCommitId}
-                      <ExternalLink className="ml-1 h-3 w-3" />
-                    </a>
-                  ) : (
-                    <span className="text-sm ml-2 font-mono">{task.gitCommitId}</span>
-                  )}
+              {task.gitCommitId && projectData?.githubRepo && (
+                <div>
+                  <span>Commit ID: </span>
+                  <CommitLink url={`https://github.com/${projectData.githubRepo}/commit/${task.gitCommitId}`} />
                 </div>
               )}
             </div>

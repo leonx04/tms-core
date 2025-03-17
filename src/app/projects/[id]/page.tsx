@@ -754,13 +754,31 @@ export default function ProjectDetailPage() {
                   <PaginationItem>
                     <PaginationPrevious onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)} />
                   </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <PaginationItem key={page}>
-                      <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
+                  {currentPage > 3 && (
+                    <>
+                      <PaginationItem>
+                        <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
+                      </PaginationItem>
+                      <PaginationEllipsis />
+                    </>
+                  )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => page >= currentPage - 2 && page <= currentPage + 2)
+                    .map(page => (
+                      <PaginationItem key={page}>
+                        <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                  {currentPage < totalPages - 2 && (
+                    <>
+                      <PaginationEllipsis />
+                      <PaginationItem>
+                        <PaginationLink onClick={() => setCurrentPage(totalPages)}>{totalPages}</PaginationLink>
+                      </PaginationItem>
+                    </>
+                  )}
                   <PaginationItem>
                     {currentPage < totalPages && (
                       <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />

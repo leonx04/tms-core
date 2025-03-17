@@ -47,7 +47,7 @@ export default function ProjectDetailPage() {
   const [showPriorityFilter, setShowPriorityFilter] = useState(false)
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
+  const itemsPerPage = 9
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()

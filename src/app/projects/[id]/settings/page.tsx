@@ -364,7 +364,7 @@ export default function ProjectSettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        
+
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -375,7 +375,7 @@ export default function ProjectSettingsPage() {
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
-        
+
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Project not found</h2>
@@ -393,7 +393,7 @@ export default function ProjectSettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      
+
 
       <main className="container mx-auto px-4 py-8">
         <Link

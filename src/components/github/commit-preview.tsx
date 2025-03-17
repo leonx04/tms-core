@@ -71,9 +71,9 @@ export function CommitLink({ url }: { url: string }) {
               </div>
               <div className="flex items-center gap-2 text-sm">
                 {commitInfo.author?.avatar_url && (
-                  <img 
-                    src={commitInfo.author.avatar_url} 
-                    alt="Avatar" 
+                  <img
+                    src={commitInfo.author.avatar_url}
+                    alt="Avatar"
                     className="h-5 w-5 rounded-full"
                   />
                 )}
@@ -96,7 +96,7 @@ export function CommitLink({ url }: { url: string }) {
               </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Không thể tải thông tin commit</p>
+            <p className="text-sm text-muted-foreground">Not found data commit</p>
           )}
         </TooltipContent>
       </Tooltip>

@@ -1,4 +1,5 @@
 "use client"
+import { RepoLink } from "@/components/github/repo-preview"
 import { PageHeader } from "@/components/layout/page-header"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -209,10 +210,8 @@ function ProjectCard({ project }: { project: Project }) {
             </div>
             {project.githubRepo && (
               <div className="flex items-center text-muted-foreground">
-                <Github className="h-4 w-4 mr-2" />
-                <span className="truncate">
-                  {project.githubRepo.replace(/^https?:\/\/(www\.)?github\.com\//, "")}
-                </span>
+              <Github className="h-4 w-4 mr-2" />
+              <RepoLink url={project.githubRepo} />
               </div>
             )}
           </div>
@@ -246,9 +245,11 @@ function ProjectCard({ project }: { project: Project }) {
               href={`/projects/${project.id}/settings`}
               onClick={(e) => e.stopPropagation()}
             >
-              <Button variant="ghost" size="sm" className="ml-auto rounded-full">
-                <Settings className="h-4 w-4" />
-              </Button>
+                {userRoles.includes("admin") && (
+                <Button variant="ghost" size="sm" className="ml-auto rounded-full">
+                  <Settings className="h-4 w-4" />
+                </Button>
+                )}
             </Link>
           </div>
         </CardFooter>

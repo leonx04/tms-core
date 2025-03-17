@@ -924,7 +924,7 @@ export default function TaskDetailPage() {
                     {history.map((entry) => (
                       <li key={entry.id} className="border-b border-border last:border-0 pb-4 last:pb-0">
                         <div className="flex items-start mb-1">
-                          <div className="h-7 w-7 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-medium mr-2 mt-0.5">
+                          <div className="flex-shrink-0 h-7 w-7 rounded-full bg-muted text-muted-foreground flex items-center justify-center text-xs font-medium mr-2 mt-0.5">
                             {users[entry.userId]?.displayName?.charAt(0) || "?"}
                           </div>
                           <div>
@@ -951,7 +951,7 @@ export default function TaskDetailPage() {
                           <div
                             className="text-sm ml-9 mt-1 text-muted-foreground"
                             dangerouslySetInnerHTML={{
-                              __html: formatTextWithLinks(entry.comment, projectData?.githubRepo),
+                              __html: formatTextWithLinks(entry.comment, getRepoSlug(projectData?.githubRepo)),
                             }}
                           />
                         )}

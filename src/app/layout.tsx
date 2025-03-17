@@ -34,6 +34,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <meta name="google-site-verification" content="uPN5UdwQjwKQot2cX_IHUf696zu9aj__Dx0k7mPHwc4" />
+        <meta name="robots" content="index, follow"/>
         {/* Google Analytics */}
         {GA_TRACKING_ID && (
           <>

@@ -7,6 +7,7 @@ import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import type React from "react"
 import "./globals.css"
+import { AuthSessionManager } from "@/components/auth-session-manager"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,6 +73,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
           <ThemeProvider defaultTheme="system">
+            <AuthSessionManager />
             <LayoutWrapper>{children}</LayoutWrapper>
           </ThemeProvider>
         </AuthProvider>

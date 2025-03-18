@@ -28,7 +28,7 @@ export const AuthSessionManager = () => {
     // Check if user is authenticated for protected routes
     const checkAuthStatus = () => {
       // Skip checks for public routes
-      const publicRoutes = ["/", "/login", "/register", "/reset-password", "/upgrade", "/terms"]
+      const publicRoutes = ["/", "/login", "/register", "/reset-password", "/upgrade", "/forgot-password"]
       if (publicRoutes.some(route => pathname === route || pathname.startsWith(route + "/"))) {
         return
       }

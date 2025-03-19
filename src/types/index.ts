@@ -161,6 +161,20 @@ export type PaymentHistory = {
   invoiceId?: string
 }
 
+// Import history type
+export type ImportHistory = {
+  id: string
+  userId: string
+  projectId: string
+  fileName: string
+  importDate: string
+  totalCount: number
+  successCount: number
+  duplicateCount: number
+  errorCount: number
+  errors: string[]
+}
+
 // Constants
 export const TASK_STATUS = {
   TODO: "todo",

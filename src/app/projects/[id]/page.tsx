@@ -15,7 +15,6 @@ import {
   Calendar,
   ChevronDown,
   ChevronRight,
-  ChevronLeft,
   Clock,
   Filter,
   Grid,
@@ -24,12 +23,23 @@ import {
   Plus,
   Search,
   Settings,
-  Users
+  Users,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import React, { JSX, useEffect, useState } from "react"
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from "@/components/ui/pagination"
+import React, { type JSX, useEffect, useState } from "react"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from "@/components/ui/pagination"
+import { ImportExportToolbar } from "@/components/import-export-toolbar"
+import { AssigneeGroup } from "@/components/assignee-group"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null)
@@ -53,6 +63,9 @@ export default function ProjectDetailPage() {
   const router = useRouter()
   const projectId = params.id as string
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
+
+  const isMobile = useMediaQuery("(max-width: 768px)")
+  const isSmallScreen = useMediaQuery("(max-width: 1024px)")
 
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -136,7 +149,7 @@ export default function ProjectDetailPage() {
       if (
         !task.title.toLowerCase().includes(queryLower) &&
         !task.description.toLowerCase().includes(queryLower) &&
-        !(task.tags && task.tags.some(tag => tag.toLowerCase().includes(queryLower)))
+        !(task.tags && task.tags.some((tag) => tag.toLowerCase().includes(queryLower)))
       ) {
         return false
       }
@@ -144,14 +157,12 @@ export default function ProjectDetailPage() {
     return true
   })
 
-  const userRoles = user && project?.members && project.members[user.uid]
-    ? project.members[user.uid].roles
-    : []
+  const userRoles = user && project?.members && project.members[user.uid] ? project.members[user.uid].roles : []
 
   const toggleTaskExpansion = (taskId: string) => {
-    setExpandedTasks(prev => ({
+    setExpandedTasks((prev) => ({
       ...prev,
-      [taskId]: !prev[taskId]
+      [taskId]: !prev[taskId],
     }))
   }
 
@@ -160,10 +171,10 @@ export default function ProjectDetailPage() {
     const taskMap: Record<string, Task> = {}
     const rootTasks: Task[] = []
 
-    filteredTasks.forEach(task => {
+    filteredTasks.forEach((task) => {
       taskMap[task.id] = task
     })
-    filteredTasks.forEach(task => {
+    filteredTasks.forEach((task) => {
       if (!task.parentTaskId || !taskMap[task.parentTaskId]) {
         rootTasks.push(task)
       }
@@ -172,7 +183,7 @@ export default function ProjectDetailPage() {
   }
 
   const findChildTasks = (taskId: string) => {
-    return filteredTasks.filter(task => task.parentTaskId === taskId)
+    return filteredTasks.filter((task) => task.parentTaskId === taskId)
   }
 
   if (loading) {
@@ -239,13 +250,50 @@ export default function ProjectDetailPage() {
           </div>
         </PageHeader>
 
+        <div className="mb-6">
+          <ImportExportToolbar
+            projectId={projectId}
+            tasks={tasks}
+            userId={user?.uid || ""}
+            onImportComplete={() => {
+              // Refresh tasks when import is complete
+              const fetchProjectData = async () => {
+                if (!user || !projectId) return
+
+                try {
+                  setLoading(true)
+                  // Fetch tasks cho project
+                  const tasksRef = ref(database, "tasks")
+                  const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
+                  const tasksSnapshot = await get(tasksQuery)
+
+                  if (tasksSnapshot.exists()) {
+                    const tasksData = tasksSnapshot.val()
+                    const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
+                      id,
+                      ...data,
+                    }))
+                    setTasks(tasksList)
+                  }
+                } catch (error) {
+                  console.error("Error fetching tasks:", error)
+                } finally {
+                  setLoading(false)
+                }
+              }
+
+              fetchProjectData()
+            }}
+          />
+        </div>
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 w-full md:w-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:flex gap-2 w-full md:w-auto">
             {/* Status Filter */}
             <div className="relative h-10">
               <Button
                 variant="outline"
-                className="w-full sm:w-40 h-10 rounded-lg shadow-sm"
+                className="w-full h-10 rounded-lg shadow-sm"
                 onClick={() => {
                   setShowStatusFilter(!showStatusFilter)
                   setShowTypeFilter(false)
@@ -318,7 +366,7 @@ export default function ProjectDetailPage() {
             <div className="relative h-10">
               <Button
                 variant="outline"
-                className="w-full sm:w-40 h-10 rounded-lg shadow-sm"
+                className="w-full h-10 rounded-lg shadow-sm"
                 onClick={() => {
                   setShowTypeFilter(!showTypeFilter)
                   setShowStatusFilter(false)
@@ -329,7 +377,9 @@ export default function ProjectDetailPage() {
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2 overflow-hidden">
                     <Layers className="h-4 w-4 flex-shrink-0" />
-                    <span className="block truncate">{typeFilter ? typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1) : "Type"}</span>
+                    <span className="block truncate">
+                      {typeFilter ? typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1) : "Type"}
+                    </span>
                   </div>
                   <ChevronDown className="h-4 w-4 flex-shrink-0" />
                 </div>
@@ -391,7 +441,7 @@ export default function ProjectDetailPage() {
             <div className="relative h-10">
               <Button
                 variant="outline"
-                className="w-full sm:w-40 h-10 rounded-lg shadow-sm flex items-center justify-between"
+                className="w-full h-10 rounded-lg shadow-sm flex items-center justify-between"
                 onClick={() => {
                   setShowMemberFilter(!showMemberFilter)
                   setShowStatusFilter(false)
@@ -402,7 +452,7 @@ export default function ProjectDetailPage() {
                 <div className="flex items-center gap-2 overflow-hidden">
                   <Users className="h-4 w-4 flex-shrink-0" />
                   <span className="block truncate">
-                    {memberFilter ? (users[memberFilter]?.displayName || "Member") : "Assigned To"}
+                    {memberFilter ? users[memberFilter]?.displayName || "Member" : "Assigned To"}
                   </span>
                 </div>
                 <ChevronDown className="h-4 w-4 flex-shrink-0" />
@@ -440,7 +490,7 @@ export default function ProjectDetailPage() {
             <div className="relative h-10">
               <Button
                 variant="outline"
-                className="w-full sm:w-40 h-10 rounded-lg shadow-sm"
+                className="w-full h-10 rounded-lg shadow-sm"
                 onClick={() => {
                   setShowPriorityFilter(!showPriorityFilter)
                   setShowStatusFilter(false)
@@ -450,7 +500,9 @@ export default function ProjectDetailPage() {
               >
                 <div className="flex items-center justify-between w-full">
                   <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="block truncate">{priorityFilter ? priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1) : "Priority"}</span>
+                    <span className="block truncate">
+                      {priorityFilter ? priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1) : "Priority"}
+                    </span>
                   </div>
                   <ChevronDown className="h-4 w-4 flex-shrink-0" />
                 </div>
@@ -498,19 +550,19 @@ export default function ProjectDetailPage() {
                 </Card>
               )}
             </div>
+          </div>
 
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px]">
-              <div className="relative h-10">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="text"
-                  placeholder="Search tasks..."
-                  className="w-full h-10 pl-10 pr-4 py-2 rounded-lg shadow-sm bg-background focus:ring-2 focus:ring-primary/10 transition-colors"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
+          {/* Search input - make it full width on mobile */}
+          <div className="relative w-full md:w-auto md:flex-1 md:min-w-[200px] mb-4 md:mb-0">
+            <div className="relative h-10">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                className="w-full h-10 pl-10 pr-4 py-2 rounded-lg shadow-sm bg-background focus:ring-2 focus:ring-primary/10 transition-colors"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
           </div>
 
@@ -534,7 +586,9 @@ export default function ProjectDetailPage() {
 
             <Link href={`/projects/${projectId}/tasks/create`} className="w-full sm:w-auto">
               <Button className="rounded-lg shadow-sm h-10 w-full">
-                <Plus className="mr-2 h-4 w-4" /> Create Task
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Create Task</span>
+                <span className="sm:hidden">Create</span>
               </Button>
             </Link>
           </div>
@@ -545,9 +599,7 @@ export default function ProjectDetailPage() {
             icon={<Plus className="h-8 w-8 text-primary" />}
             title="No tasks found"
             description={
-              tasks.length === 0
-                ? "This project doesn't have any tasks yet"
-                : "No tasks match your current filters"
+              tasks.length === 0 ? "This project doesn't have any tasks yet" : "No tasks match your current filters"
             }
             action={
               <Link href={`/projects/${projectId}/tasks/create`}>
@@ -560,23 +612,30 @@ export default function ProjectDetailPage() {
         ) : viewMode === "list" ? (
           <Card className="shadow-modern animate-fadeIn overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-[900px] table-auto table-vercel">
+              <table className={`w-full table-auto table-vercel ${isMobile ? "min-w-[600px]" : "min-w-[900px]"}`}>
                 <thead>
                   <tr className="bg-muted/50">
                     <th className="px-4 py-3 text-left text-sm font-medium min-w-[200px]">Title</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Type</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Status</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Priority</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[150px]">Assigned To</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[120px]">Due Date</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                    {!isMobile && <th className="px-4 py-3 text-left text-sm font-medium">Priority</th>}
+                    <th className="px-4 py-3 text-left text-sm font-medium">Assigned</th>
+                    {!isSmallScreen && <th className="px-4 py-3 text-left text-sm font-medium">Due Date</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/10">
                   {paginatedData.map((task) => {
-                    const renderTaskRow = (task: Task, level: number = 0): JSX.Element => {
+                    const renderTaskRow = (task: Task, level = 0): JSX.Element => {
                       const childTasks = findChildTasks(task.id)
                       const hasChildren = childTasks.length > 0
                       const isExpanded = autoExpand || expandedTasks[task.id]
+
+                      // Get assigned users
+                      const assignedUsers =
+                        task.assignedTo && task.assignedTo.length > 0
+                          ? task.assignedTo.map((userId) => users[userId]).filter(Boolean)
+                          : []
+
                       return (
                         <React.Fragment key={task.id}>
                           <tr className="hover:bg-muted/30 transition-colors">
@@ -606,7 +665,10 @@ export default function ProjectDetailPage() {
                                 ) : (
                                   <div className="w-6 mr-2"></div>
                                 )}
-                                <Link href={`/projects/${projectId}/tasks/${task.id}`} className="hover:text-primary transition-colors block">
+                                <Link
+                                  href={`/projects/${projectId}/tasks/${task.id}`}
+                                  className="hover:text-primary transition-colors block truncate"
+                                >
                                   {task.title}
                                 </Link>
                               </div>
@@ -617,46 +679,38 @@ export default function ProjectDetailPage() {
                               </Badge>
                             </td>
                             <td className="px-4 py-3">
-                              <Badge className={getStatusColor(task.status)}>
-                                {getStatusLabel(task.status)}
-                              </Badge>
+                              <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
                             </td>
+                            {!isMobile && (
+                              <td className="px-4 py-3">
+                                <Badge className={getPriorityColor(task.priority)}>
+                                  {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                                </Badge>
+                              </td>
+                            )}
                             <td className="px-4 py-3">
-                              <Badge className={getPriorityColor(task.priority)}>
-                                {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                              </Badge>
+                              <AssigneeGroup
+                                users={assignedUsers}
+                                maxVisible={isMobile ? 2 : 3}
+                                size={isMobile ? "sm" : "md"}
+                              />
                             </td>
-                            <td className="px-4 py-3">
-                              <div className="flex flex-col gap-1">
-                                {task.assignedTo && task.assignedTo.length > 0 ? (
-                                  task.assignedTo.map((userId) => (
-                                    <div key={userId} className="flex items-center space-x-2">
-                                      <div
-                                        className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background"
-                                        title={users[userId]?.displayName || "Unknown user"}
-                                      >
-                                        {users[userId]?.displayName?.charAt(0) || "?"}
-                                      </div>
-                                      <span className="text-sm">{users[userId]?.displayName || "Unknown"}</span>
-                                    </div>
-                                  ))
+                            {!isSmallScreen && (
+                              <td className="px-4 py-3 text-sm">
+                                {task.dueDate ? (
+                                  <div className="flex items-center">
+                                    <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                    <span>{formatDate(task.dueDate)}</span>
+                                  </div>
                                 ) : (
-                                  <span className="text-sm text-muted-foreground">Unassigned</span>
+                                  <span className="text-muted-foreground">-</span>
                                 )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3 text-sm">
-                              {task.dueDate ? (
-                                <div className="flex items-center">
-                                  <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                                  <span>{formatDate(task.dueDate)}</span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">-</span>
-                              )}
-                            </td>
+                              </td>
+                            )}
                           </tr>
-                          {hasChildren && isExpanded && childTasks.map(childTask => renderTaskRow(childTask, level + 1))}
+                          {hasChildren &&
+                            isExpanded &&
+                            childTasks.map((childTask) => renderTaskRow(childTask, level + 1))}
                         </React.Fragment>
                       )
                     }
@@ -669,19 +723,52 @@ export default function ProjectDetailPage() {
               <Pagination className="mt-4">
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)} />
+                    <PaginationPrevious
+                      onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
+                    />
                   </PaginationItem>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                    <PaginationItem key={page}>
-                      <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
+                  {currentPage > 2 && (
+                    <>
+                      <PaginationItem className="hidden sm:inline-block">
+                        <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
+                      </PaginationItem>
+                      {currentPage > 3 && (
+                        <PaginationItem className="hidden sm:inline-block">
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                    </>
+                  )}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((page) => {
+                      if (isMobile) {
+                        // On mobile, show only current page and adjacent pages
+                        return page >= currentPage - 1 && page <= currentPage + 1
+                      }
+                      // On desktop, show more pages
+                      return page >= currentPage - 2 && page <= currentPage + 2
+                    })
+                    .map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ))}
+                  {currentPage < totalPages - 1 && (
+                    <>
+                      {currentPage < totalPages - 2 && (
+                        <PaginationItem className="hidden sm:inline-block">
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      <PaginationItem className="hidden sm:inline-block">
+                        <PaginationLink onClick={() => setCurrentPage(totalPages)}>{totalPages}</PaginationLink>
+                      </PaginationItem>
+                    </>
+                  )}
                   <PaginationItem>
-                    {currentPage < totalPages && (
-                      <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />
-                    )}
+                    {currentPage < totalPages && <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />}
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -689,70 +776,65 @@ export default function ProjectDetailPage() {
           </Card>
         ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedData.map((task) => (
-                <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
-                  <Card className="h-full shadow-modern card-hover transition-all animate-fadeIn">
-                    <div className="p-4">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
-                        <Badge className={`${getStatusColor(task.status)} truncate`}>{getStatusLabel(task.status)}</Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2 truncate">
-                        {task.description || "No description provided"}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        <Badge className={`${getTypeColor(task.type)} truncate`}>
-                          {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
-                        </Badge>
-                        <Badge className={`${getPriorityColor(task.priority)} truncate`}>
-                          {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
-                        </Badge>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="flex flex-col gap-1">
-                          {task.assignedTo && task.assignedTo.length > 0 ? (
-                            task.assignedTo.map((userId) => (
-                              <div
-                                key={userId}
-                                className="flex items-center space-x-2"
-                                title={users[userId]?.displayName || "Unknown user"}
-                              >
-                                <div className="h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-medium ring-2 ring-background">
-                                  {users[userId]?.displayName?.charAt(0) || "?"}
-                                </div>
-                                <span className="text-xs">{users[userId]?.displayName || "Unknown"}</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedData.map((task) => {
+                // Get assigned users
+                const assignedUsers =
+                  task.assignedTo && task.assignedTo.length > 0
+                    ? task.assignedTo.map((userId) => users[userId]).filter(Boolean)
+                    : []
+
+                return (
+                  <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
+                    <Card className="h-full shadow-modern card-hover transition-all animate-fadeIn">
+                      <div className="p-4">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
+                          <Badge className={`${getStatusColor(task.status)} truncate`}>
+                            {getStatusLabel(task.status)}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2 truncate">
+                          {task.description || "No description provided"}
+                        </p>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          <Badge className={`${getTypeColor(task.type)} truncate`}>
+                            {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
+                          </Badge>
+                          <Badge className={`${getPriorityColor(task.priority)} truncate`}>
+                            {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <AssigneeGroup users={assignedUsers} maxVisible={2} size="sm" />
+                          <div className="flex items-center gap-2">
+                            {task.dueDate && (
+                              <div className="flex items-center text-xs text-muted-foreground truncate">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                {formatDate(task.dueDate)}
                               </div>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground truncate">Unassigned</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {task.dueDate && (
-                            <div className="flex items-center text-xs text-muted-foreground truncate">
-                              <Calendar className="h-3 w-3 mr-1" />
-                              {formatDate(task.dueDate)}
-                            </div>
-                          )}
-                          {task.percentDone !== undefined && (
-                            <div className="flex items-center">
-                              <Clock className="h-3 w-3 text-muted-foreground mr-1 flex-shrink-0" />
-                              <span className="text-xs text-muted-foreground truncate">{task.percentDone}%</span>
-                            </div>
-                          )}
+                            )}
+                            {task.percentDone !== undefined && (
+                              <div className="flex items-center">
+                                <Clock className="h-3 w-3 text-muted-foreground mr-1 flex-shrink-0" />
+                                <span className="text-xs text-muted-foreground truncate">{task.percentDone}%</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+                    </Card>
+                  </Link>
+                )
+              })}
             </div>
             {totalPages > 1 && (
               <Pagination className="mt-4">
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)} />
+                    <PaginationPrevious
+                      onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
+                    />
                   </PaginationItem>
                   {currentPage > 3 && (
                     <>
@@ -763,8 +845,8 @@ export default function ProjectDetailPage() {
                     </>
                   )}
                   {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter(page => page >= currentPage - 2 && page <= currentPage + 2)
-                    .map(page => (
+                    .filter((page) => page >= currentPage - 2 && page <= currentPage + 2)
+                    .map((page) => (
                       <PaginationItem key={page}>
                         <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
                           {page}
@@ -780,9 +862,7 @@ export default function ProjectDetailPage() {
                     </>
                   )}
                   <PaginationItem>
-                    {currentPage < totalPages && (
-                      <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />
-                    )}
+                    {currentPage < totalPages && <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />}
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -793,3 +873,4 @@ export default function ProjectDetailPage() {
     </div>
   )
 }
+

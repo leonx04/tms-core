@@ -188,7 +188,7 @@ function ProjectCard({ project }: { project: Project }) {
           <div className="flex justify-between items-start mb-2">
             <h3 className="text-xl font-semibold truncate">{project.name}</h3>
             {isOwner && (
-              <Badge variant="primary" className="ml-2 flex-shrink-0">
+              <Badge variant="default" className="ml-2 flex-shrink-0">
                 <Star className="h-3 w-3 mr-1" /> Owner
               </Badge>
             )}
@@ -221,22 +221,22 @@ function ProjectCard({ project }: { project: Project }) {
           <div className="flex items-center justify-between w-full">
             <div className="flex flex-wrap gap-1">
               {userRoles.includes("admin") && (
-                <Badge variant="primary">
+                <Badge variant="default">
                   <Shield className="mr-1 h-3 w-3" /> Admin
                 </Badge>
               )}
               {userRoles.includes("dev") && (
-                <Badge variant="info">
+                <Badge variant="secondary">
                   <Code className="mr-1 h-3 w-3" /> Dev
                 </Badge>
               )}
               {userRoles.includes("tester") && (
-                <Badge variant="success">
+                <Badge variant="default">
                   <TestTube className="mr-1 h-3 w-3" /> Tester
                 </Badge>
               )}
               {userRoles.includes("documentWriter") && (
-                <Badge variant="warning">
+                <Badge variant="outline">
                   <FileText className="mr-1 h-3 w-3" /> Doc
                 </Badge>
               )}

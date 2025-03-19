@@ -8,6 +8,7 @@ import Stripe from "stripe"
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
   apiVersion: "2025-02-24.acacia",
 })
+
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
@@ -89,9 +90,11 @@ export async function POST(request: NextRequest) {
     // Check if user already has an active subscription
     const userRef = ref(database, `users/${userId}`)
     const userSnapshot = await get(userRef)
+    let customerId: string | undefined
 
     if (userSnapshot.exists()) {
       const userData = userSnapshot.val()
+      customerId = userData.stripeCustomerId
 
       // If user has a Stripe subscription ID, retrieve it to handle upgrades/downgrades
       if (userData.subscriptionId) {
@@ -102,11 +105,22 @@ export async function POST(request: NextRequest) {
           await stripe.subscriptions.update(userData.subscriptionId, {
             cancel_at_period_end: true,
           })
-        } catch (error) {
+        } catch (error: any) {
           console.log("No active subscription found or error retrieving:", error)
           // Continue with new subscription creation
         }
       }
+    }
+
+    // Create or retrieve Stripe customer
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email,
+        metadata: {
+          userId,
+        },
+      })
+      customerId = customer.id
     }
 
     // Create a checkout session
@@ -117,9 +131,8 @@ export async function POST(request: NextRequest) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `TMC ${packageId.charAt(0).toUpperCase() + packageId.slice(1)} Plan (${
-                billingCycle === "monthly" ? "Monthly" : "Yearly"
-              })`,
+              name: `TMC ${packageId.charAt(0).toUpperCase() + packageId.slice(1)} Plan (${billingCycle === "monthly" ? "Monthly" : "Yearly"
+                })`,
               description: `Subscription to the ${packageId} plan`,
             },
             unit_amount: prices[packageId as keyof typeof prices][billingCycle as keyof typeof prices.plus],
@@ -133,7 +146,8 @@ export async function POST(request: NextRequest) {
       mode: "subscription",
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/upgrade?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/upgrade?canceled=true`,
-      customer_email: email,
+      customer: customerId,
+      customer_email: customerId ? undefined : email,
       client_reference_id: userId,
       metadata: {
         userId,
@@ -151,4 +165,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-

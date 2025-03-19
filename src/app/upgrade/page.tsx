@@ -2,12 +2,27 @@
 
 import { loadStripe } from "@stripe/stripe-js"
 import { onValue, ref, update } from "firebase/database"
-import { ArrowLeft, Check, CreditCard, Lock, Shield, Users, Zap } from "lucide-react"
+import {
+  ArrowLeft,
+  Check,
+  CreditCard,
+  Lock,
+  Shield,
+  Users,
+  Zap,
+  CheckCircle,
+  AlertCircle,
+  Sparkles,
+  Loader2,
+  Calendar,
+  History,
+  Receipt,
+} from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,8 +48,9 @@ export default function UpgradePage() {
   const { user, userData } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
+  const searchParams = useSearchParams()
 
-  // Định nghĩa default plans
+  // Define default plans
   const defaultPlans: SubscriptionPlan[] = [
     {
       id: "basic",
@@ -61,6 +77,7 @@ export default function UpgradePage() {
         "Advanced task management",
         "GitHub integration",
         "Email & in-app notifications",
+        "Priority email support",
         "1 year validity",
       ],
       popular: true,
@@ -77,13 +94,14 @@ export default function UpgradePage() {
         "Advanced GitHub integration",
         "Priority support",
         "Custom Cloudinary configuration",
+        "Advanced analytics",
         "1 year validity",
       ],
       popular: false,
     },
   ]
 
-  // Fetch subscription plans từ Firebase. Nếu chưa đăng nhập, dùng luôn default plans
+  // Fetch subscription plans from Firebase. If not logged in, use default plans
   useEffect(() => {
     if (!user) {
       setPlans(defaultPlans)
@@ -112,7 +130,7 @@ export default function UpgradePage() {
         console.error("Error fetching subscription plans:", error)
         setPlans(defaultPlans)
         setLoading(false)
-      }
+      },
     )
 
     return () => unsubscribe()
@@ -120,10 +138,9 @@ export default function UpgradePage() {
 
   // Handle URL parameters for payment status
   useEffect(() => {
-    const url = new URL(window.location.href)
-    const successParam = url.searchParams.get("success")
-    const canceledParam = url.searchParams.get("canceled")
-    const sessionId = url.searchParams.get("session_id")
+    const successParam = searchParams.get("success")
+    const canceledParam = searchParams.get("canceled")
+    const sessionId = searchParams.get("session_id")
 
     if (successParam === "true" && sessionId) {
       setSuccess("Payment successful! Your subscription has been upgraded.")
@@ -141,10 +158,10 @@ export default function UpgradePage() {
       // Clear URL parameters
       window.history.replaceState({}, document.title, "/upgrade")
     }
-  }, [toast])
+  }, [searchParams, toast])
 
   const handleUpgrade = async (packageId: string) => {
-    // Yêu cầu đăng nhập trước khi nâng cấp
+    // Require login before upgrading
     if (!user) {
       const encryptedReturnUrl = secureRoutes.encryptRoute("/upgrade")
       router.push(`/login?returnUrl=${encryptedReturnUrl}`)
@@ -156,16 +173,16 @@ export default function UpgradePage() {
     setSuccess(null)
 
     try {
-      // Xử lý gói miễn phí không cần gọi API
+      // Handle free tier without calling API
       if (packageId === "basic") {
         await handleFreeUpgrade(packageId)
         return
       }
 
-      // Lấy auth token
+      // Get auth token
       const token = await user.getIdToken()
 
-      // Tạo phiên thanh toán
+      // Create checkout session
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
         headers: {
@@ -197,7 +214,7 @@ export default function UpgradePage() {
 
       const data = await response.json()
 
-      // Chuyển hướng đến Stripe Checkout
+      // Redirect to Stripe Checkout
       const stripe = await stripePromise
       if (!stripe) throw new Error("Failed to load Stripe")
 
@@ -256,13 +273,14 @@ export default function UpgradePage() {
         description: "An error occurred while upgrading your package",
         variant: "destructive",
       })
+    } finally {
+      setProcessingPayment(false)
     }
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-
         <main className="container mx-auto px-6 py-10 max-w-7xl">
           <div className="flex flex-col items-center space-y-8">
             <Skeleton className="h-10 w-64" />
@@ -294,14 +312,24 @@ export default function UpgradePage() {
 
   return (
     <div className="min-h-screen bg-background">
-
       <main className="container mx-auto px-6 py-10 max-w-7xl">
-        <Link
-          href="/profile"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Account
-        </Link>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+          <Link
+            href="/profile"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Account
+          </Link>
+
+          <div className="flex items-center gap-3 mt-4 sm:mt-0">
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
+              <Link href="/subscription-history" className="flex items-center gap-1.5">
+                <History className="h-4 w-4" />
+                Payment History
+              </Link>
+            </Button>
+          </div>
+        </div>
 
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Upgrade Your Plan</h1>
@@ -311,15 +339,73 @@ export default function UpgradePage() {
         </div>
 
         {error && (
-          <Alert variant="destructive" className="mb-8 max-w-3xl mx-auto">
+          <Alert variant="destructive" className="mb-8 max-w-3xl mx-auto animate-in fade-in-50 slide-in-from-top-5">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {success && (
-          <Alert className="mb-8 max-w-3xl mx-auto bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-200 dark:border-green-800">
+          <Alert className="mb-8 max-w-3xl mx-auto bg-green-50 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-200 dark:border-green-800 animate-in fade-in-50 slide-in-from-top-5">
+            <CheckCircle className="h-4 w-4" />
+            <AlertTitle>Success</AlertTitle>
             <AlertDescription>{success}</AlertDescription>
           </Alert>
+        )}
+
+        {/* Current Plan Banner */}
+        {userData?.packageId && (
+          <div className="mb-10 max-w-4xl mx-auto">
+            <div className="bg-muted/50 border border-border rounded-lg p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-primary/10 p-2 rounded-full">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-medium">
+                    Current Plan:{" "}
+                    <span className="font-bold text-primary">
+                      {userData.packageId.charAt(0).toUpperCase() + userData.packageId.slice(1)}
+                    </span>
+                  </h3>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {userData.packageExpiry
+                        ? new Date(userData.packageExpiry).toLocaleDateString()
+                        : "No expiration date"}
+                    </div>
+
+                    {userData.billingCycle && (
+                      <div className="flex items-center gap-1">
+                        <Receipt className="h-3.5 w-3.5" />
+                        <span className="capitalize">{userData.billingCycle} billing</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Badge
+                  variant={
+                    userData.packageId === "basic" ? "outline" : userData.packageId === "plus" ? "secondary" : "default"
+                  }
+                  className="px-3 py-1"
+                >
+                  {userData.packageId.charAt(0).toUpperCase() + userData.packageId.slice(1)}
+                </Badge>
+
+                <Button variant="outline" size="sm" asChild className="h-7">
+                  <Link href="/subscription-history" className="flex items-center gap-1.5">
+                    <History className="h-3.5 w-3.5" />
+                    View History
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="flex justify-center mb-12">
@@ -352,9 +438,11 @@ export default function UpgradePage() {
                     buttonText={
                       userData?.packageId === plan.id && userData?.billingCycle === "monthly"
                         ? "Current Plan"
-                        : plan.id === "basic"
+                        : userData?.packageId === "premium" && plan.id !== "premium"
                           ? "Downgrade"
-                          : "Upgrade"
+                          : plan.id === "basic"
+                            ? "Switch to Basic"
+                            : "Upgrade"
                     }
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={
@@ -380,9 +468,11 @@ export default function UpgradePage() {
                     buttonText={
                       userData?.packageId === plan.id && userData?.billingCycle === "yearly"
                         ? "Current Plan"
-                        : plan.id === "basic"
+                        : userData?.packageId === "premium" && plan.id !== "premium"
                           ? "Downgrade"
-                          : "Upgrade"
+                          : plan.id === "basic"
+                            ? "Switch to Basic"
+                            : "Upgrade"
                     }
                     onClick={() => handleUpgrade(plan.id)}
                     disabled={
@@ -396,6 +486,101 @@ export default function UpgradePage() {
               </div>
             </TabsContent>
           </Tabs>
+        </div>
+
+        {/* Plan Comparison Table */}
+        <div className="max-w-4xl mx-auto mb-16 overflow-hidden rounded-xl border border-border">
+          <div className="bg-muted/50 p-4 border-b border-border">
+            <h3 className="text-xl font-semibold">Plan Comparison</h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-muted/30">
+                  <th className="py-4 px-6 text-left font-medium">Features</th>
+                  <th className="py-4 px-6 text-center font-medium">Basic</th>
+                  <th className="py-4 px-6 text-center font-medium">Plus</th>
+                  <th className="py-4 px-6 text-center font-medium">Premium</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                <tr>
+                  <td className="py-4 px-6">Projects</td>
+                  <td className="py-4 px-6 text-center">Up to 3</td>
+                  <td className="py-4 px-6 text-center">Up to 10</td>
+                  <td className="py-4 px-6 text-center">Unlimited</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6">Task Management</td>
+                  <td className="py-4 px-6 text-center">Basic</td>
+                  <td className="py-4 px-6 text-center">Advanced</td>
+                  <td className="py-4 px-6 text-center">Full Suite</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6">GitHub Integration</td>
+                  <td className="py-4 px-6 text-center">
+                    <AlertCircle className="h-5 w-5 text-muted-foreground mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6">Email Notifications</td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6">In-app Notifications</td>
+                  <td className="py-4 px-6 text-center">
+                    <AlertCircle className="h-5 w-5 text-muted-foreground mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6">Priority Support</td>
+                  <td className="py-4 px-6 text-center">
+                    <AlertCircle className="h-5 w-5 text-muted-foreground mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">Email Only</td>
+                  <td className="py-4 px-6 text-center">Email & Chat</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6">Custom Cloudinary Config</td>
+                  <td className="py-4 px-6 text-center">
+                    <AlertCircle className="h-5 w-5 text-muted-foreground mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <AlertCircle className="h-5 w-5 text-muted-foreground mx-auto" />
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    <Check className="h-5 w-5 text-green-500 mx-auto" />
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6">Analytics</td>
+                  <td className="py-4 px-6 text-center">Basic</td>
+                  <td className="py-4 px-6 text-center">Standard</td>
+                  <td className="py-4 px-6 text-center">Advanced</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <div className="max-w-3xl mx-auto bg-muted/40 p-8 rounded-xl border border-border shadow-sm">
@@ -430,13 +615,16 @@ export default function UpgradePage() {
           <p className="text-muted-foreground mb-6">
             Our team is ready to help you find the perfect plan for your needs.
           </p>
-          <div className="flex justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             <Button variant="outline" className="gap-2">
               <Users className="h-4 w-4" />
               Contact Sales
             </Button>
-            <Button variant="ghost" className="gap-2">
-              View Plan Comparison
+            <Button variant="ghost" className="gap-2" asChild>
+              <Link href="/subscription-history">
+                <History className="h-4 w-4" />
+                View Payment History
+              </Link>
             </Button>
           </div>
         </div>
@@ -503,15 +691,15 @@ function PricingCard({
           onClick={onClick}
           disabled={disabled}
           variant={current ? "outline" : highlighted ? "default" : "outline"}
-          className="w-full py-6 text-base"
+          className={`w-full py-6 text-base ${current ? "bg-primary/5 border-primary/20" : ""}`}
           size="lg"
         >
+          {current && <CheckCircle className="mr-2 h-4 w-4" />}
           {buttonText}
-          {processingPayment && (
-            <div className="ml-2 animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-current"></div>
-          )}
+          {processingPayment && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
         </Button>
       </CardFooter>
     </Card>
   )
 }
+

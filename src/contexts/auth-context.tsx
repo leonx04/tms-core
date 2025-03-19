@@ -56,20 +56,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
 
+  // Function to update token in localStorage and cookie
+  const updateAuthToken = async (user: User) => {
+    try {
+      const token = await user.getIdToken(true) // Force refresh
+      localStorage.setItem("jwt", token)
+
+      // Set token expiry (30 minutes)
+      const expiryTime = Date.now() + 30 * 60 * 1000
+      localStorage.setItem("jwt_expiry", expiryTime.toString())
+
+      // Also set token in cookie for middleware
+      document.cookie = `jwt=${token}; path=/; max-age=${30 * 60}; SameSite=Strict; Secure`
+
+      return token
+    } catch (error) {
+      console.error("Error getting token:", error)
+      return null
+    }
+  }
+
+  // Function to clear auth tokens
+  const clearAuthTokens = () => {
+    localStorage.removeItem("jwt")
+    localStorage.removeItem("jwt_expiry")
+    document.cookie = "jwt=; path=/; max-age=0; SameSite=Strict; Secure"
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
 
       if (user) {
-        try {
-          const token = await user.getIdToken()
-          localStorage.setItem("jwt", token)
-          const expiryTime = Date.now() + 30 * 60 * 1000 // 30 minutes expiry
-          localStorage.setItem("jwt_expiry", expiryTime.toString())
-        } catch (error) {
-          console.error("Error getting token:", error)
-        }
+        // Update auth token
+        await updateAuthToken(user)
 
+        // Fetch user data from database
         const userRef = ref(database, `users/${user.uid}`)
         const snapshot = await get(userRef)
 
@@ -77,6 +99,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserData(snapshot.val() as UserData)
           await update(userRef, { lastActive: new Date().toISOString() })
         } else {
+          // Create new user data if it doesn't exist
           const newUserData: UserData = {
             id: user.uid,
             email: user.email || "",
@@ -92,20 +115,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUserData(null)
-        localStorage.removeItem("jwt")
-        localStorage.removeItem("jwt_expiry")
+        clearAuthTokens()
       }
+
       setLoading(false)
     })
 
+    // Check token expiry periodically
     const checkTokenExpiry = () => {
       const expiryTime = localStorage.getItem("jwt_expiry")
       if (expiryTime && Date.now() > Number.parseInt(expiryTime)) {
-        firebaseSignOut(auth)
+        clearAuthTokens()
+        if (auth.currentUser) {
+          firebaseSignOut(auth)
+        }
       }
     }
+
     checkTokenExpiry()
-    const interval = setInterval(checkTokenExpiry, 60000)
+    const interval = setInterval(checkTokenExpiry, 60000) // Check every minute
+
     return () => {
       unsubscribe()
       clearInterval(interval)
@@ -115,14 +144,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      const token = await userCredential.user.getIdToken()
-      localStorage.setItem("jwt", token)
-      const expiryTime = Date.now() + 30 * 60 * 1000
-      localStorage.setItem("jwt_expiry", expiryTime.toString())
+      await updateAuthToken(userCredential.user)
+
       if (auth.currentUser) {
         const userRef = ref(database, `users/${auth.currentUser.uid}/lastActive`)
         await set(userRef, new Date().toISOString())
       }
+
       toast({
         title: "Welcome back!",
         description: "You've successfully signed in.",
@@ -153,10 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleSocialSignIn = async (provider: GoogleAuthProvider | GithubAuthProvider, providerName: string) => {
     try {
       const result = await signInWithPopup(auth, provider)
-      const token = await result.user.getIdToken()
-      localStorage.setItem("jwt", token)
-      const expiryTime = Date.now() + 30 * 60 * 1000
-      localStorage.setItem("jwt_expiry", expiryTime.toString())
+      await updateAuthToken(result.user)
 
       const userRef = ref(database, `users/${result.user.uid}`)
       const snapshot = await get(userRef)
@@ -245,10 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
       await updateProfile(userCredential.user, { displayName })
-      const token = await userCredential.user.getIdToken()
-      localStorage.setItem("jwt", token)
-      const expiryTime = Date.now() + 30 * 60 * 1000
-      localStorage.setItem("jwt_expiry", expiryTime.toString())
+      await updateAuthToken(userCredential.user)
 
       const newUserData: UserData = {
         id: userCredential.user.uid,
@@ -290,8 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      localStorage.removeItem("jwt")
-      localStorage.removeItem("jwt_expiry")
+      clearAuthTokens()
       await firebaseSignOut(auth)
       toast({
         title: "Signed out",
@@ -343,7 +364,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Comprehensive profile update function
+  // Improved profile update function that preserves social links
   const updateUserProfile = async (data: {
     displayName?: string
     email?: string
@@ -361,6 +382,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       const updates: Partial<UserData> = {}
+
+      // Store the current provider data to preserve social links
+      const currentProviders = user.providerData.map((provider) => ({
+        providerId: provider.providerId,
+        uid: provider.uid,
+        email: provider.email,
+        displayName: provider.displayName,
+        photoURL: provider.photoURL,
+      }))
 
       // If email or password change is requested, we need to reauthenticate
       if ((data.email && data.email !== user.email) || data.password) {
@@ -418,6 +448,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Update password if requested
         if (data.password) {
           await updatePassword(user, data.password)
+
+          // Refresh token after password change
+          await updateAuthToken(user)
+
           toast({
             title: "Password updated",
             description: "Your password has been successfully updated.",
@@ -435,6 +469,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (Object.keys(updates).length > 0) {
         await updateUserData(updates)
       }
+
+      // Refresh token to ensure it's up to date
+      await updateAuthToken(user)
     } catch (error: any) {
       console.error("Update profile error:", error)
 
@@ -477,8 +514,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const provider = new GoogleAuthProvider()
     try {
       const result = await linkWithPopup(auth.currentUser, provider)
-      const token = await result.user.getIdToken()
-      localStorage.setItem("jwt", token)
+      await updateAuthToken(result.user)
 
       toast({
         title: "Account linked",
@@ -518,8 +554,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const provider = new GithubAuthProvider()
     try {
       const result = await linkWithPopup(auth.currentUser, provider)
-      const token = await result.user.getIdToken()
-      localStorage.setItem("jwt", token)
+      await updateAuthToken(result.user)
 
       toast({
         title: "Account linked",

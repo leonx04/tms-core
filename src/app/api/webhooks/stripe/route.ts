@@ -49,8 +49,11 @@ export async function POST(request: NextRequest) {
           packageId,
           packageExpiry: expiryDate.toISOString(),
           subscriptionId: session.subscription,
-          billingCycle, // Lưu chu kỳ thanh toán
+          stripeCustomerId: session.customer,
+          billingCycle, // Save billing cycle
+          subscriptionStatus: "active",
           lastPayment: new Date().toISOString(),
+          lastUpdated: new Date().toISOString(),
         })
 
         // Add to payment history
@@ -64,6 +67,17 @@ export async function POST(request: NextRequest) {
           timestamp: new Date().toISOString(),
           sessionId: session.id,
           subscriptionId: session.subscription,
+        })
+
+        // Add notification for user
+        const notificationRef = ref(database, `notifications/${userId}/${Date.now()}`)
+        await set(notificationRef, {
+          userId,
+          eventType: "SUBSCRIPTION_CREATED",
+          referenceId: session.subscription,
+          message: `Your subscription to the ${packageId.charAt(0).toUpperCase() + packageId.slice(1)} plan has been activated.`,
+          status: "unread",
+          createdAt: new Date().toISOString(),
         })
 
         console.log(`User ${userId} upgraded to ${packageId} package with ${billingCycle} billing`)
@@ -109,6 +123,8 @@ export async function POST(request: NextRequest) {
               await update(userRef, {
                 packageExpiry: expiryDate.toISOString(),
                 lastPayment: new Date().toISOString(),
+                subscriptionStatus: "active",
+                lastUpdated: new Date().toISOString(),
               })
 
               // Add to payment history
@@ -123,7 +139,62 @@ export async function POST(request: NextRequest) {
                 invoiceId: invoice.id,
                 subscriptionId,
               })
+
+              // Add notification for user
+              const notificationRef = ref(database, `notifications/${userId}/${Date.now()}`)
+              await set(notificationRef, {
+                userId,
+                eventType: "PAYMENT_SUCCEEDED",
+                referenceId: invoice.id,
+                message: `Your payment for the ${userData.packageId.charAt(0).toUpperCase() + userData.packageId.slice(1)} plan was successful. Your subscription has been renewed.`,
+                status: "unread",
+                createdAt: new Date().toISOString(),
+              })
             }
+          }
+        }
+      }
+      break
+    }
+
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice
+      const subscriptionId = invoice.subscription as string
+
+      if (subscriptionId) {
+        // Find user with this subscription ID
+        const usersRef = ref(database, "users")
+        const usersSnapshot = await get(usersRef)
+
+        if (usersSnapshot.exists()) {
+          const users = usersSnapshot.val()
+          let userId = null
+
+          // Find user with matching subscription ID
+          Object.keys(users).forEach((key) => {
+            if (users[key].subscriptionId === subscriptionId) {
+              userId = key
+            }
+          })
+
+          if (userId) {
+            // Update subscription status
+            const userRef = ref(database, `users/${userId}`)
+            await update(userRef, {
+              subscriptionStatus: "past_due",
+              lastUpdated: new Date().toISOString(),
+            })
+
+            // Add notification for user
+            const notificationRef = ref(database, `notifications/${userId}/${Date.now()}`)
+            await set(notificationRef, {
+              userId,
+              eventType: "PAYMENT_FAILED",
+              referenceId: invoice.id,
+              message: "Your payment failed. Please update your payment method to continue your subscription.",
+              status: "unread",
+              createdAt: new Date().toISOString(),
+            })
           }
         }
       }
@@ -155,6 +226,19 @@ export async function POST(request: NextRequest) {
             cancelAtPeriodEnd: subscription.cancel_at_period_end,
             lastUpdated: new Date().toISOString(),
           })
+
+          // If subscription was canceled but still active, notify user
+          if (subscription.cancel_at_period_end && subscription.status === "active") {
+            const notificationRef = ref(database, `notifications/${userId}/${Date.now()}`)
+            await set(notificationRef, {
+              userId,
+              eventType: "SUBSCRIPTION_CANCELING",
+              referenceId: subscription.id,
+              message: "Your subscription has been set to cancel at the end of the current billing period.",
+              status: "unread",
+              createdAt: new Date().toISOString(),
+            })
+          }
         }
       }
       break
@@ -187,6 +271,17 @@ export async function POST(request: NextRequest) {
             lastUpdated: new Date().toISOString(),
           })
 
+          // Add notification for user
+          const notificationRef = ref(database, `notifications/${userId}/${Date.now()}`)
+          await set(notificationRef, {
+            userId,
+            eventType: "SUBSCRIPTION_CANCELED",
+            referenceId: subscription.id,
+            message: "Your subscription has been canceled. Your account has been downgraded to the Basic plan.",
+            status: "unread",
+            createdAt: new Date().toISOString(),
+          })
+
           console.log(`User ${userId} downgraded to basic package due to subscription cancellation`)
         }
       }
@@ -199,4 +294,3 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ received: true })
 }
-

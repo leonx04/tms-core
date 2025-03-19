@@ -1,81 +1,127 @@
 "use client"
 
-import { useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 import { AlertCircle } from "lucide-react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useEffect, useState } from "react"
 
 export const AuthSessionManager = () => {
-  const { user, loading } = useAuth()
+  const { user, loading, signIn } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [redirectAfterAuth, setRedirectAfterAuth] = useState<string | null>(null)
 
+  // Handle authentication state and redirects
   useEffect(() => {
+    // Public routes that don't require authentication
+    const publicRoutes = ["/", "/login", "/register", "/reset-password", "/upgrade", "/forgot-password"]
+
+    // Check if the route is public
+    const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+
+    // Get callbackUrl from URL if present
+    const callbackUrl = searchParams.get("callbackUrl")
+    if (callbackUrl && pathname === "/login") {
+      setRedirectAfterAuth(decodeURIComponent(callbackUrl))
+    }
+
     // Check if the JWT token is expired
     const checkTokenExpiry = () => {
+      const token = localStorage.getItem("jwt")
       const expiryTime = localStorage.getItem("jwt_expiry")
 
-      if (expiryTime && Date.now() > Number.parseInt(expiryTime)) {
-        // Token expired, redirect to login with message
-        redirectToLogin("Your session has expired. Please sign in again.")
-        return true
-      }
-      return false
+      // If no token or expiry, consider it expired
+      if (!token || !expiryTime) return true
+
+      // Check if token is expired
+      return Date.now() > Number.parseInt(expiryTime)
     }
 
-    // Check if user is authenticated for protected routes
-    const checkAuthStatus = () => {
-      // Skip checks for public routes
-      const publicRoutes = ["/", "/login", "/register", "/reset-password", "/upgrade", "/forgot-password"]
-      if (publicRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
-        return
-      }
+    // Attempt to restore session from localStorage if needed
+    const attemptSessionRestore = async () => {
+      const token = localStorage.getItem("jwt")
 
-      // If we're not loading and there's no user, redirect to login
-      if (!loading && !user) {
-        redirectToLogin("Please sign in to access this page.")
+      if (token && !checkTokenExpiry() && !user) {
+        // We have a valid token but no user - this can happen on page refresh
+        // Let the auth context handle the restoration via onAuthStateChanged
+        // Just wait for it to complete
+        return new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (!loading) {
+              clearInterval(checkInterval)
+              resolve()
+            }
+          }, 100)
+        })
       }
+      return Promise.resolve()
     }
 
-    // Redirect to login with a message
-    const redirectToLogin = (message: string) => {
-      // Only redirect if we're not already on the login page
-      if (pathname !== "/login") {
-        // Store the current path to redirect back after login
-        const returnUrl = encodeURIComponent(pathname)
-        router.push(`/login?callbackUrl=${returnUrl}`)
+    const handleAuthState = async () => {
+      setIsCheckingAuth(true)
 
-        // Show toast notification with a slight delay to ensure it appears after navigation
-        setTimeout(() => {
+      try {
+        // Try to restore session if needed
+        await attemptSessionRestore()
+
+        // If token is expired, clear it
+        if (checkTokenExpiry()) {
+          localStorage.removeItem("jwt")
+          localStorage.removeItem("jwt_expiry")
+        }
+
+        // If we're on a protected route and not authenticated, redirect to login
+        if (!isPublicRoute && !user && !loading) {
+          const returnUrl = encodeURIComponent(pathname)
+          router.push(`/login?callbackUrl=${returnUrl}`)
+
+          // Show toast notification
           toast({
             title: "Authentication Required",
-            description: message,
+            description: "Please sign in to access this page.",
             variant: "destructive",
           })
-        }, 100)
+        }
+
+        // If we're authenticated and have a redirect target, go there
+        if (user && redirectAfterAuth) {
+          router.push(redirectAfterAuth)
+          setRedirectAfterAuth(null)
+        }
+
+        // If we're authenticated and on an auth page, redirect to projects
+        if (user && (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password")) {
+          router.push("/projects")
+        }
+      } finally {
+        setIsCheckingAuth(false)
       }
     }
 
-    // First check token expiry
-    const isExpired = checkTokenExpiry()
-
-    // If token is not expired, check auth status
-    if (!isExpired) {
-      checkAuthStatus()
+    // Only run auth checks when loading is complete
+    if (!loading) {
+      handleAuthState()
     }
 
     // Set up interval to check token expiry regularly
     const tokenCheckInterval = setInterval(() => {
-      checkTokenExpiry()
+      if (checkTokenExpiry() && user) {
+        // If token expired but we still have a user object, force sign out
+        localStorage.removeItem("jwt")
+        localStorage.removeItem("jwt_expiry")
+        window.location.reload() // Force reload to clear auth state
+      }
     }, 60000) // Check every minute
 
     return () => {
       clearInterval(tokenCheckInterval)
     }
-  }, [user, loading, router, pathname, toast])
+  }, [user, loading, pathname, router, toast, searchParams, redirectAfterAuth])
 
   // This component doesn't render anything visible, just the toaster
   return <Toaster />

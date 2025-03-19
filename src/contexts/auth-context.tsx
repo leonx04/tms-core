@@ -141,7 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<void> => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       await updateAuthToken(userCredential.user)
@@ -155,6 +155,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Welcome back!",
         description: "You've successfully signed in.",
       })
+
+      // Check for redirect URL from sessionStorage
+      const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
+      if (redirectUrl) {
+        // Redirect will be handled by AuthSessionManager
+      }
+
+      return
     } catch (error: any) {
       console.error("Sign in error:", error)
       let errorMessage = "Failed to sign in. Please check your credentials."
@@ -206,6 +214,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Welcome!",
         description: `You've successfully signed in with ${providerName}.`,
       })
+
+      return result.user
     } catch (error: any) {
       console.error(`${providerName} sign-in error:`, error)
 

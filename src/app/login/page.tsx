@@ -1,20 +1,20 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
 
-import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from "lucide-react"
+import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from 'lucide-react'
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle } from 'lucide-react'
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -33,7 +33,22 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/projects"
 
-  const { signIn, signInWithGoogle, signInWithGithub } = useAuth()
+  const { signIn, signInWithGoogle, signInWithGithub, user } = useAuth()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      const redirectUrl = callbackUrl ? decodeURIComponent(callbackUrl) : "/projects"
+      router.push(redirectUrl)
+    }
+  }, [user, router, callbackUrl])
+
+  // Store callback URL in sessionStorage for persistence
+  useEffect(() => {
+    if (callbackUrl) {
+      sessionStorage.setItem("redirectAfterAuth", decodeURIComponent(callbackUrl))
+    }
+  }, [callbackUrl])
 
   const {
     register,
@@ -53,7 +68,7 @@ export default function LoginPage() {
 
     try {
       await signIn(data.email, data.password)
-      router.push(decodeURIComponent(callbackUrl))
+      // Redirect will be handled by the useEffect above when user state updates
     } catch (error: any) {
       console.error("Login error:", error)
       // We don't need to set error here as the toast is shown in the auth context
@@ -67,7 +82,7 @@ export default function LoginPage() {
     setSocialLoading("google")
     try {
       await signInWithGoogle()
-      router.push(decodeURIComponent(callbackUrl))
+      // Redirect will be handled by the useEffect above when user state updates
     } catch (error: any) {
       // Error is handled in the auth context
     } finally {
@@ -80,7 +95,7 @@ export default function LoginPage() {
     setSocialLoading("github")
     try {
       await signInWithGithub()
-      router.push(decodeURIComponent(callbackUrl))
+      // Redirect will be handled by the useEffect above when user state updates
     } catch (error: any) {
       // Error is handled in the auth context
     } finally {
@@ -114,6 +129,13 @@ export default function LoginPage() {
             </Link>
             <h1 className="text-2xl font-bold mt-6">Welcome back</h1>
             <p className="text-muted-foreground mt-2">Sign in to your account</p>
+
+            {/* Show redirect message if there's a callback URL */}
+            {callbackUrl && callbackUrl !== "/projects" && (
+              <div className="mt-2 text-sm text-primary">
+                You'll be redirected back after signing in
+              </div>
+            )}
           </div>
 
           <Card className="shadow-modern animate-fadeIn">
@@ -278,4 +300,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

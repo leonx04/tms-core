@@ -1,14 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-
 import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from 'lucide-react'
-
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -16,39 +14,51 @@ import { useAuth } from "@/contexts/auth-context"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from 'lucide-react'
 
-const loginSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-})
-
-type LoginFormValues = z.infer<typeof loginSchema>
-
-export default function LoginPage() {
+// Create a client component that uses useSearchParams
+function LoginForm() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
 
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get("callbackUrl") || "/projects"
-
+  // We'll use a different approach to get the callbackUrl
   const { signIn, signInWithGoogle, signInWithGithub, user } = useAuth()
+
+  // Get callbackUrl from sessionStorage instead of useSearchParams
+  const [callbackUrl, setCallbackUrl] = useState<string>("/projects")
+
+  useEffect(() => {
+    // Get callbackUrl from URL on client side
+    const params = new URLSearchParams(window.location.search)
+    const urlCallbackUrl = params.get("callbackUrl")
+
+    if (urlCallbackUrl) {
+      const decodedUrl = decodeURIComponent(urlCallbackUrl)
+      setCallbackUrl(decodedUrl)
+      sessionStorage.setItem("redirectAfterAuth", decodedUrl)
+    } else {
+      // Check if we have a stored redirect URL
+      const storedRedirect = sessionStorage.getItem("redirectAfterAuth")
+      if (storedRedirect) {
+        setCallbackUrl(storedRedirect)
+      }
+    }
+  }, [])
 
   // Redirect if already logged in
   useEffect(() => {
     if (user) {
-      const redirectUrl = callbackUrl ? decodeURIComponent(callbackUrl) : "/projects"
-      router.push(redirectUrl)
+      router.push(callbackUrl || "/projects")
     }
   }, [user, router, callbackUrl])
 
-  // Store callback URL in sessionStorage for persistence
-  useEffect(() => {
-    if (callbackUrl) {
-      sessionStorage.setItem("redirectAfterAuth", decodeURIComponent(callbackUrl))
-    }
-  }, [callbackUrl])
+  const loginSchema = z.object({
+    email: z.string().email({ message: "Please enter a valid email address" }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  })
+
+  type LoginFormValues = z.infer<typeof loginSchema>
 
   const {
     register,
@@ -298,5 +308,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Main page component with Suspense
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   )
 }

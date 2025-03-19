@@ -1,18 +1,19 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { Suspense } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle } from "lucide-react"
 
 // Create a client component that uses useSearchParams
 function LoginForm() {
@@ -22,7 +23,6 @@ function LoginForm() {
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
 
   const router = useRouter()
-  // We'll use a different approach to get the callbackUrl
   const { signIn, signInWithGoogle, signInWithGithub, user } = useAuth()
 
   // Get callbackUrl from sessionStorage instead of useSearchParams
@@ -30,18 +30,20 @@ function LoginForm() {
 
   useEffect(() => {
     // Get callbackUrl from URL on client side
-    const params = new URLSearchParams(window.location.search)
-    const urlCallbackUrl = params.get("callbackUrl")
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      const urlCallbackUrl = params.get("callbackUrl")
 
-    if (urlCallbackUrl) {
-      const decodedUrl = decodeURIComponent(urlCallbackUrl)
-      setCallbackUrl(decodedUrl)
-      sessionStorage.setItem("redirectAfterAuth", decodedUrl)
-    } else {
-      // Check if we have a stored redirect URL
-      const storedRedirect = sessionStorage.getItem("redirectAfterAuth")
-      if (storedRedirect) {
-        setCallbackUrl(storedRedirect)
+      if (urlCallbackUrl) {
+        const decodedUrl = decodeURIComponent(urlCallbackUrl)
+        setCallbackUrl(decodedUrl)
+        sessionStorage.setItem("redirectAfterAuth", decodedUrl)
+      } else {
+        // Check if we have a stored redirect URL
+        const storedRedirect = sessionStorage.getItem("redirectAfterAuth")
+        if (storedRedirect) {
+          setCallbackUrl(storedRedirect)
+        }
       }
     }
   }, [])
@@ -142,9 +144,7 @@ function LoginForm() {
 
             {/* Show redirect message if there's a callback URL */}
             {callbackUrl && callbackUrl !== "/projects" && (
-              <div className="mt-2 text-sm text-primary">
-                You'll be redirected back after signing in
-              </div>
+              <div className="mt-2 text-sm text-primary">You'll be redirected back after signing in</div>
             )}
           </div>
 
@@ -319,3 +319,4 @@ export default function LoginPage() {
     </Suspense>
   )
 }
+

@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -8,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth"
 import { AlertCircle, ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
@@ -25,7 +26,7 @@ const resetPasswordSchema = z
 
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [isVerifying, setIsVerifying] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -34,8 +35,16 @@ export default function ResetPasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [email, setEmail] = useState<string | null>(null)
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const oobCode = searchParams.get("oobCode")
+
+  // Get oobCode from URL on client side
+  const [oobCode, setOobCode] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      setOobCode(params.get("oobCode"))
+    }
+  }, [])
 
   const {
     register,
@@ -68,7 +77,9 @@ export default function ResetPasswordPage() {
       }
     }
 
-    verifyCode()
+    if (oobCode) {
+      verifyCode()
+    }
   }, [oobCode])
 
   const onSubmit = async (data: ResetPasswordFormValues) => {
@@ -214,6 +225,14 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   )
 }
 

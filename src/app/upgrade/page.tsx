@@ -1,5 +1,6 @@
 "use client"
 
+import { Suspense } from "react"
 import { loadStripe } from "@stripe/stripe-js"
 import { onValue, ref, update } from "firebase/database"
 import {
@@ -19,7 +20,7 @@ import {
   Receipt,
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -38,7 +39,8 @@ import { type SubscriptionPlan, PACKAGE_LIMITS } from "@/types"
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "")
 
-export default function UpgradePage() {
+// Component that uses useSearchParams
+function UpgradePageContent() {
   const [loading, setLoading] = useState(true)
   const [processingPayment, setProcessingPayment] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -48,7 +50,9 @@ export default function UpgradePage() {
   const { user, userData } = useAuth()
   const router = useRouter()
   const { toast } = useToast()
-  const searchParams = useSearchParams()
+
+  // Get search params in a client component
+  const searchParams = new URLSearchParams(typeof window !== "undefined" ? window.location.search : "")
 
   // Define default plans
   const defaultPlans: SubscriptionPlan[] = [
@@ -158,7 +162,7 @@ export default function UpgradePage() {
       // Clear URL parameters
       window.history.replaceState({}, document.title, "/upgrade")
     }
-  }, [searchParams, toast])
+  }, [toast])
 
   const handleUpgrade = async (packageId: string) => {
     // Require login before upgrading
@@ -700,6 +704,15 @@ function PricingCard({
         </Button>
       </CardFooter>
     </Card>
+  )
+}
+
+// Main component with Suspense
+export default function UpgradePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+      <UpgradePageContent />
+    </Suspense>
   )
 }
 

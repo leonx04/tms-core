@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 const registerSchema = z
   .object({
@@ -58,11 +60,7 @@ export default function RegisterPage() {
       router.push("/projects")
     } catch (error: any) {
       console.error("Registration error:", error)
-      if (error.code === "auth/email-already-in-use") {
-        setError("Email already in use. Please try a different email or sign in.")
-      } else {
-        setError("An error occurred during registration. Please try again.")
-      }
+      // Error is handled in the auth context
     } finally {
       setIsLoading(false)
     }
@@ -76,8 +74,7 @@ export default function RegisterPage() {
       await signInWithGoogle()
       router.push("/projects")
     } catch (error: any) {
-      console.error("Google sign-in error:", error)
-      setError("An error occurred during Google sign-in. Please try again.")
+      // Error is handled in the auth context
     } finally {
       setSocialLoading(null)
     }
@@ -91,8 +88,7 @@ export default function RegisterPage() {
       await signInWithGithub()
       router.push("/projects")
     } catch (error: any) {
-      console.error("GitHub sign-in error:", error)
-      setError("An error occurred during GitHub sign-in. Please try again.")
+      // Error is handled in the auth context
     } finally {
       setSocialLoading(null)
     }
@@ -126,16 +122,18 @@ export default function RegisterPage() {
           <Card className="shadow-modern animate-fadeIn">
             <CardContent className="p-8">
               {error && (
-                <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6 flex items-start">
-                  <span className="font-medium">{error}</span>
-                </div>
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
               <div className="space-y-4">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full py-3 rounded-lg flex items-center justify-center"
+                  className="w-full py-6 rounded-lg flex items-center justify-center"
                   onClick={handleGoogleSignIn}
                   disabled={isLoading || socialLoading !== null}
                 >
@@ -169,7 +167,7 @@ export default function RegisterPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full py-3 rounded-lg flex items-center justify-center"
+                  className="w-full py-6 rounded-lg flex items-center justify-center"
                   onClick={handleGithubSignIn}
                   disabled={isLoading || socialLoading !== null}
                 >
@@ -294,7 +292,7 @@ export default function RegisterPage() {
                   </label>
                 </div>
 
-                <Button type="submit" className="w-full py-3 rounded-lg" disabled={isLoading}>
+                <Button type="submit" className="w-full py-6 rounded-lg" disabled={isLoading}>
                   {isLoading ? (
                     "Creating account..."
                   ) : (

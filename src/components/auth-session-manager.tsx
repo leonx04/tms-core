@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
+import { AlertCircle } from "lucide-react"
 
 export const AuthSessionManager = () => {
   const { user, loading } = useAuth()
@@ -18,8 +19,8 @@ export const AuthSessionManager = () => {
       const expiryTime = localStorage.getItem("jwt_expiry")
 
       if (expiryTime && Date.now() > Number.parseInt(expiryTime)) {
-        // Token expired, redirect to home with message
-        redirectToHome("Session expired. Please sign in again.")
+        // Token expired, redirect to login with message
+        redirectToLogin("Your session has expired. Please sign in again.")
         return true
       }
       return false
@@ -29,21 +30,23 @@ export const AuthSessionManager = () => {
     const checkAuthStatus = () => {
       // Skip checks for public routes
       const publicRoutes = ["/", "/login", "/register", "/reset-password", "/upgrade", "/forgot-password"]
-      if (publicRoutes.some(route => pathname === route || pathname.startsWith(route + "/"))) {
+      if (publicRoutes.some((route) => pathname === route || pathname.startsWith(route + "/"))) {
         return
       }
 
-      // If we're not loading and there's no user, redirect to home
+      // If we're not loading and there's no user, redirect to login
       if (!loading && !user) {
-        redirectToHome("Please sign in to access this page.")
+        redirectToLogin("Please sign in to access this page.")
       }
     }
 
-    // Redirect to home with a message
-    const redirectToHome = (message: string) => {
-      // Only redirect if we're not already on the home page
-      if (pathname !== "/") {
-        router.push("/")
+    // Redirect to login with a message
+    const redirectToLogin = (message: string) => {
+      // Only redirect if we're not already on the login page
+      if (pathname !== "/login") {
+        // Store the current path to redirect back after login
+        const returnUrl = encodeURIComponent(pathname)
+        router.push(`/login?callbackUrl=${returnUrl}`)
 
         // Show toast notification with a slight delay to ensure it appears after navigation
         setTimeout(() => {
@@ -79,3 +82,4 @@ export const AuthSessionManager = () => {
 }
 
 export default AuthSessionManager
+

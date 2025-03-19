@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useEffect, useState } from "react"
 import {
   type User,
@@ -13,11 +12,18 @@ import {
   GoogleAuthProvider,
   GithubAuthProvider,
   signInWithPopup,
+  linkWithPopup,
+  fetchSignInMethodsForEmail,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updateEmail,
+  updatePassword,
 } from "firebase/auth"
 import { auth, database } from "@/lib/firebase"
 import { ref, get, set, update } from "firebase/database"
 import { secureRoutes } from "@/lib/secure-routes"
 import type { UserData } from "@/types"
+import { useToast } from "@/hooks/use-toast"
 
 type AuthContextType = {
   user: User | null
@@ -29,6 +35,14 @@ type AuthContextType = {
   signUp: (email: string, password: string, displayName: string) => Promise<void>
   signOut: () => Promise<void>
   updateUserData: (data: Partial<UserData>) => Promise<void>
+  linkWithGoogleAccount: () => Promise<void>
+  linkWithGithubAccount: () => Promise<void>
+  updateUserProfile: (data: {
+    displayName?: string
+    email?: string
+    password?: string
+    currentPassword?: string
+  }) => Promise<void>
   encryptRoute: (route: string) => string
   decryptRoute: (encryptedRoute: string) => string
   obscureUserId: (userId: string, visibleChars?: number) => string
@@ -40,77 +54,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user)
 
       if (user) {
-        // Get JWT token and store in localStorage
         try {
           const token = await user.getIdToken()
           localStorage.setItem("jwt", token)
-          // Set expiry time (30 minutes from now)
-          const expiryTime = Date.now() + 30 * 60 * 1000
+          const expiryTime = Date.now() + 30 * 60 * 1000 // 30 minutes expiry
           localStorage.setItem("jwt_expiry", expiryTime.toString())
         } catch (error) {
           console.error("Error getting token:", error)
         }
 
-        // Fetch user data from database
         const userRef = ref(database, `users/${user.uid}`)
         const snapshot = await get(userRef)
 
         if (snapshot.exists()) {
           setUserData(snapshot.val() as UserData)
-
-          // Update last active timestamp
-          await update(userRef, {
-            lastActive: new Date().toISOString(),
-          })
+          await update(userRef, { lastActive: new Date().toISOString() })
         } else {
-          // Create new user data with basic package
           const newUserData: UserData = {
             id: user.uid,
             email: user.email || "",
             displayName: user.displayName || "",
             photoURL: user.photoURL || "",
-            packageId: "basic", // Default package
-            packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
+            packageId: "basic",
+            packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
             lastActive: new Date().toISOString(),
-            preferences: {
-              emailNotifications: true,
-              inAppNotifications: true,
-            },
+            preferences: { emailNotifications: true, inAppNotifications: true },
           }
-
           await set(userRef, newUserData)
           setUserData(newUserData)
         }
       } else {
         setUserData(null)
-        // Clear JWT from localStorage on logout
         localStorage.removeItem("jwt")
         localStorage.removeItem("jwt_expiry")
       }
-
       setLoading(false)
     })
 
-    // Check for JWT expiry on page load
     const checkTokenExpiry = () => {
       const expiryTime = localStorage.getItem("jwt_expiry")
       if (expiryTime && Date.now() > Number.parseInt(expiryTime)) {
-        // Token expired, sign out
         firebaseSignOut(auth)
       }
     }
-
     checkTokenExpiry()
-
-    // Set up interval to check token expiry
-    const interval = setInterval(checkTokenExpiry, 60000) // Check every minute
-
+    const interval = setInterval(checkTokenExpiry, 60000)
     return () => {
       unsubscribe()
       clearInterval(interval)
@@ -118,161 +113,442 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password)
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      const token = await userCredential.user.getIdToken()
+      localStorage.setItem("jwt", token)
+      const expiryTime = Date.now() + 30 * 60 * 1000
+      localStorage.setItem("jwt_expiry", expiryTime.toString())
+      if (auth.currentUser) {
+        const userRef = ref(database, `users/${auth.currentUser.uid}/lastActive`)
+        await set(userRef, new Date().toISOString())
+      }
+      toast({
+        title: "Welcome back!",
+        description: "You've successfully signed in.",
+      })
+    } catch (error: any) {
+      console.error("Sign in error:", error)
+      let errorMessage = "Failed to sign in. Please check your credentials."
 
-    // Get and store JWT token
-    const token = await userCredential.user.getIdToken()
-    localStorage.setItem("jwt", token)
-    const expiryTime = Date.now() + 30 * 60 * 1000 // 30 minutes
-    localStorage.setItem("jwt_expiry", expiryTime.toString())
+      if (
+        error.code === "auth/invalid-credential" ||
+        error.code === "auth/user-not-found" ||
+        error.code === "auth/wrong-password"
+      ) {
+        errorMessage = "Invalid email or password. Please try again."
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many failed login attempts. Please try again later or reset your password."
+      }
 
-    // Update last active
-    if (auth.currentUser) {
-      const userRef = ref(database, `users/${auth.currentUser.uid}/lastActive`)
-      await set(userRef, new Date().toISOString())
+      toast({
+        title: "Sign in failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+      throw error
+    }
+  }
+
+  const handleSocialSignIn = async (provider: GoogleAuthProvider | GithubAuthProvider, providerName: string) => {
+    try {
+      const result = await signInWithPopup(auth, provider)
+      const token = await result.user.getIdToken()
+      localStorage.setItem("jwt", token)
+      const expiryTime = Date.now() + 30 * 60 * 1000
+      localStorage.setItem("jwt_expiry", expiryTime.toString())
+
+      const userRef = ref(database, `users/${result.user.uid}`)
+      const snapshot = await get(userRef)
+
+      if (!snapshot.exists()) {
+        const newUserData: UserData = {
+          id: result.user.uid,
+          email: result.user.email || "",
+          displayName: result.user.displayName || "",
+          photoURL: result.user.photoURL || "",
+          packageId: "basic",
+          packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          lastActive: new Date().toISOString(),
+          preferences: { emailNotifications: true, inAppNotifications: true },
+        }
+        await set(userRef, newUserData)
+      } else {
+        await set(ref(database, `users/${result.user.uid}/lastActive`), new Date().toISOString())
+      }
+
+      toast({
+        title: "Welcome!",
+        description: `You've successfully signed in with ${providerName}.`,
+      })
+    } catch (error: any) {
+      console.error(`${providerName} sign-in error:`, error)
+
+      if (error.code === "auth/account-exists-with-different-credential") {
+        const email = error.customData?.email
+
+        // Check which providers are available for this email
+        const methods = await fetchSignInMethodsForEmail(auth, email)
+
+        let availableProviders = methods.join(", ")
+        if (methods.includes("password")) {
+          availableProviders = availableProviders.replace("password", "email/password")
+        }
+
+        toast({
+          title: "Sign in method conflict",
+          description: `An account already exists with the email ${email}. Please sign in using ${availableProviders} and then link your ${providerName} account from your profile settings.`,
+          variant: "destructive",
+          duration: 8000,
+        })
+      } else {
+        toast({
+          title: `${providerName} sign in failed`,
+          description: error.message || `Failed to sign in with ${providerName}`,
+          variant: "destructive",
+        })
+      }
+
+      throw error
     }
   }
 
   const signInWithGoogle = async () => {
     const provider = new GoogleAuthProvider()
-    const result = await signInWithPopup(auth, provider)
-
-    // Get and store JWT token
-    const token = await result.user.getIdToken()
-    localStorage.setItem("jwt", token)
-    const expiryTime = Date.now() + 30 * 60 * 1000 // 30 minutes
-    localStorage.setItem("jwt_expiry", expiryTime.toString())
-
-    // Check if this is a new user
-    const userRef = ref(database, `users/${result.user.uid}`)
-    const snapshot = await get(userRef)
-
-    if (!snapshot.exists()) {
-      // Create new user data with basic package
-      const newUserData: UserData = {
-        id: result.user.uid,
-        email: result.user.email || "",
-        displayName: result.user.displayName || "",
-        photoURL: result.user.photoURL || "",
-        packageId: "basic", // Default package
-        packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
-        lastActive: new Date().toISOString(),
-        preferences: {
-          emailNotifications: true,
-          inAppNotifications: true,
-        },
-      }
-
-      await set(userRef, newUserData)
-    } else {
-      // Update last active
-      const userRef = ref(database, `users/${result.user.uid}/lastActive`)
-      await set(userRef, new Date().toISOString())
-    }
+    await handleSocialSignIn(provider, "Google")
   }
 
   const signInWithGithub = async () => {
     const provider = new GithubAuthProvider()
-    const result = await signInWithPopup(auth, provider)
-
-    // Get and store JWT token
-    const token = await result.user.getIdToken()
-    localStorage.setItem("jwt", token)
-    const expiryTime = Date.now() + 30 * 60 * 1000 // 30 minutes
-    localStorage.setItem("jwt_expiry", expiryTime.toString())
-
-    // Check if this is a new user
-    const userRef = ref(database, `users/${result.user.uid}`)
-    const snapshot = await get(userRef)
-
-    if (!snapshot.exists()) {
-      // Create new user data with basic package
-      const newUserData: UserData = {
-        id: result.user.uid,
-        email: result.user.email || "",
-        displayName: result.user.displayName || "",
-        photoURL: result.user.photoURL || "",
-        packageId: "basic", // Default package
-        packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
-        lastActive: new Date().toISOString(),
-        preferences: {
-          emailNotifications: true,
-          inAppNotifications: true,
-        },
-      }
-
-      await set(userRef, newUserData)
-    } else {
-      // Update last active
-      const userRef = ref(database, `users/${result.user.uid}/lastActive`)
-      await set(userRef, new Date().toISOString())
-    }
+    await handleSocialSignIn(provider, "GitHub")
   }
 
   const signUp = async (email: string, password: string, displayName: string) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-    await updateProfile(userCredential.user, { displayName })
+    try {
+      // Check if email already exists with different providers
+      const methods = await fetchSignInMethodsForEmail(auth, email)
 
-    // Get and store JWT token
-    const token = await userCredential.user.getIdToken()
-    localStorage.setItem("jwt", token)
-    const expiryTime = Date.now() + 30 * 60 * 1000 // 30 minutes
-    localStorage.setItem("jwt_expiry", expiryTime.toString())
+      if (methods.length > 0) {
+        let availableProviders = methods.join(", ")
+        if (methods.includes("password")) {
+          availableProviders = availableProviders.replace("password", "email/password")
+        }
 
-    // Create user data with basic package
-    const newUserData: UserData = {
-      id: userCredential.user.uid,
-      email: email,
-      displayName: displayName,
-      packageId: "basic", // Default package
-      packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from now
-      lastActive: new Date().toISOString(),
-      preferences: {
-        emailNotifications: true,
-        inAppNotifications: true,
-      },
+        toast({
+          title: "Email already in use",
+          description: `This email is already registered. Please sign in using ${availableProviders}.`,
+          variant: "destructive",
+          duration: 6000,
+        })
+        throw new Error("Email already in use")
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      await updateProfile(userCredential.user, { displayName })
+      const token = await userCredential.user.getIdToken()
+      localStorage.setItem("jwt", token)
+      const expiryTime = Date.now() + 30 * 60 * 1000
+      localStorage.setItem("jwt_expiry", expiryTime.toString())
+
+      const newUserData: UserData = {
+        id: userCredential.user.uid,
+        email: email,
+        displayName: displayName,
+        packageId: "basic",
+        packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActive: new Date().toISOString(),
+        preferences: { emailNotifications: true, inAppNotifications: true },
+      }
+
+      const userRef = ref(database, `users/${userCredential.user.uid}`)
+      await set(userRef, newUserData)
+
+      toast({
+        title: "Account created",
+        description: "Your account has been successfully created.",
+      })
+    } catch (error: any) {
+      console.error("Sign up error:", error)
+
+      if (error.code === "auth/email-already-in-use") {
+        toast({
+          title: "Email already in use",
+          description: "This email is already registered. Please sign in or use a different email.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Sign up failed",
+          description: error.message || "Failed to create account. Please try again.",
+          variant: "destructive",
+        })
+      }
+
+      throw error
     }
-
-    const userRef = ref(database, `users/${userCredential.user.uid}`)
-    await set(userRef, newUserData)
   }
 
   const signOut = async () => {
-    localStorage.removeItem("jwt")
-    localStorage.removeItem("jwt_expiry")
-    await firebaseSignOut(auth)
+    try {
+      localStorage.removeItem("jwt")
+      localStorage.removeItem("jwt_expiry")
+      await firebaseSignOut(auth)
+      toast({
+        title: "Signed out",
+        description: "You've been successfully signed out.",
+      })
+    } catch (error) {
+      console.error("Sign out error:", error)
+      toast({
+        title: "Sign out failed",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const updateUserData = async (data: Partial<UserData>) => {
-    if (!user) return
+    if (!user) {
+      toast({
+        title: "Update failed",
+        description: "You must be logged in to update your profile.",
+        variant: "destructive",
+      })
+      return
+    }
 
-    const updates: Record<string, any> = {}
-    Object.entries(data).forEach(([key, value]) => {
-      updates[`users/${user.uid}/${key}`] = value
-    })
+    try {
+      const updates: Record<string, any> = {}
+      Object.entries(data).forEach(([key, value]) => {
+        updates[`users/${user.uid}/${key}`] = value
+      })
 
-    // Update in Firebase
-    Object.entries(updates).forEach(async ([path, value]) => {
-      await set(ref(database, path), value)
-    })
+      for (const [path, value] of Object.entries(updates)) {
+        await set(ref(database, path), value)
+      }
 
-    // Update local state
-    setUserData((prev) => (prev ? { ...prev, ...data } : null))
+      setUserData((prev) => (prev ? { ...prev, ...data } : null))
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been successfully updated.",
+      })
+    } catch (error) {
+      console.error("Update user data error:", error)
+      toast({
+        title: "Update failed",
+        description: "Failed to update your profile. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
-  // Route encryption/decryption methods
-  const encryptRoute = (route: string): string => {
-    return secureRoutes.encryptRoute(route)
+  // Comprehensive profile update function
+  const updateUserProfile = async (data: {
+    displayName?: string
+    email?: string
+    password?: string
+    currentPassword?: string
+  }) => {
+    if (!user || !user.email) {
+      toast({
+        title: "Update failed",
+        description: "You must be logged in to update your profile.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      const updates: Partial<UserData> = {}
+
+      // If email or password change is requested, we need to reauthenticate
+      if ((data.email && data.email !== user.email) || data.password) {
+        if (!data.currentPassword) {
+          toast({
+            title: "Authentication required",
+            description: "Current password is required to update email or password.",
+            variant: "destructive",
+          })
+          throw new Error("Current password required")
+        }
+
+        try {
+          // Reauthenticate user
+          const credential = EmailAuthProvider.credential(user.email, data.currentPassword)
+          await reauthenticateWithCredential(user, credential)
+        } catch (error: any) {
+          console.error("Reauthentication error:", error)
+
+          if (error.code === "auth/invalid-credential" || error.code === "auth/wrong-password") {
+            toast({
+              title: "Authentication failed",
+              description: "The current password you entered is incorrect. Please try again.",
+              variant: "destructive",
+            })
+            throw new Error("Current password is incorrect")
+          } else {
+            toast({
+              title: "Authentication failed",
+              description: "Failed to verify your identity. Please try again or sign out and sign back in.",
+              variant: "destructive",
+            })
+            throw error
+          }
+        }
+
+        // Update email if requested
+        if (data.email && data.email !== user.email) {
+          // Check if email is already in use with different providers
+          const methods = await fetchSignInMethodsForEmail(auth, data.email)
+
+          if (methods.length > 0) {
+            toast({
+              title: "Email already in use",
+              description: "This email is already registered with another account.",
+              variant: "destructive",
+            })
+            throw new Error("Email already in use")
+          }
+
+          await updateEmail(user, data.email)
+          updates.email = data.email
+        }
+
+        // Update password if requested
+        if (data.password) {
+          await updatePassword(user, data.password)
+          toast({
+            title: "Password updated",
+            description: "Your password has been successfully updated.",
+          })
+        }
+      }
+
+      // Update display name if requested
+      if (data.displayName && data.displayName !== user.displayName) {
+        await updateProfile(user, { displayName: data.displayName })
+        updates.displayName = data.displayName
+      }
+
+      // Update user data in database if there are changes
+      if (Object.keys(updates).length > 0) {
+        await updateUserData(updates)
+      }
+    } catch (error: any) {
+      console.error("Update profile error:", error)
+
+      if (error.code === "auth/wrong-password") {
+        toast({
+          title: "Authentication failed",
+          description: "Current password is incorrect.",
+          variant: "destructive",
+        })
+      } else if (error.code === "auth/requires-recent-login") {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in again before updating your email or password.",
+          variant: "destructive",
+        })
+        await signOut()
+      } else {
+        toast({
+          title: "Update failed",
+          description: error.message || "Failed to update your profile. Please try again.",
+          variant: "destructive",
+        })
+      }
+
+      throw error
+    }
   }
 
-  const decryptRoute = (encryptedRoute: string): string => {
-    return secureRoutes.decryptRoute(encryptedRoute)
+  // Linking functions for an existing account
+  const linkWithGoogleAccount = async () => {
+    if (!auth.currentUser) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to link an account.",
+        variant: "destructive",
+      })
+      throw new Error("User must be logged in to link an account.")
+    }
+
+    const provider = new GoogleAuthProvider()
+    try {
+      const result = await linkWithPopup(auth.currentUser, provider)
+      const token = await result.user.getIdToken()
+      localStorage.setItem("jwt", token)
+
+      toast({
+        title: "Account linked",
+        description: "Your Google account has been successfully linked.",
+      })
+    } catch (error: any) {
+      console.error("Link Google account error:", error)
+
+      if (error.code === "auth/credential-already-in-use") {
+        toast({
+          title: "Account already exists",
+          description: "This Google account is already linked to another user.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Linking failed",
+          description: "Failed to link your Google account. Please try again.",
+          variant: "destructive",
+        })
+      }
+
+      throw new Error("Error linking Google account: " + error.message)
+    }
   }
 
-  // User ID obscuring method
-  const obscureUserId = (userId: string, visibleChars = 4): string => {
-    return secureRoutes.obscureUserId(userId, visibleChars)
+  const linkWithGithubAccount = async () => {
+    if (!auth.currentUser) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to link an account.",
+        variant: "destructive",
+      })
+      throw new Error("User must be logged in to link an account.")
+    }
+
+    const provider = new GithubAuthProvider()
+    try {
+      const result = await linkWithPopup(auth.currentUser, provider)
+      const token = await result.user.getIdToken()
+      localStorage.setItem("jwt", token)
+
+      toast({
+        title: "Account linked",
+        description: "Your GitHub account has been successfully linked.",
+      })
+    } catch (error: any) {
+      console.error("Link GitHub account error:", error)
+
+      if (error.code === "auth/credential-already-in-use") {
+        toast({
+          title: "Account already exists",
+          description: "This GitHub account is already linked to another user.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Linking failed",
+          description: "Failed to link your GitHub account. Please try again.",
+          variant: "destructive",
+        })
+      }
+
+      throw new Error("Error linking GitHub account: " + error.message)
+    }
   }
+
+  const encryptRoute = (route: string): string => secureRoutes.encryptRoute(route)
+  const decryptRoute = (encryptedRoute: string): string => secureRoutes.decryptRoute(encryptedRoute)
+  const obscureUserId = (userId: string, visibleChars = 4): string => secureRoutes.obscureUserId(userId, visibleChars)
 
   return (
     <AuthContext.Provider
@@ -286,6 +562,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signOut,
         updateUserData,
+        updateUserProfile,
+        linkWithGoogleAccount,
+        linkWithGithubAccount,
         encryptRoute,
         decryptRoute,
         obscureUserId,

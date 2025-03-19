@@ -1,16 +1,20 @@
 "use client"
 
+import { useState } from "react"
+import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { z } from "zod"
+import { zodResolver } from "@hookform/resolvers/zod"
+
+import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from "lucide-react"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from "lucide-react"
-import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -24,9 +28,11 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const callbackUrl = searchParams.get("callbackUrl") || "/projects"
+
   const { signIn, signInWithGoogle, signInWithGithub } = useAuth()
 
   const {
@@ -47,14 +53,10 @@ export default function LoginPage() {
 
     try {
       await signIn(data.email, data.password)
-      router.push(callbackUrl)
+      router.push(decodeURIComponent(callbackUrl))
     } catch (error: any) {
       console.error("Login error:", error)
-      if (error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
-        setError("Invalid email or password. Please try again.")
-      } else {
-        setError("An error occurred during login. Please try again.")
-      }
+      // We don't need to set error here as the toast is shown in the auth context
     } finally {
       setIsLoading(false)
     }
@@ -63,13 +65,11 @@ export default function LoginPage() {
   const handleGoogleSignIn = async () => {
     setError(null)
     setSocialLoading("google")
-
     try {
       await signInWithGoogle()
-      router.push(callbackUrl)
+      router.push(decodeURIComponent(callbackUrl))
     } catch (error: any) {
-      console.error("Google sign-in error:", error)
-      setError("An error occurred during Google sign-in. Please try again.")
+      // Error is handled in the auth context
     } finally {
       setSocialLoading(null)
     }
@@ -78,13 +78,11 @@ export default function LoginPage() {
   const handleGithubSignIn = async () => {
     setError(null)
     setSocialLoading("github")
-
     try {
       await signInWithGithub()
-      router.push(callbackUrl)
+      router.push(decodeURIComponent(callbackUrl))
     } catch (error: any) {
-      console.error("GitHub sign-in error:", error)
-      setError("An error occurred during GitHub sign-in. Please try again.")
+      // Error is handled in the auth context
     } finally {
       setSocialLoading(null)
     }
@@ -92,6 +90,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      {/* Top bar with "Back to Home" */}
       <div className="container mx-auto px-4 py-8 flex justify-between items-center">
         <Link href="/" className="inline-flex items-center text-sm hover:text-primary transition-colors">
           <ArrowLeft className="mr-2 h-4 w-4" />
@@ -99,8 +98,10 @@ export default function LoginPage() {
         </Link>
       </div>
 
+      {/* Centered login card */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="w-full max-w-md">
+          {/* Branding & welcome text */}
           <div className="text-center mb-8">
             <Link href="/" className="inline-block">
               <div className="flex items-center justify-center">
@@ -118,23 +119,27 @@ export default function LoginPage() {
           <Card className="shadow-modern animate-fadeIn">
             <CardContent className="p-8">
               {error && (
-                <div className="bg-destructive/10 text-destructive p-4 rounded-lg mb-6 flex items-start">
-                  <span className="font-medium">{error}</span>
-                </div>
+                <Alert variant="destructive" className="mb-6">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
+              {/* Social sign-in buttons */}
               <div className="space-y-4">
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full py-3 rounded-lg flex items-center justify-center"
+                  className="w-full py-6 rounded-lg flex items-center justify-center"
                   onClick={handleGoogleSignIn}
                   disabled={isLoading || socialLoading !== null}
                 >
                   {socialLoading === "google" ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary" />
                   ) : (
                     <>
+                      {/* Simple Google icon (SVG) */}
                       <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
                         <path
                           d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -161,12 +166,12 @@ export default function LoginPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="w-full py-3 rounded-lg flex items-center justify-center"
+                  className="w-full py-6 rounded-lg flex items-center justify-center"
                   onClick={handleGithubSignIn}
                   disabled={isLoading || socialLoading !== null}
                 >
                   {socialLoading === "github" ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-primary" />
                   ) : (
                     <>
                       <Github className="mr-2 h-5 w-5" />
@@ -176,6 +181,7 @@ export default function LoginPage() {
                 </Button>
               </div>
 
+              {/* OR separator */}
               <div className="relative my-6">
                 <Separator />
                 <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
@@ -183,13 +189,15 @@ export default function LoginPage() {
                 </span>
               </div>
 
+              {/* Email/Password form */}
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+                {/* Email field */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium mb-1">
                     Email
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <input
                       id="email"
                       type="email"
@@ -202,6 +210,7 @@ export default function LoginPage() {
                   {errors.email && <p className="text-destructive text-sm mt-1">{errors.email.message}</p>}
                 </div>
 
+                {/* Password field */}
                 <div>
                   <label htmlFor="password" className="block text-sm font-medium mb-1">
                     Password
@@ -217,7 +226,7 @@ export default function LoginPage() {
                     />
                     <button
                       type="button"
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
                     >
                       {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -226,6 +235,7 @@ export default function LoginPage() {
                   {errors.password && <p className="text-destructive text-sm mt-1">{errors.password.message}</p>}
                 </div>
 
+                {/* Remember me & Forgot password */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
                     <input
@@ -242,7 +252,8 @@ export default function LoginPage() {
                   </Link>
                 </div>
 
-                <Button type="submit" className="w-full py-3 rounded-lg" disabled={isLoading}>
+                {/* Sign in button */}
+                <Button type="submit" className="w-full py-6 rounded-lg" disabled={isLoading}>
                   {isLoading ? (
                     "Signing in..."
                   ) : (
@@ -253,6 +264,7 @@ export default function LoginPage() {
                 </Button>
               </form>
 
+              {/* Sign up link */}
               <div className="mt-6 text-center text-sm">
                 <span className="text-muted-foreground">Don't have an account?</span>{" "}
                 <Link href="/register" className="text-primary hover:underline font-medium">

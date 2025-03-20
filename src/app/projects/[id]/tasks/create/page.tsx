@@ -15,10 +15,28 @@ import { database } from "@/lib/firebase"
 import type { Project } from "@/types"
 import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, set } from "firebase/database"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, GitCommit, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { AssigneeGroup } from "@/components/ui/assignee-group"
+
+// Hàm trích xuất commit id từ chuỗi đầu vào.
+const extractCommitId = (input: string): string => {
+  if (!input) return ""
+  const trimmed = input.trim()
+  const urlRegex = /commit\/([a-f0-9]{7,40})/i
+  const idRegex = /^[a-f0-9]{7,40}$/i
+
+  const matchUrl = trimmed.match(urlRegex)
+  if (matchUrl) {
+    return matchUrl[1]
+  }
+  if (idRegex.test(trimmed)) {
+    return trimmed
+  }
+  return ""
+}
 
 export default function CreateTaskPage() {
   const [loading, setLoading] = useState(true)
@@ -46,6 +64,7 @@ export default function CreateTaskPage() {
   const [parentTaskId, setParentTaskId] = useState<string | null>(null)
   const [parentTaskTitle, setParentTaskTitle] = useState<string>("")
   const [parentTaskSearch, setParentTaskSearch] = useState("")
+  const [commitId, setCommitId] = useState<string>("")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -153,6 +172,8 @@ export default function CreateTaskPage() {
     setIsSaving(true)
 
     try {
+      const parsedCommitId = extractCommitId(commitId)
+
       // Create new task
       const newTaskRef = push(ref(database, "tasks"))
       const newTask = {
@@ -171,6 +192,7 @@ export default function CreateTaskPage() {
         estimatedTime: estimatedTime !== undefined ? estimatedTime : null,
         parentTaskId: parentTaskId || null,
         tags,
+        gitCommitId: parsedCommitId || null,
       }
 
       await set(newTaskRef, newTask)
@@ -207,6 +229,7 @@ export default function CreateTaskPage() {
       toast({
         title: "Task created",
         description: "New task has been created successfully",
+        variant: "success",
       })
 
       setTimeout(() => {
@@ -227,6 +250,12 @@ export default function CreateTaskPage() {
   const filteredTasks = useMemo(() => {
     return projectTasks.filter((task) => task.title.toLowerCase().includes(parentTaskSearch.toLowerCase()))
   }, [parentTaskSearch, projectTasks])
+
+  // Convert available members to array for AssigneeGroup component
+  const getAssigneeUsers = () => {
+    if (!assignedTo) return []
+    return assignedTo.filter((id) => availableMembers[id]).map((id) => availableMembers[id])
+  }
 
   if (loading) {
     return (
@@ -268,7 +297,7 @@ export default function CreateTaskPage() {
 
         <PageHeader title="Create Task" description={`Add a new task to ${project.name}`} />
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-fadeIn">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-bounce-in">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4 md:col-span-2">
@@ -375,13 +404,33 @@ export default function CreateTaskPage() {
               </div>
 
               <div className="space-y-4">
+                <label htmlFor="commitId" className="block text-sm font-medium flex items-center">
+                  <GitCommit className="h-4 w-4 mr-2" />
+                  Commit ID or URL
+                </label>
+                <Input
+                  id="commitId"
+                  value={commitId}
+                  onChange={(e) => setCommitId(e.target.value)}
+                  placeholder="Enter commit ID or GitHub commit URL"
+                  disabled={isSaving}
+                  className="w-full"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {project.githubRepo
+                    ? `Enter a commit ID or URL from ${project.githubRepo}`
+                    : "Enter a commit ID or GitHub commit URL"}
+                </p>
+              </div>
+
+              <div className="space-y-4">
                 <label htmlFor="parentTask" className="block text-sm font-medium">
                   Parent Task (optional)
                 </label>
                 <Select
                   value={parentTaskId || ""}
                   onValueChange={(value) => {
-                    setParentTaskId(value || null)
+                    setParentTaskId(value === "none" ? null : value)
                     const taskTitle = projectTasks.find((task) => task.id === value)?.title || ""
                     setParentTaskTitle(taskTitle)
                   }}
@@ -404,11 +453,13 @@ export default function CreateTaskPage() {
                     <SelectItem value="none">None</SelectItem>
                     {filteredTasks.map((task) => (
                       <SelectItem key={task.id} value={task.id}>
-                        {task.title}{" "}
-                        {(task.assignedTo ?? []).length > 0 &&
-                          `- ${(task.assignedTo ?? [])
-                            .map((id) => availableMembers[id]?.displayName || availableMembers[id]?.email)
-                            .join(", ")}`}
+                        <div className="truncate max-w-[200px]">
+                          {task.title}{" "}
+                          {(task.assignedTo ?? []).length > 0 &&
+                            `- ${(task.assignedTo ?? [])
+                              .map((id) => availableMembers[id]?.displayName || availableMembers[id]?.email)
+                              .join(", ")}`}
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -417,6 +468,13 @@ export default function CreateTaskPage() {
 
               <div className="space-y-4 md:col-span-2">
                 <label className="block text-sm font-medium">Assigned To</label>
+
+                {assignedTo.length > 0 && (
+                  <div className="mb-2">
+                    <AssigneeGroup users={getAssigneeUsers()} />
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {Object.entries(availableMembers).map(([memberId, memberData]: [string, any]) => (
                     <div key={memberId} className="flex items-center space-x-2">
@@ -434,7 +492,7 @@ export default function CreateTaskPage() {
                         disabled={isSaving}
                         className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                       />
-                      <label htmlFor={`member-${memberId}`} className="text-sm">
+                      <label htmlFor={`member-${memberId}`} className="text-sm truncate">
                         {memberData.displayName || memberData.email}
                       </label>
                     </div>

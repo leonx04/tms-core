@@ -11,8 +11,9 @@ import { useAuth } from "@/contexts/auth-context"
 import { database } from "@/lib/firebase"
 import { formatDate } from "@/lib/utils"
 import type { Project } from "@/types"
+import { PACKAGE_LIMITS } from "@/types"
 import { get, ref } from "firebase/database"
-import { Calendar, Code, FileText, Github, Plus, Search, Settings, Shield, Star, TestTube, Users } from "lucide-react"
+import { Calendar, Code, FileText, Github, Plus, Search, Settings, Shield, Star, TestTube, Users } from 'lucide-react'
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -31,7 +32,7 @@ export default function ProjectsPage() {
       if (!user) return
 
       try {
-        // Lấy tất cả các dự án mà user là thành viên
+        // Fetch all projects where user is a member
         const projectsRef = ref(database, "projects")
         const snapshot = await get(projectsRef)
 
@@ -53,7 +54,7 @@ export default function ProjectsPage() {
         console.error("Error fetching projects:", error)
         toast({
           title: "Error",
-          description: "Failed to load projects. Please try again.",
+          description: "Failed to load your projects. Please try again.",
           variant: "destructive",
         })
       } finally {
@@ -80,14 +81,7 @@ export default function ProjectsPage() {
   const canCreateProject = () => {
     if (!userData) return false
 
-    // Kiểm tra xem user có thể tạo thêm dự án hay không dựa trên gói cước của họ
-    const packageLimits = {
-      basic: 3,
-      plus: 10,
-      premium: Number.POSITIVE_INFINITY,
-    }
-
-    const limit = packageLimits[userData.packageId as keyof typeof packageLimits] || 0
+    const limit = PACKAGE_LIMITS[userData.packageId as keyof typeof PACKAGE_LIMITS] || 0
     return projects.length < limit
   }
 
@@ -122,7 +116,7 @@ export default function ProjectsPage() {
 
             {canCreateProject() ? (
               <Link href="/projects/create">
-                <Button className="w-full sm:w-auto rounded-lg shadow-sm">
+                <Button className="w-full sm:w-auto rounded-lg">
                   <Plus className="mr-2 h-4 w-4" /> Create Project
                 </Button>
               </Link>
@@ -130,11 +124,11 @@ export default function ProjectsPage() {
               <Button
                 disabled
                 title="You've reached your project limit. Upgrade your plan to create more projects."
-                className="w-full sm:w-auto rounded-lg shadow-sm"
+                className="w-full sm:w-auto rounded-lg"
                 onClick={() => {
                   toast({
-                    title: "Project limit reached",
-                    description: "Upgrade your plan to create more projects.",
+                    title: "Project Limit Reached",
+                    description: "You've reached your project limit. Upgrade your plan to create more projects.",
                     variant: "destructive",
                   })
                 }}
@@ -158,7 +152,7 @@ export default function ProjectsPage() {
               canCreateProject() &&
               projects.length === 0 && (
                 <Link href="/projects/create">
-                  <Button className="rounded-lg shadow-sm">
+                  <Button className="rounded-lg">
                     <Plus className="mr-2 h-4 w-4" /> Create Project
                   </Button>
                 </Link>
@@ -166,7 +160,7 @@ export default function ProjectsPage() {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProjects.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
@@ -252,17 +246,19 @@ function ProjectCard({ project }: { project: Project }) {
                 </Badge>
               )}
             </div>
-            {userRoles.includes("admin") && (
-              <Link href={`/projects/${project.id}/settings`} onClick={(e) => e.stopPropagation()}>
+            <Link
+              href={`/projects/${project.id}/settings`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {userRoles.includes("admin") && (
                 <Button variant="ghost" size="sm" className="ml-auto rounded-full">
                   <Settings className="h-4 w-4" />
                 </Button>
-              </Link>
-            )}
+              )}
+            </Link>
           </div>
         </CardFooter>
       </CardContent>
     </Card>
   )
 }
-

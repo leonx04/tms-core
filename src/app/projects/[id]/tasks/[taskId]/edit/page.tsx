@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { PageHeader } from "@/components/layout/page-header"
+import { AssigneeGroup } from "@/components/ui/assignee-group"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
@@ -10,16 +11,33 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 import { database } from "@/lib/firebase"
 import type { Project, Task } from "@/types"
 import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
 import { get, ref, update } from "firebase/database"
-import { ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, GitCommit, Save } from 'lucide-react'
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+
+// Hàm trích xuất commit id từ chuỗi đầu vào.
+const extractCommitId = (input: string): string => {
+  if (!input) return "";
+  const trimmed = input.trim();
+  const urlRegex = /commit\/([a-f0-9]{7,40})/i;
+  const idRegex = /^[a-f0-9]{7,40}$/i;
+
+  const matchUrl = trimmed.match(urlRegex);
+  if (matchUrl) {
+    return matchUrl[1];
+  }
+  if (idRegex.test(trimmed)) {
+    return trimmed;
+  }
+  return "";
+};
 
 export default function EditTaskPage() {
   const [task, setTask] = useState<Task | null>(null)
@@ -46,6 +64,7 @@ export default function EditTaskPage() {
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState<string>("")
   const [availableMembers, setAvailableMembers] = useState<Record<string, any>>({})
+  const [commitId, setCommitId] = useState<string>("")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -61,7 +80,7 @@ export default function EditTaskPage() {
             title: "Task not found",
             description: "The task you're looking for doesn't exist",
             variant: "destructive",
-          })
+          });
           router.push(`/projects/${projectId}`)
           return
         }
@@ -77,7 +96,7 @@ export default function EditTaskPage() {
             title: "Invalid task",
             description: "This task doesn't belong to the current project",
             variant: "destructive",
-          })
+          });
           router.push(`/projects/${projectId}`)
           return
         }
@@ -91,10 +110,11 @@ export default function EditTaskPage() {
         setStatus(taskData.status)
         setPriority(taskData.priority)
         setDueDate(taskData.dueDate ? new Date(taskData.dueDate) : undefined)
-        setPercentDone(taskData.percentDone)
+        setPercentDone(taskData.percentDone || 0)
         setEstimatedTime(taskData.estimatedTime ?? undefined)
         setAssignedTo(taskData.assignedTo || [])
         setTags(taskData.tags ?? [])
+        setCommitId(taskData.gitCommitId || "")
 
         // Fetch project details
         const projectRef = ref(database, `projects/${projectId}`)
@@ -105,7 +125,7 @@ export default function EditTaskPage() {
             title: "Project not found",
             description: "The project you're looking for doesn't exist",
             variant: "destructive",
-          })
+          });
           router.push("/projects")
           return
         }
@@ -126,7 +146,7 @@ export default function EditTaskPage() {
             title: "Access denied",
             description: "You don't have permission to edit this task",
             variant: "destructive",
-          })
+          });
           router.push(`/projects/${projectId}/tasks/${taskId}`)
           return
         }
@@ -156,7 +176,7 @@ export default function EditTaskPage() {
           title: "Error",
           description: "Failed to load task data. Please try again.",
           variant: "destructive",
-        })
+        });
       } finally {
         setLoading(false)
       }
@@ -173,6 +193,8 @@ export default function EditTaskPage() {
     setIsSaving(true)
 
     try {
+      const parsedCommitId = extractCommitId(commitId);
+
       const updates: Partial<Task> = {
         title,
         description,
@@ -185,6 +207,11 @@ export default function EditTaskPage() {
         assignedTo,
         tags,
         updatedAt: new Date().toISOString(),
+      }
+
+      // Only update gitCommitId if it has changed
+      if (parsedCommitId !== task.gitCommitId) {
+        updates.gitCommitId = parsedCommitId || null;
       }
 
       const taskRef = ref(database, `tasks/${taskId}`)
@@ -209,7 +236,8 @@ export default function EditTaskPage() {
       toast({
         title: "Task updated",
         description: "Task has been updated successfully",
-      })
+        variant: "success",
+      });
 
       setTimeout(() => {
         router.push(`/projects/${projectId}/tasks/${taskId}`)
@@ -220,16 +248,24 @@ export default function EditTaskPage() {
         title: "Error",
         description: "Failed to update task. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
       setIsSaving(false)
     }
   }
 
+  // Convert available members to array for AssigneeGroup component
+  const getAssigneeUsers = () => {
+    if (!assignedTo) return [];
+    return assignedTo
+      .filter(id => availableMembers[id])
+      .map(id => availableMembers[id]);
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="flex items-center justify-center h-[calc(100vh-64px)]">
+      <div className="bg-background min-h-screen">
+        <div className="flex h-[calc(100vh-64px)] justify-center items-center">
           <LoadingSpinner />
         </div>
       </div>
@@ -238,7 +274,7 @@ export default function EditTaskPage() {
 
   if (!task || !project) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="bg-background min-h-screen">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Task not found</h2>
@@ -255,22 +291,22 @@ export default function EditTaskPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background min-h-screen">
       <main className="container mx-auto px-4 py-8">
         <Link
           href={`/projects/${projectId}/tasks/${taskId}`}
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+          className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center mb-6 transition-colors"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Task
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Task
         </Link>
 
         <PageHeader title="Edit Task" description={`Update task details for ${project.name}`} />
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-fadeIn">
+        <div className="bg-card border border-border rounded-xl shadow-sm animate-bounce-in overflow-hidden">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4 md:col-span-2">
-                <label htmlFor="title" className="block text-sm font-medium">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="md:col-span-2 space-y-4">
+                <label htmlFor="title" className="text-sm block font-medium">
                   Task Title <span className="text-destructive">*</span>
                 </label>
                 <Input
@@ -283,8 +319,8 @@ export default function EditTaskPage() {
                 />
               </div>
 
-              <div className="space-y-4 md:col-span-2">
-                <label htmlFor="description" className="block text-sm font-medium">
+              <div className="md:col-span-2 space-y-4">
+                <label htmlFor="description" className="text-sm block font-medium">
                   Description
                 </label>
                 <Textarea
@@ -298,7 +334,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="type" className="block text-sm font-medium">
+                <label htmlFor="type" className="text-sm block font-medium">
                   Type <span className="text-destructive">*</span>
                 </label>
                 <Select value={type} onValueChange={setType} disabled={isSaving}>
@@ -315,7 +351,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="status" className="block text-sm font-medium">
+                <label htmlFor="status" className="text-sm block font-medium">
                   Status <span className="text-destructive">*</span>
                 </label>
                 <Select value={status} onValueChange={setStatus} disabled={isSaving}>
@@ -332,7 +368,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="priority" className="block text-sm font-medium">
+                <label htmlFor="priority" className="text-sm block font-medium">
                   Priority <span className="text-destructive">*</span>
                 </label>
                 <Select value={priority} onValueChange={setPriority} disabled={isSaving}>
@@ -349,14 +385,14 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="dueDate" className="block text-sm font-medium">
+                <label htmlFor="dueDate" className="text-sm block font-medium">
                   Due Date
                 </label>
                 <DatePicker date={dueDate} setDate={setDueDate} disabled={isSaving} />
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="percentDone" className="block text-sm font-medium">
+                <label htmlFor="percentDone" className="text-sm block font-medium">
                   Progress: {percentDone}%
                 </label>
                 <Slider
@@ -370,7 +406,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="estimatedTime" className="block text-sm font-medium">
+                <label htmlFor="estimatedTime" className="text-sm block font-medium">
                   Estimated Time (hours)
                 </label>
                 <Input
@@ -379,15 +415,44 @@ export default function EditTaskPage() {
                   min={0}
                   step={0.5}
                   value={estimatedTime || ""}
-                  onChange={(e) => setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)}
+                  onChange={(e) =>
+                    setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)
+                  }
                   disabled={isSaving}
                   className="w-full"
                 />
               </div>
 
-              <div className="space-y-4 md:col-span-2">
-                <label className="block text-sm font-medium">Assigned To</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              <div className="space-y-4">
+                <label htmlFor="commitId" className="flex text-sm block font-medium items-center">
+                  <GitCommit className="h-4 w-4 mr-2" />
+                  Commit ID or URL
+                </label>
+                <Input
+                  id="commitId"
+                  value={commitId}
+                  onChange={(e) => setCommitId(e.target.value)}
+                  placeholder="Enter commit ID or GitHub commit URL"
+                  disabled={isSaving}
+                  className="w-full"
+                />
+                <p className="text-muted-foreground text-xs">
+                  {project.githubRepo ?
+                    `Enter a commit ID or URL from ${project.githubRepo}` :
+                    "Enter a commit ID or GitHub commit URL"}
+                </p>
+              </div>
+
+              <div className="md:col-span-2 space-y-4">
+                <label className="text-sm block font-medium">Assigned To</label>
+
+                {assignedTo.length > 0 && (
+                  <div className="mb-2">
+                    <AssigneeGroup users={getAssigneeUsers()} />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-2 md:grid-cols-3 sm:grid-cols-2">
                   {Object.entries(availableMembers).map(([memberId, memberData]: [string, any]) => (
                     <div key={memberId} className="flex items-center space-x-2">
                       <input
@@ -402,9 +467,9 @@ export default function EditTaskPage() {
                           }
                         }}
                         disabled={isSaving}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        className="border-gray-300 h-4 rounded text-primary w-4 focus:ring-primary"
                       />
-                      <label htmlFor={`member-${memberId}`} className="text-sm">
+                      <label htmlFor={`member-${memberId}`} className="text-sm truncate">
                         {memberData.displayName || memberData.email}
                       </label>
                     </div>
@@ -412,21 +477,23 @@ export default function EditTaskPage() {
                 </div>
               </div>
 
-              <div className="space-y-4 md:col-span-2">
-                <label htmlFor="tagInput" className="block text-sm font-medium">
+              <div className="md:col-span-2 space-y-4">
+                <label htmlFor="tagInput" className="text-sm block font-medium">
                   Tags
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag, index) => (
                     <div
                       key={index}
-                      className="flex items-center border border-spacing-3 px-2 py-1 rounded-full text-sm"
+                      className="flex border border-spacing-3 rounded-full text-sm items-center px-2 py-1"
                     >
                       <span>{tag}</span>
                       <button
                         type="button"
-                        onClick={() => setTags(tags.filter((t) => t !== tag))}
-                        className="ml-2 text-red-500"
+                        onClick={() =>
+                          setTags(tags.filter((t) => t !== tag))
+                        }
+                        className="text-red-500 ml-2"
                         disabled={isSaving}
                       >
                         &times;
@@ -454,14 +521,14 @@ export default function EditTaskPage() {
               </div>
             </div>
 
-            <div className="flex justify-end space-x-4 pt-4 border-t border-border">
+            <div className="flex border-border border-t justify-end pt-4 space-x-4">
               <Link href={`/projects/${projectId}/tasks/${taskId}`}>
                 <Button type="button" variant="outline" disabled={isSaving} className="rounded-lg shadow-sm">
                   Cancel
                 </Button>
               </Link>
               <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
-                <Save className="mr-2 h-4 w-4" />
+                <Save className="h-4 w-4 mr-2" />
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
@@ -471,4 +538,3 @@ export default function EditTaskPage() {
     </div>
   )
 }
-

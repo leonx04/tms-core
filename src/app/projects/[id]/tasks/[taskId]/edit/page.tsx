@@ -10,12 +10,13 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { database } from "@/lib/firebase"
 import type { Project, Task } from "@/types"
 import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
 import { get, ref, update } from "firebase/database"
-import { AlertCircle, ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -25,13 +26,12 @@ export default function EditTaskPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
   const taskId = params.taskId as string
+  const { toast } = useToast()
 
   // Form state
   const [title, setTitle] = useState("")
@@ -57,6 +57,11 @@ export default function EditTaskPage() {
         const taskSnapshot = await get(taskRef)
 
         if (!taskSnapshot.exists()) {
+          toast({
+            title: "Task not found",
+            description: "The task you're looking for doesn't exist",
+            variant: "destructive",
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -68,6 +73,11 @@ export default function EditTaskPage() {
 
         // Verify task belongs to the project
         if (taskData.projectId !== projectId) {
+          toast({
+            title: "Invalid task",
+            description: "This task doesn't belong to the current project",
+            variant: "destructive",
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -91,6 +101,11 @@ export default function EditTaskPage() {
         const projectSnapshot = await get(projectRef)
 
         if (!projectSnapshot.exists()) {
+          toast({
+            title: "Project not found",
+            description: "The project you're looking for doesn't exist",
+            variant: "destructive",
+          })
           router.push("/projects")
           return
         }
@@ -107,6 +122,11 @@ export default function EditTaskPage() {
         const canEditTask = userRoles.some((role) => ["admin", "dev", "tester"].includes(role))
 
         if (!canEditTask) {
+          toast({
+            title: "Access denied",
+            description: "You don't have permission to edit this task",
+            variant: "destructive",
+          })
           router.push(`/projects/${projectId}/tasks/${taskId}`)
           return
         }
@@ -132,14 +152,18 @@ export default function EditTaskPage() {
         }
       } catch (error) {
         console.error("Error fetching data:", error)
-        setError("Failed to load task data")
+        toast({
+          title: "Error",
+          description: "Failed to load task data. Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [user, projectId, taskId, router])
+  }, [user, projectId, taskId, router, toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -147,8 +171,6 @@ export default function EditTaskPage() {
     if (!user || !task) return
 
     setIsSaving(true)
-    setError(null)
-    setSuccess(null)
 
     try {
       const updates: Partial<Task> = {
@@ -184,14 +206,21 @@ export default function EditTaskPage() {
         comment: "Task updated",
       })
 
-      setSuccess("Task updated successfully")
+      toast({
+        title: "Task updated",
+        description: "Task has been updated successfully",
+      })
 
       setTimeout(() => {
         router.push(`/projects/${projectId}/tasks/${taskId}`)
       }, 1500)
     } catch (error) {
       console.error("Error updating task:", error)
-      setError("Failed to update task")
+      toast({
+        title: "Error",
+        description: "Failed to update task. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSaving(false)
     }
@@ -200,7 +229,6 @@ export default function EditTaskPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -211,7 +239,6 @@ export default function EditTaskPage() {
   if (!task || !project) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Task not found</h2>
@@ -219,7 +246,7 @@ export default function EditTaskPage() {
               The task you're looking for doesn't exist or you don't have access to it.
             </p>
             <Link href={`/projects/${projectId}`}>
-              <Button>Go to Project</Button>
+              <Button className="rounded-lg shadow-sm">Go to Project</Button>
             </Link>
           </div>
         </div>
@@ -229,8 +256,6 @@ export default function EditTaskPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-
       <main className="container mx-auto px-4 py-8">
         <Link
           href={`/projects/${projectId}/tasks/${taskId}`}
@@ -241,21 +266,7 @@ export default function EditTaskPage() {
 
         <PageHeader title="Edit Task" description={`Update task details for ${project.name}`} />
 
-        {error && (
-          <div className="bg-destructive/10 text-destructive p-4 rounded-xl mb-6 flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-4 rounded-xl mb-6 flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <span>{success}</span>
-          </div>
-        )}
-
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-fadeIn">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4 md:col-span-2">
@@ -368,9 +379,7 @@ export default function EditTaskPage() {
                   min={0}
                   step={0.5}
                   value={estimatedTime || ""}
-                  onChange={(e) =>
-                    setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)
-                  }
+                  onChange={(e) => setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)}
                   disabled={isSaving}
                   className="w-full"
                 />
@@ -416,9 +425,7 @@ export default function EditTaskPage() {
                       <span>{tag}</span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setTags(tags.filter((t) => t !== tag))
-                        }
+                        onClick={() => setTags(tags.filter((t) => t !== tag))}
                         className="ml-2 text-red-500"
                         disabled={isSaving}
                       >
@@ -449,11 +456,11 @@ export default function EditTaskPage() {
 
             <div className="flex justify-end space-x-4 pt-4 border-t border-border">
               <Link href={`/projects/${projectId}/tasks/${taskId}`}>
-                <Button type="button" variant="outline" disabled={isSaving}>
+                <Button type="button" variant="outline" disabled={isSaving} className="rounded-lg shadow-sm">
                   Cancel
                 </Button>
               </Link>
-              <Button type="submit" disabled={isSaving}>
+              <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
                 <Save className="mr-2 h-4 w-4" />
                 {isSaving ? "Saving..." : "Save Changes"}
               </Button>
@@ -464,3 +471,4 @@ export default function EditTaskPage() {
     </div>
   )
 }
+

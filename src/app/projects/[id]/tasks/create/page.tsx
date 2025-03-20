@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { PageHeader } from "@/components/layout/page-header"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
@@ -7,12 +9,13 @@ import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { database } from "@/lib/firebase"
 import type { Project } from "@/types"
 import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, set } from "firebase/database"
-import { AlertCircle, ArrowLeft, Save } from "lucide-react"
+import { ArrowLeft, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
@@ -20,8 +23,6 @@ import { useEffect, useMemo, useState } from "react"
 export default function CreateTaskPage() {
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [availableMembers, setAvailableMembers] = useState<Record<string, any>>({})
   const [projectTasks, setProjectTasks] = useState<{ id: string; title: string; assignedTo?: string[] }[]>([])
@@ -29,6 +30,7 @@ export default function CreateTaskPage() {
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
+  const { toast } = useToast()
 
   // Form state
   const [title, setTitle] = useState("")
@@ -55,6 +57,11 @@ export default function CreateTaskPage() {
         const projectSnapshot = await get(projectRef)
 
         if (!projectSnapshot.exists()) {
+          toast({
+            title: "Project not found",
+            description: "The project you're looking for doesn't exist",
+            variant: "destructive",
+          })
           router.push("/projects")
           return
         }
@@ -71,6 +78,11 @@ export default function CreateTaskPage() {
         const canCreateTask = userRoles.some((role) => ["admin", "dev", "tester"].includes(role))
 
         if (!canCreateTask) {
+          toast({
+            title: "Access denied",
+            description: "You don't have permission to create tasks in this project",
+            variant: "destructive",
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -109,26 +121,36 @@ export default function CreateTaskPage() {
           }))
           setProjectTasks(tasksList)
         }
-
       } catch (error) {
         console.error("Error fetching data:", error)
-        setError("Failed to load project data")
+        toast({
+          title: "Error",
+          description: "Failed to load project data. Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [user, projectId, router])
+  }, [user, projectId, router, toast])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!user || !projectId) return
 
+    if (!title.trim()) {
+      toast({
+        title: "Validation error",
+        description: "Task title is required",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSaving(true)
-    setError(null)
-    setSuccess(null)
 
     try {
       // Create new task
@@ -182,29 +204,33 @@ export default function CreateTaskPage() {
         }
       }
 
-      setSuccess("Task created successfully")
+      toast({
+        title: "Task created",
+        description: "New task has been created successfully",
+      })
 
       setTimeout(() => {
         router.push(`/projects/${projectId}/tasks/${newTaskRef.key}`)
       }, 1500)
     } catch (error) {
       console.error("Error creating task:", error)
-      setError("Failed to create task")
+      toast({
+        title: "Error",
+        description: "Failed to create task. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSaving(false)
     }
   }
 
   const filteredTasks = useMemo(() => {
-    return projectTasks.filter(task =>
-      task.title.toLowerCase().includes(parentTaskSearch.toLowerCase())
-    );
-  }, [parentTaskSearch, projectTasks]);
+    return projectTasks.filter((task) => task.title.toLowerCase().includes(parentTaskSearch.toLowerCase()))
+  }, [parentTaskSearch, projectTasks])
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -215,7 +241,6 @@ export default function CreateTaskPage() {
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Project not found</h2>
@@ -223,7 +248,7 @@ export default function CreateTaskPage() {
               The project you're looking for doesn't exist or you don't have access to it.
             </p>
             <Link href="/projects">
-              <Button>Go to Projects</Button>
+              <Button className="rounded-lg shadow-sm">Go to Projects</Button>
             </Link>
           </div>
         </div>
@@ -233,8 +258,6 @@ export default function CreateTaskPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-
       <main className="container mx-auto px-4 py-8">
         <Link
           href={`/projects/${projectId}`}
@@ -245,21 +268,7 @@ export default function CreateTaskPage() {
 
         <PageHeader title="Create Task" description={`Add a new task to ${project.name}`} />
 
-        {error && (
-          <div className="bg-destructive/10 text-destructive p-4 rounded-xl mb-6 flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-4 rounded-xl mb-6 flex items-start">
-            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <span>{success}</span>
-          </div>
-        )}
-
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-fadeIn">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4 md:col-span-2">
@@ -358,9 +367,7 @@ export default function CreateTaskPage() {
                   min={0}
                   step={0.5}
                   value={estimatedTime || ""}
-                  onChange={(e) =>
-                    setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)
-                  }
+                  onChange={(e) => setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)}
                   disabled={isSaving}
                   className="w-full"
                   placeholder="0"
@@ -375,7 +382,7 @@ export default function CreateTaskPage() {
                   value={parentTaskId || ""}
                   onValueChange={(value) => {
                     setParentTaskId(value || null)
-                    const taskTitle = projectTasks.find(task => task.id === value)?.title || ""
+                    const taskTitle = projectTasks.find((task) => task.id === value)?.title || ""
                     setParentTaskTitle(taskTitle)
                   }}
                   disabled={isSaving}
@@ -400,7 +407,7 @@ export default function CreateTaskPage() {
                         {task.title}{" "}
                         {(task.assignedTo ?? []).length > 0 &&
                           `- ${(task.assignedTo ?? [])
-                            .map(id => availableMembers[id]?.displayName || availableMembers[id]?.email)
+                            .map((id) => availableMembers[id]?.displayName || availableMembers[id]?.email)
                             .join(", ")}`}
                       </SelectItem>
                     ))}
@@ -441,10 +448,7 @@ export default function CreateTaskPage() {
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center bg-gray-200 px-2 py-1 rounded-full text-sm"
-                    >
+                    <div key={index} className="flex items-center bg-muted px-2 py-1 rounded-full text-sm">
                       <span>{tag}</span>
                       <button
                         type="button"
@@ -479,11 +483,11 @@ export default function CreateTaskPage() {
 
             <div className="flex justify-end space-x-4 pt-4 border-t border-border">
               <Link href={`/projects/${projectId}`}>
-                <Button type="button" variant="outline" disabled={isSaving}>
+                <Button type="button" variant="outline" disabled={isSaving} className="rounded-lg shadow-sm">
                   Cancel
                 </Button>
               </Link>
-              <Button type="submit" disabled={isSaving}>
+              <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
                 <Save className="mr-2 h-4 w-4" />
                 {isSaving ? "Creating..." : "Create Task"}
               </Button>
@@ -494,3 +498,4 @@ export default function CreateTaskPage() {
     </div>
   )
 }
+

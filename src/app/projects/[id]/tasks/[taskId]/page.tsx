@@ -5,6 +5,7 @@ import type React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { database } from "@/lib/firebase"
 import { formatTextWithLinks } from "@/lib/format-text-with-links"
@@ -19,33 +20,43 @@ import {
 } from "@/lib/utils"
 import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
-import { ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit, ExternalLink, GitCommit, MessageSquare, User } from "lucide-react"
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Edit,
+  MessageSquare,
+  User,
+} from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { CommitLink } from "@/components/github/commit-preview";
+import { CommitLink } from "@/components/github/commit-preview"
 
 // Hàm trích xuất commit id từ chuỗi đầu vào.
 // Nếu đầu vào chứa URL commit thì chỉ lấy phần id. Nếu không thì kiểm tra xem chuỗi nhập vào có phải là commit id hợp lệ (7-40 ký tự hexa) hay không.
 const extractCommitId = (input: string): string => {
-  const trimmed = input.trim();
-  const urlRegex = /commit\/([a-f0-9]{7,40})/i;
-  const idRegex = /^[a-f0-9]{7,40}$/i;
+  const trimmed = input.trim()
+  const urlRegex = /commit\/([a-f0-9]{7,40})/i
+  const idRegex = /^[a-f0-9]{7,40}$/i
 
-  const matchUrl = trimmed.match(urlRegex);
+  const matchUrl = trimmed.match(urlRegex)
   if (matchUrl) {
-    return matchUrl[1];
+    return matchUrl[1]
   }
   if (idRegex.test(trimmed)) {
-    return trimmed;
+    return trimmed
   }
-  return "";
-};
+  return ""
+}
 
 // Hàm loại bỏ phần "https://github.com/" nếu có trong chuỗi repo.
 const getRepoSlug = (repo: string): string => {
-  return repo.replace(/^(https?:\/\/github\.com\/)/i, '');
-};
+  return repo.replace(/^(https?:\/\/github\.com\/)/i, "")
+}
 
 export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null)
@@ -66,45 +77,51 @@ export default function TaskDetailPage() {
   const router = useRouter()
   const projectId = params.id as string
   const taskId = params.taskId as string
-  const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({});
+  const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({})
+  const { toast } = useToast()
 
   // Hàm tính % hoàn thành dựa trên các child task
   const calculatePercentDone = (tasks: Task[]) => {
-    if (!tasks || tasks.length === 0) return 0;
+    if (!tasks || tasks.length === 0) return 0
 
     const totalPercent = tasks.reduce((sum, task) => {
-      return sum + (task.percentDone || 0);
-    }, 0);
+      return sum + (task.percentDone || 0)
+    }, 0)
 
-    return Math.round(totalPercent / tasks.length);
-  };
+    return Math.round(totalPercent / tasks.length)
+  }
 
   // Hàm ghi lại lịch sử của task
   const logTaskHistory = async (entry: Omit<TaskHistory, "id">) => {
     try {
-      const historyRef = push(ref(database, "taskHistory"));
-      await set(historyRef, entry);
-      setHistory(prev => [{ id: historyRef.key as string, ...entry }, ...prev]);
+      const historyRef = push(ref(database, "taskHistory"))
+      await set(historyRef, entry)
+      setHistory((prev) => [{ id: historyRef.key as string, ...entry }, ...prev])
     } catch (error) {
-      console.error("Error logging task history:", error);
+      console.error("Error logging task history:", error)
+      toast({
+        title: "Error",
+        description: "Failed to log task history",
+        variant: "destructive",
+      })
     }
-  };
+  }
 
   // Cập nhật tiến độ cho parent task (nếu có)
   const updateParentTaskProgress = async (parentTaskId: string, childTasks: Task[]) => {
-    if (!parentTaskId || childTasks.length === 0) return;
+    if (!parentTaskId || childTasks.length === 0) return
 
     try {
-      const newPercentDone = calculatePercentDone(childTasks);
+      const newPercentDone = calculatePercentDone(childTasks)
 
-      const parentTaskRef = ref(database, `tasks/${parentTaskId}`);
+      const parentTaskRef = ref(database, `tasks/${parentTaskId}`)
       await update(parentTaskRef, {
         percentDone: newPercentDone,
         updatedAt: new Date().toISOString(),
-      });
+      })
 
       if (task && task.id === parentTaskId) {
-        setTask(prev => prev ? { ...prev, percentDone: newPercentDone, updatedAt: new Date().toISOString() } : prev);
+        setTask((prev) => (prev ? { ...prev, percentDone: newPercentDone, updatedAt: new Date().toISOString() } : prev))
       }
 
       if (user) {
@@ -120,12 +137,17 @@ export default function TaskDetailPage() {
             },
           ],
           comment: "Progress updated automatically based on subtasks",
-        });
+        })
       }
     } catch (error) {
-      console.error("Error updating parent task progress:", error);
+      console.error("Error updating parent task progress:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update parent task progress",
+        variant: "destructive",
+      })
     }
-  };
+  }
 
   useEffect(() => {
     const fetchTaskData = async () => {
@@ -137,6 +159,11 @@ export default function TaskDetailPage() {
         const taskSnapshot = await get(taskRef)
 
         if (!taskSnapshot.exists()) {
+          toast({
+            title: "Task not found",
+            description: "The task you're looking for doesn't exist",
+            variant: "destructive",
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -148,6 +175,11 @@ export default function TaskDetailPage() {
 
         // Check if task belongs to this project
         if (taskData.projectId !== projectId) {
+          toast({
+            title: "Invalid task",
+            description: "This task doesn't belong to the current project",
+            variant: "destructive",
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -159,6 +191,11 @@ export default function TaskDetailPage() {
         const projectSnapshot = await get(projectRef)
 
         if (!projectSnapshot.exists()) {
+          toast({
+            title: "Project not found",
+            description: "The project you're looking for doesn't exist",
+            variant: "destructive",
+          })
           router.push("/projects")
           return
         }
@@ -168,6 +205,11 @@ export default function TaskDetailPage() {
 
         // Check if user is a member of this project
         if (!projectData.members || !projectData.members[user.uid]) {
+          toast({
+            title: "Access denied",
+            description: "You don't have access to this project",
+            variant: "destructive",
+          })
           router.push("/projects")
           return
         }
@@ -288,19 +330,19 @@ export default function TaskDetailPage() {
           setChildTasks(childTasksList)
 
           if (childTasksList.length > 0) {
-            const calculatedPercent = calculatePercentDone(childTasksList);
+            const calculatedPercent = calculatePercentDone(childTasksList)
             if (taskData.percentDone === undefined || taskData.percentDone !== calculatedPercent) {
-              const taskRef = ref(database, `tasks/${taskId}`);
+              const taskRef = ref(database, `tasks/${taskId}`)
               await update(taskRef, {
                 percentDone: calculatedPercent,
-                updatedAt: new Date().toISOString()
-              });
+                updatedAt: new Date().toISOString(),
+              })
 
               setTask({
                 ...taskData,
                 percentDone: calculatedPercent,
-                updatedAt: new Date().toISOString()
-              });
+                updatedAt: new Date().toISOString(),
+              })
             }
           }
         }
@@ -308,13 +350,18 @@ export default function TaskDetailPage() {
         setUsers(usersData)
       } catch (error) {
         console.error("Error fetching task data:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load task data. Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
     }
 
     fetchTaskData()
-  }, [user, projectId, taskId, router])
+  }, [user, projectId, taskId, router, toast])
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -365,20 +412,28 @@ export default function TaskDetailPage() {
       ])
 
       // Lưu lịch sử hành động "thêm comment"
-      const commentLog = commentText.trim().length <= 100
-        ? commentText.trim()
-        : commentText.trim().slice(0, 100) + "...";
+      const commentLog =
+        commentText.trim().length <= 100 ? commentText.trim() : commentText.trim().slice(0, 100) + "..."
       await logTaskHistory({
         taskId,
         userId: user.uid,
         timestamp: new Date().toISOString(),
         changes: [],
         comment: `Comment added: ${commentLog}`,
-      });
+      })
 
       setCommentText("")
+      toast({
+        title: "Comment added",
+        description: "Your comment has been added successfully",
+      })
     } catch (error) {
       console.error("Error submitting comment:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsSubmittingComment(false)
     }
@@ -401,9 +456,9 @@ export default function TaskDetailPage() {
       }
 
       // Nếu chuyển sang RESOLVED và có commit id, chỉ lưu lại commit id được trích xuất từ link/commit id nhập vào.
-      const parsedCommitId = extractCommitId(commitId);
+      const parsedCommitId = extractCommitId(commitId)
       if (newStatus === TASK_STATUS.RESOLVED && parsedCommitId) {
-        updates.gitCommitId = parsedCommitId;
+        updates.gitCommitId = parsedCommitId
       }
 
       await update(taskRef, updates)
@@ -429,10 +484,11 @@ export default function TaskDetailPage() {
         userId: user.uid,
         timestamp: new Date().toISOString(),
         changes,
-        comment: newStatus === TASK_STATUS.RESOLVED && parsedCommitId
-          ? `Status updated with commit: ${parsedCommitId}`
-          : "Status updated",
-      });
+        comment:
+          newStatus === TASK_STATUS.RESOLVED && parsedCommitId
+            ? `Status updated with commit: ${parsedCommitId}`
+            : "Status updated",
+      })
 
       // Tạo thông báo cho các thành viên được giao task (ngoại trừ người cập nhật)
       if (task.assignedTo) {
@@ -462,8 +518,17 @@ export default function TaskDetailPage() {
       })
 
       setCommitId("")
+      toast({
+        title: "Status updated",
+        description: `Task status changed to ${getStatusLabel(newStatus)}`,
+      })
     } catch (error) {
       console.error("Error updating status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update task status. Please try again.",
+        variant: "destructive",
+      })
     } finally {
       setIsUpdatingStatus(false)
     }
@@ -519,25 +584,30 @@ export default function TaskDetailPage() {
   }
 
   const fetchUserData = async (userId: string) => {
-    setUsersLoading(prev => ({ ...prev, [userId]: true }));
+    setUsersLoading((prev) => ({ ...prev, [userId]: true }))
     try {
-      const userRef = ref(database, `users/${userId}`);
-      const userSnapshot = await get(userRef);
+      const userRef = ref(database, `users/${userId}`)
+      const userSnapshot = await get(userRef)
       if (userSnapshot.exists()) {
-        setUsers(prev => ({
+        setUsers((prev) => ({
           ...prev,
           [userId]: {
             id: userId,
-            ...userSnapshot.val()
-          }
-        }));
+            ...userSnapshot.val(),
+          },
+        }))
       }
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      console.error("Error fetching user data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load user data",
+        variant: "destructive",
+      })
     } finally {
-      setUsersLoading(prev => ({ ...prev, [userId]: false }));
+      setUsersLoading((prev) => ({ ...prev, [userId]: false }))
     }
-  };
+  }
 
   if (loading) {
     return (
@@ -559,7 +629,7 @@ export default function TaskDetailPage() {
               The task you're looking for doesn't exist or you don't have access to it.
             </p>
             <Link href={`/projects/${projectId}`}>
-              <Button className="rounded-lg">Go to Project</Button>
+              <Button className="rounded-lg shadow-sm">Go to Project</Button>
             </Link>
           </div>
         </div>
@@ -584,7 +654,7 @@ export default function TaskDetailPage() {
 
               <div className="flex items-center space-x-2 self-start">
                 <Link href={`/projects/${projectId}/tasks/${taskId}/edit`}>
-                  <Button variant="outline" size="sm" className="rounded-lg">
+                  <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
                     <Edit className="mr-2 h-4 w-4" /> Edit
                   </Button>
                 </Link>
@@ -594,7 +664,7 @@ export default function TaskDetailPage() {
                     onClick={() => handleStatusUpdate(getNextStatus() as string)}
                     disabled={isUpdatingStatus}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-lg shadow-sm"
                   >
                     {getNextStatusLabel()}
                   </Button>
@@ -725,7 +795,9 @@ export default function TaskDetailPage() {
               {task.gitCommitId && projectData?.githubRepo && (
                 <div>
                   <span>Commit ID: </span>
-                  <CommitLink url={`https://github.com/${getRepoSlug(projectData.githubRepo)}/commit/${task.gitCommitId}`} />
+                  <CommitLink
+                    url={`https://github.com/${getRepoSlug(projectData.githubRepo)}/commit/${task.gitCommitId}`}
+                  />
                 </div>
               )}
             </div>
@@ -745,7 +817,7 @@ export default function TaskDetailPage() {
                     onClick={() => handleStatusUpdate(TASK_STATUS.RESOLVED)}
                     disabled={isUpdatingStatus}
                     size="sm"
-                    className="rounded-lg"
+                    className="rounded-lg shadow-sm"
                   >
                     Resolve with Commit
                   </Button>
@@ -800,7 +872,7 @@ export default function TaskDetailPage() {
                                 <div className="flex flex-wrap gap-1">
                                   {childTask.assignedTo.map((userId) => {
                                     if (!users[userId] && !usersLoading[userId]) {
-                                      fetchUserData(userId);
+                                      fetchUserData(userId)
                                     }
 
                                     return (
@@ -815,7 +887,7 @@ export default function TaskDetailPage() {
                                           {users[userId]?.displayName || "Loading user..."}
                                         </span>
                                       </div>
-                                    );
+                                    )
                                   })}
                                 </div>
                               ) : (
@@ -858,7 +930,11 @@ export default function TaskDetailPage() {
                     disabled={isSubmittingComment}
                   />
                   <div className="flex justify-end mt-2">
-                    <Button type="submit" disabled={isSubmittingComment || !commentText.trim()} className="rounded-lg">
+                    <Button
+                      type="submit"
+                      disabled={isSubmittingComment || !commentText.trim()}
+                      className="rounded-lg shadow-sm"
+                    >
                       {isSubmittingComment ? "Submitting..." : "Add Comment"}
                     </Button>
                   </div>
@@ -967,3 +1043,4 @@ export default function TaskDetailPage() {
     </div>
   )
 }
+

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
 import { database } from "@/lib/firebase"
 import { formatDate } from "@/lib/utils"
@@ -23,6 +24,7 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const { user, userData } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -49,13 +51,18 @@ export default function ProjectsPage() {
         }
       } catch (error) {
         console.error("Error fetching projects:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load projects. Please try again.",
+          variant: "destructive",
+        })
       } finally {
         setLoading(false)
       }
     }
 
     fetchProjects()
-  }, [user])
+  }, [user, toast])
 
   useEffect(() => {
     if (searchQuery.trim() === "") {
@@ -87,7 +94,6 @@ export default function ProjectsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -97,8 +103,6 @@ export default function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-
       <main className="container mx-auto px-4 py-8">
         <PageHeader
           title="My Projects"
@@ -118,7 +122,7 @@ export default function ProjectsPage() {
 
             {canCreateProject() ? (
               <Link href="/projects/create">
-                <Button className="w-full sm:w-auto rounded-lg">
+                <Button className="w-full sm:w-auto rounded-lg shadow-sm">
                   <Plus className="mr-2 h-4 w-4" /> Create Project
                 </Button>
               </Link>
@@ -126,7 +130,14 @@ export default function ProjectsPage() {
               <Button
                 disabled
                 title="You've reached your project limit. Upgrade your plan to create more projects."
-                className="w-full sm:w-auto rounded-lg"
+                className="w-full sm:w-auto rounded-lg shadow-sm"
+                onClick={() => {
+                  toast({
+                    title: "Project limit reached",
+                    description: "Upgrade your plan to create more projects.",
+                    variant: "destructive",
+                  })
+                }}
               >
                 <Plus className="mr-2 h-4 w-4" /> Create Project
               </Button>
@@ -147,7 +158,7 @@ export default function ProjectsPage() {
               canCreateProject() &&
               projects.length === 0 && (
                 <Link href="/projects/create">
-                  <Button className="rounded-lg">
+                  <Button className="rounded-lg shadow-sm">
                     <Plus className="mr-2 h-4 w-4" /> Create Project
                   </Button>
                 </Link>
@@ -155,7 +166,7 @@ export default function ProjectsPage() {
             }
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fadeIn">
             {filteredProjects.map((project) => (
               <ProjectCard key={project.id} project={project} />
             ))}
@@ -210,8 +221,8 @@ function ProjectCard({ project }: { project: Project }) {
             </div>
             {project.githubRepo && (
               <div className="flex items-center text-muted-foreground">
-              <Github className="h-4 w-4 mr-2" />
-              <RepoLink url={project.githubRepo} />
+                <Github className="h-4 w-4 mr-2" />
+                <RepoLink url={project.githubRepo} />
               </div>
             )}
           </div>
@@ -241,19 +252,17 @@ function ProjectCard({ project }: { project: Project }) {
                 </Badge>
               )}
             </div>
-            <Link
-              href={`/projects/${project.id}/settings`}
-              onClick={(e) => e.stopPropagation()}
-            >
-                {userRoles.includes("admin") && (
+            {userRoles.includes("admin") && (
+              <Link href={`/projects/${project.id}/settings`} onClick={(e) => e.stopPropagation()}>
                 <Button variant="ghost" size="sm" className="ml-auto rounded-full">
                   <Settings className="h-4 w-4" />
                 </Button>
-                )}
-            </Link>
+              </Link>
+            )}
           </div>
         </CardFooter>
       </CardContent>
     </Card>
   )
 }
+

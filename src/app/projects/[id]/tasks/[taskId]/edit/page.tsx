@@ -424,7 +424,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="commitId" className="flex text-sm block font-medium items-center">
+                <label htmlFor="commitId" className="flex text-sm font-medium items-center">
                   <GitCommit className="h-4 w-4 mr-2" />
                   Commit ID or URL
                 </label>

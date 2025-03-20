@@ -404,7 +404,7 @@ export default function CreateTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="commitId" className="block text-sm font-medium flex items-center">
+                <label htmlFor="commitId" className="text-sm font-medium flex items-center">
                   <GitCommit className="h-4 w-4 mr-2" />
                   Commit ID or URL
                 </label>

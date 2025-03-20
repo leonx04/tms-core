@@ -4,7 +4,8 @@
 
 /* --- Base Styles & Variables --- */
 @layer base {
-  /* Biến toàn cục cho Light Mode */
+
+  /* Light Mode Variables */
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 0%;
@@ -25,69 +26,124 @@
     --border: 0 0% 80%;
     --input: 0 0% 80%;
     --ring: 0 0% 0%;
-    --chart-1: 12 85% 55%;
-    --chart-2: 173 68% 35%;
-    --chart-3: 197 47% 20%;
-    --chart-4: 43 84% 60%;
-    --chart-5: 27 97% 60%;
+    --chart-1: 0 0% 20%;
+    --chart-2: 0 0% 40%;
+    --chart-3: 0 0% 60%;
+    --chart-4: 0 0% 80%;
+    --chart-5: 0 0% 90%;
     --radius: 0.5rem;
     --sidebar-background: 0 0% 96%;
-    --sidebar-foreground: 240 5.3% 20%;
-    --sidebar-primary: 240 5.9% 0%;
+    --sidebar-foreground: 0 0% 20%;
+    --sidebar-primary: 0 0% 0%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 4.8% 90%;
-    --sidebar-accent-foreground: 240 5.9% 0%;
-    --sidebar-border: 220 13% 80%;
-    --sidebar-ring: 217.2 91.2% 50%;
+    --sidebar-accent: 0 0% 90%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 80%;
+    --sidebar-ring: 0 0% 50%;
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 0%;
+
+    /* Status Colors */
+    --status-todo: 210 100% 50%;
+    --status-in-progress: 35 100% 50%;
+    --status-resolved: 142 76% 45%;
+    --status-closed: 220 10% 50%;
+
+    /* Priority Colors */
+    --priority-low: 199 89% 48%;
+    --priority-medium: 35 100% 50%;
+    --priority-high: 24 100% 50%;
+    --priority-critical: 0 100% 50%;
+
+    /* Type Colors */
+    --type-bug: 0 100% 50%;
+    --type-feature: 270 100% 60%;
+    --type-enhancement: 230 100% 60%;
+    --type-documentation: 160 100% 40%;
+
+    /* Role Colors */
+    --role-admin: 270 100% 60%;
+    --role-dev: 210 100% 50%;
+    --role-tester: 142 76% 45%;
+    --role-document-writer: 35 100% 50%;
   }
-  
-  /* Biến toàn cục cho Dark Mode */
+
+  /* Dark Mode Variables - High Contrast Black & White Theme */
   .dark {
-    --background: 240 10% 0%;
+    --background: 0 0% 0%;
     --foreground: 0 0% 100%;
-    --card: 240 10% 3%;
+    --card: 0 0% 3%;
     --card-foreground: 0 0% 100%;
-    --popover: 240 10% 3%;
+    --popover: 0 0% 3%;
     --popover-foreground: 0 0% 100%;
     --primary: 0 0% 100%;
-    --primary-foreground: 240 5.9% 0%;
-    --secondary: 240 3.7% 20%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 100%;
-    --muted: 240 3.7% 20%;
-    --muted-foreground: 240 5% 90%;
-    --accent: 240 3.7% 20%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 80%;
+    --accent: 0 0% 15%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 70% 50%;
+    --destructive: 0 100% 50%;
     --destructive-foreground: 0 0% 100%;
     --success: 142 76% 45%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 60%;
     --warning-foreground: 0 0% 0%;
-    --border: 240 3.7% 30%;
-    --input: 240 3.7% 30%;
-    --ring: 240 4.9% 90%;
-    --sidebar-background: 240 5.9% 0%;
-    --sidebar-foreground: 240 4.8% 100%;
-    --sidebar-primary: 224.3 76.3% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 25%;
-    --sidebar-accent-foreground: 240 4.8% 100%;
-    --sidebar-border: 240 3.7% 25%;
-    --sidebar-ring: 217.2 91.2% 70%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 0 0% 80%;
+    --chart-1: 0 0% 95%;
+    --chart-2: 0 0% 80%;
+    --chart-3: 0 0% 65%;
+    --chart-4: 0 0% 50%;
+    --chart-5: 0 0% 35%;
+    --sidebar-background: 0 0% 0%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 0%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 0 0% 70%;
+
+    /* Status Colors - Brighter for Dark Mode */
+    --status-todo: 210 100% 65%;
+    --status-in-progress: 35 100% 65%;
+    --status-resolved: 142 76% 55%;
+    --status-closed: 220 10% 70%;
+
+    /* Priority Colors - Brighter for Dark Mode */
+    --priority-low: 199 89% 65%;
+    --priority-medium: 35 100% 65%;
+    --priority-high: 24 100% 65%;
+    --priority-critical: 0 100% 65%;
+
+    /* Type Colors - Brighter for Dark Mode */
+    --type-bug: 0 100% 65%;
+    --type-feature: 270 100% 75%;
+    --type-enhancement: 230 100% 75%;
+    --type-documentation: 160 100% 55%;
+
+    /* Role Colors - Brighter for Dark Mode */
+    --role-admin: 270 100% 75%;
+    --role-dev: 210 100% 65%;
+    --role-tester: 142 76% 55%;
+    --role-document-writer: 35 100% 65%;
   }
-  
+
   /* Reset & Base Rules */
   * {
     @apply border-border;
   }
-  
+
   body {
-    font-family: Arial, Helvetica, sans-serif;
-    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell,
+      "Open Sans", "Helvetica Neue", sans-serif;
+    @apply bg-background text-foreground antialiased;
   }
 }
 
@@ -96,55 +152,74 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  .text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  }
+
+  .dark .text-shadow {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  }
 }
 
 /* --- Components & Custom Styles --- */
 @layer components {
+
   /* --- Form Elements --- */
   input,
   select,
   textarea {
-    @apply border-2 border-input;
+    @apply border border-input bg-background;
   }
+
   input:focus,
   select:focus,
   textarea:focus {
     @apply ring-2 ring-primary/80 border-primary;
   }
+
   button,
   .btn {
     @apply font-medium;
   }
+
   *:focus-visible {
     @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
   }
+
   label {
     @apply font-medium text-foreground;
   }
-  
-  /* --- Dark Mode Overrides cho một số components --- */
+
+  /* --- Dark Mode Overrides --- */
   .dark .bg-card {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   }
+
   .dark .border {
-    border-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.1);
   }
+
   .dark a {
-    text-decoration-color: rgba(255, 255, 255, 0.4);
+    text-decoration-color: rgba(255, 255, 255, 0.3);
   }
+
   .dark .prose {
     color: hsl(var(--foreground));
   }
+
   .dark .prose a {
     color: hsl(var(--primary));
     text-decoration: underline;
-    text-decoration-thickness: 2px;
+    text-decoration-thickness: 1px;
     text-underline-offset: 2px;
   }
+
   .dark .prose strong {
     color: hsl(var(--foreground));
-    font-weight: 700;
+    font-weight: 600;
   }
+
   .dark .prose code {
     background-color: hsl(var(--muted));
     color: hsl(var(--foreground));
@@ -152,113 +227,137 @@
     border-radius: 0.25rem;
     font-weight: 500;
   }
+
   .dark .prose blockquote {
     border-color: hsl(var(--border));
-    border-left-width: 4px;
+    border-left-width: 2px;
     color: hsl(var(--muted-foreground));
   }
-  
+
   /* --- Custom Scrollbar --- */
   ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
   }
+
   ::-webkit-scrollbar-track {
     background: hsl(var(--secondary));
-    border-radius: 4px;
+    border-radius: 3px;
   }
+
   ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.7);
-    border-radius: 4px;
-    border: 2px solid hsl(var(--secondary));
+    background: hsl(var(--muted-foreground) / 0.5);
+    border-radius: 3px;
   }
+
   ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary) / 0.7);
+    background: hsl(var(--primary) / 0.5);
   }
-  
+
   /* --- Animations --- */
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
+
   .animate-fadeIn {
-    animation: fadeIn 0.3s ease-in-out;
+    animation: fadeIn 0.2s ease-in-out;
   }
+
   @keyframes slideInFromRight {
-    from { transform: translateX(20px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+      transform: translateX(10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
   }
+
   .animate-slideIn {
-    animation: slideInFromRight 0.3s ease-out;
+    animation: slideInFromRight 0.2s ease-out;
   }
+
   @keyframes slideInFromBottom {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
+
   .animate-slideInFromBottom {
-    animation: slideInFromBottom 0.3s ease-out;
+    animation: slideInFromBottom 0.2s ease-out;
   }
-  
+
   /* --- Card & Glass Effects --- */
   .card-hover {
     transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+
   .card-hover:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
+
   .dark .card-hover:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   }
+
+  /* Glass effect with blur for modern UI components */
   .glass {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-  }
-  .dark .glass {
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
   }
-  
+
+  .dark .glass {
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
   /* --- Shadows --- */
   .shadow-modern {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05),
-                0 2px 4px rgba(0, 0, 0, 0.05),
-                0 4px 8px rgba(0, 0, 0, 0.05),
-                0 8px 16px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 2px 4px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.03);
   }
+
   .dark .shadow-modern {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3),
-                0 2px 4px rgba(0, 0, 0, 0.3),
-                0 4px 8px rgba(0, 0, 0, 0.3),
-                0 8px 16px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 2px 4px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.5);
   }
+
   .shadow-modern-lg {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06),
-                0 4px 8px rgba(0, 0, 0, 0.06),
-                0 8px 16px rgba(0, 0, 0, 0.06),
-                0 16px 32px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03), 0 4px 8px rgba(0, 0, 0, 0.03), 0 8px 16px rgba(0, 0, 0, 0.03);
   }
+
   .dark .shadow-modern-lg {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4),
-                0 4px 8px rgba(0, 0, 0, 0.4),
-                0 8px 16px rgba(0, 0, 0, 0.4),
-                0 16px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6), 0 4px 8px rgba(0, 0, 0, 0.6), 0 8px 16px rgba(0, 0, 0, 0.6);
   }
-  
+
   /* --- Gradient Text & Borders --- */
   .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-800 to-blue-500;
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-300;
   }
-  .dark .gradient-text {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500;
-  }
+
   .gradient-border {
     position: relative;
     border-radius: var(--radius);
     overflow: hidden;
   }
+
   .gradient-border::before {
     content: "";
     position: absolute;
@@ -271,177 +370,176 @@
     mask-composite: exclude;
     pointer-events: none;
   }
-  
+
   /* --- Vercel-like Components --- */
   .btn-vercel {
     @apply bg-foreground text-background hover:bg-foreground/90 transition-colors;
   }
+
   .dark .btn-vercel {
-    @apply bg-background text-foreground hover:bg-background/90;
+    @apply bg-white text-black hover:bg-white/90;
   }
+
   .card-vercel {
     @apply bg-card shadow-modern rounded-lg overflow-hidden;
     border: 1px solid hsl(var(--border) / 0.1);
   }
+
   .dark .card-vercel {
-    border: 1px solid hsl(var(--border) / 0.1);
+    border: 1px solid hsl(var(--border) / 0.2);
   }
+
   .input-vercel {
     @apply bg-background border-0 shadow-sm focus:ring-2 focus:ring-primary/10 transition-all;
   }
+
   .table-vercel {
     @apply w-full;
   }
+
   .table-vercel th {
     @apply text-left text-sm font-medium text-muted-foreground px-4 py-3;
   }
+
   .table-vercel td {
     @apply px-4 py-3 border-t border-border/10;
   }
+
   .table-vercel tr:hover {
     @apply bg-muted/30;
   }
-  .badge-vercel {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
-  
+
   /* --- Grid Pattern Background --- */
   .bg-grid-pattern {
-    background-image: linear-gradient(to right, hsl(var(--border) / 0.1) 1px, transparent 1px),
-                      linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px);
+    background-image: linear-gradient(to right, hsl(var(--border) / 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.05) 1px, transparent 1px);
     background-size: 24px 24px;
   }
+
   .dark .bg-grid-pattern {
-    background-image: linear-gradient(to right, hsl(var(--border) / 0.2) 1px, transparent 1px),
-                      linear-gradient(to bottom, hsl(var(--border) / 0.2) 1px, transparent 1px);
+    background-image: linear-gradient(to right, hsl(var(--border) / 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px);
   }
-  
-  /* --- Status Colors --- */
-  .status-todo {
-    @apply bg-blue-100 text-blue-800 border-blue-300;
-  }
-  .dark .status-todo {
-    @apply bg-blue-900 text-blue-100 border-blue-700;
-  }
-  .status-in-progress {
-    @apply bg-yellow-100 text-yellow-800 border-yellow-300;
-  }
-  .dark .status-in-progress {
-    @apply bg-yellow-900 text-yellow-100 border-yellow-700;
-  }
-  .status-resolved {
-    @apply bg-green-100 text-green-800 border-green-300;
-  }
-  .dark .status-resolved {
-    @apply bg-green-900 text-green-100 border-green-700;
-  }
-  .status-closed {
-    @apply bg-gray-100 text-gray-800 border-gray-300;
-  }
-  .dark .status-closed {
-    @apply bg-gray-800 text-gray-100 border-gray-600;
-  }
-  
-  /* --- Priority Colors --- */
-  .priority-low {
-    @apply bg-blue-50 text-blue-800 border-blue-200;
-  }
-  .dark .priority-low {
-    @apply bg-blue-900 text-blue-50 border-blue-700;
-  }
-  .priority-medium {
-    @apply bg-yellow-50 text-yellow-800 border-yellow-200;
-  }
-  .dark .priority-medium {
-    @apply bg-yellow-900 text-yellow-50 border-yellow-700;
-  }
-  .priority-high {
-    @apply bg-orange-50 text-orange-800 border-orange-200;
-  }
-  .dark .priority-high {
-    @apply bg-orange-900 text-orange-50 border-orange-700;
-  }
-  .priority-critical {
-    @apply bg-red-50 text-red-800 border-red-200;
-  }
-  .dark .priority-critical {
-    @apply bg-red-900 text-red-50 border-red-700;
-  }
-  
-  /* --- Type Colors --- */
-  .type-bug {
-    @apply bg-red-50 text-red-800 border-red-200;
-  }
-  .dark .type-bug {
-    @apply bg-red-900 text-red-50 border-red-700;
-  }
-  .type-feature {
-    @apply bg-purple-50 text-purple-800 border-purple-200;
-  }
-  .dark .type-feature {
-    @apply bg-purple-900 text-purple-50 border-purple-700;
-  }
-  .type-enhancement {
-    @apply bg-indigo-50 text-indigo-800 border-indigo-200;
-  }
-  .dark .type-enhancement {
-    @apply bg-indigo-900 text-indigo-50 border-indigo-700;
-  }
-  .type-documentation {
-    @apply bg-emerald-50 text-emerald-800 border-emerald-200;
-  }
-  .dark .type-documentation {
-    @apply bg-emerald-900 text-emerald-50 border-emerald-700;
-  }
-  
-  /* --- Role Colors --- */
-  .role-admin {
-    @apply bg-purple-50 text-purple-800 border-purple-200;
-  }
-  .dark .role-admin {
-    @apply bg-purple-900 text-purple-50 border-purple-700;
-  }
-  .role-dev {
-    @apply bg-blue-50 text-blue-800 border-blue-200;
-  }
-  .dark .role-dev {
-    @apply bg-blue-900 text-blue-50 border-blue-700;
-  }
-  .role-tester {
-    @apply bg-green-50 text-green-800 border-green-200;
-  }
-  .dark .role-tester {
-    @apply bg-green-900 text-green-50 border-green-700;
-  }
-  .role-documentWriter {
-    @apply bg-amber-50 text-amber-800 border-amber-200;
-  }
-  .dark .role-documentWriter {
-    @apply bg-amber-900 text-amber-50 border-amber-700;
-  }
-  
-  /* --- Badges chung & Icon --- */
+
+  /* --- Status Indicators with Blur Effect --- */
   .status-badge,
   .priority-badge,
   .type-badge,
   .role-badge {
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-solid font-semibold;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
-  @media (max-width: 640px) {
-    .status-badge,
-    .priority-badge,
-    .type-badge,
-    .role-badge {
-      @apply text-xs py-1 px-3;
-    }
+
+  .dark .status-badge,
+  .dark .priority-badge,
+  .dark .type-badge,
+  .dark .role-badge {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   }
-  .status-badge:hover,
-  .priority-badge:hover,
-  .type-badge:hover,
-  .role-badge:hover {
-    @apply opacity-90 shadow-sm;
+
+  /* Status Colors - Vibrant & Clear */
+  .status-todo {
+    background-color: hsla(var(--status-todo), 0.15);
+    color: hsl(var(--status-todo));
+    border-color: hsla(var(--status-todo), 0.3);
   }
-  /* Thêm icon nhỏ vào trước nội dung badge */
+
+  .status-in-progress {
+    background-color: hsla(var(--status-in-progress), 0.15);
+    color: hsl(var(--status-in-progress));
+    border-color: hsla(var(--status-in-progress), 0.3);
+  }
+
+  .status-resolved {
+    background-color: hsla(var(--status-resolved), 0.15);
+    color: hsl(var(--status-resolved));
+    border-color: hsla(var(--status-resolved), 0.3);
+  }
+
+  .status-closed {
+    background-color: hsla(var(--status-closed), 0.15);
+    color: hsl(var(--status-closed));
+    border-color: hsla(var(--status-closed), 0.3);
+  }
+
+  /* Priority Colors - Vibrant & Clear */
+  .priority-low {
+    background-color: hsla(var(--priority-low), 0.15);
+    color: hsl(var(--priority-low));
+    border-color: hsla(var(--priority-low), 0.3);
+  }
+
+  .priority-medium {
+    background-color: hsla(var(--priority-medium), 0.15);
+    color: hsl(var(--priority-medium));
+    border-color: hsla(var(--priority-medium), 0.3);
+  }
+
+  .priority-high {
+    background-color: hsla(var(--priority-high), 0.15);
+    color: hsl(var(--priority-high));
+    border-color: hsla(var(--priority-high), 0.3);
+  }
+
+  .priority-critical {
+    background-color: hsla(var(--priority-critical), 0.15);
+    color: hsl(var(--priority-critical));
+    border-color: hsla(var(--priority-critical), 0.3);
+  }
+
+  /* Type Colors - Vibrant & Clear */
+  .type-bug {
+    background-color: hsla(var(--type-bug), 0.15);
+    color: hsl(var(--type-bug));
+    border-color: hsla(var(--type-bug), 0.3);
+  }
+
+  .type-feature {
+    background-color: hsla(var(--type-feature), 0.15);
+    color: hsl(var(--type-feature));
+    border-color: hsla(var(--type-feature), 0.3);
+  }
+
+  .type-enhancement {
+    background-color: hsla(var(--type-enhancement), 0.15);
+    color: hsl(var(--type-enhancement));
+    border-color: hsla(var(--type-enhancement), 0.3);
+  }
+
+  .type-documentation {
+    background-color: hsla(var(--type-documentation), 0.15);
+    color: hsl(var(--type-documentation));
+    border-color: hsla(var(--type-documentation), 0.3);
+  }
+
+  /* Role Colors - Vibrant & Clear */
+  .role-admin {
+    background-color: hsla(var(--role-admin), 0.15);
+    color: hsl(var(--role-admin));
+    border-color: hsla(var(--role-admin), 0.3);
+  }
+
+  .role-dev {
+    background-color: hsla(var(--role-dev), 0.15);
+    color: hsl(var(--role-dev));
+    border-color: hsla(var(--role-dev), 0.3);
+  }
+
+  .role-tester {
+    background-color: hsla(var(--role-tester), 0.15);
+    color: hsl(var(--role-tester));
+    border-color: hsla(var(--role-tester), 0.3);
+  }
+
+  .role-documentWriter {
+    background-color: hsla(var(--role-document-writer), 0.15);
+    color: hsl(var(--role-document-writer));
+    border-color: hsla(var(--role-document-writer), 0.3);
+  }
+
+  /* Badge Icons - Brighter & More Visible */
   .status-todo::before,
   .status-in-progress::before,
   .status-resolved::before,
@@ -454,19 +552,133 @@
   .type-feature::before,
   .type-enhancement::before,
   .type-documentation::before {
-    @apply mr-1 inline-block w-2 h-2 rounded-full;
+    @apply mr-1.5 inline-block w-2.5 h-2.5 rounded-full;
     content: "";
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
   }
-  .status-todo::before { @apply bg-blue-500; }
-  .status-in-progress::before { @apply bg-yellow-500; }
-  .status-resolved::before { @apply bg-green-500; }
-  .status-closed::before { @apply bg-gray-500; }
-  .priority-low::before { @apply bg-blue-500; }
-  .priority-medium::before { @apply bg-yellow-500; }
-  .priority-high::before { @apply bg-orange-500; }
-  .priority-critical::before { @apply bg-red-500; }
-  .type-bug::before { @apply bg-red-500; }
-  .type-feature::before { @apply bg-purple-500; }
-  .type-enhancement::before { @apply bg-indigo-500; }
-  .type-documentation::before { @apply bg-emerald-500; }
+
+  .status-todo::before {
+    background-color: hsl(var(--status-todo));
+  }
+
+  .status-in-progress::before {
+    background-color: hsl(var(--status-in-progress));
+  }
+
+  .status-resolved::before {
+    background-color: hsl(var(--status-resolved));
+  }
+
+  .status-closed::before {
+    background-color: hsl(var(--status-closed));
+  }
+
+  .priority-low::before {
+    background-color: hsl(var(--priority-low));
+  }
+
+  .priority-medium::before {
+    background-color: hsl(var(--priority-medium));
+  }
+
+  .priority-high::before {
+    background-color: hsl(var(--priority-high));
+  }
+
+  .priority-critical::before {
+    background-color: hsl(var(--priority-critical));
+  }
+
+  .type-bug::before {
+    background-color: hsl(var(--type-bug));
+  }
+
+  .type-feature::before {
+    background-color: hsl(var(--type-feature));
+  }
+
+  .type-enhancement::before {
+    background-color: hsl(var(--type-enhancement));
+  }
+
+  .type-documentation::before {
+    background-color: hsl(var(--type-documentation));
+  }
+
+  /* Alert Components with Blur Effect */
+  .alert {
+    @apply p-4 rounded-lg border flex items-start gap-3;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .alert {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .alert-info {
+    background-color: hsla(var(--priority-low), 0.1);
+    color: hsl(var(--priority-low));
+    border-color: hsla(var(--priority-low), 0.3);
+  }
+
+  .alert-success {
+    background-color: hsla(var(--status-resolved), 0.1);
+    color: hsl(var(--status-resolved));
+    border-color: hsla(var(--status-resolved), 0.3);
+  }
+
+  .alert-warning {
+    background-color: hsla(var(--priority-medium), 0.1);
+    color: hsl(var(--priority-medium));
+    border-color: hsla(var(--priority-medium), 0.3);
+  }
+
+  .alert-error {
+    background-color: hsla(var(--priority-critical), 0.1);
+    color: hsl(var(--priority-critical));
+    border-color: hsla(var(--priority-critical), 0.3);
+  }
+
+  /* Toast Notifications with Blur Effect */
+  .toast {
+    @apply p-4 rounded-lg border shadow-lg max-w-md;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .toast-info {
+    background-color: hsla(var(--priority-low), 0.15);
+    color: hsl(var(--priority-low));
+    border-color: hsla(var(--priority-low), 0.3);
+  }
+
+  .toast-success {
+    background-color: hsla(var(--status-resolved), 0.15);
+    color: hsl(var(--status-resolved));
+    border-color: hsla(var(--status-resolved), 0.3);
+  }
+
+  .toast-warning {
+    background-color: hsla(var(--priority-medium), 0.15);
+    color: hsl(var(--priority-medium));
+    border-color: hsla(var(--priority-medium), 0.3);
+  }
+
+  .toast-error {
+    background-color: hsla(var(--priority-critical), 0.15);
+    color: hsl(var(--priority-critical));
+    border-color: hsla(var(--priority-critical), 0.3);
+  }
+
+  /* Tooltip with Blur Effect */
+  .tooltip {
+    @apply px-2 py-1 text-xs rounded;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    background: rgba(0, 0, 0, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
 }

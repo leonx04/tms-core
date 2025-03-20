@@ -8,6 +8,7 @@ import Script from "next/script"
 import type React from "react"
 import "./globals.css"
 import { AuthSessionManager } from "@/components/auth-session-manager"
+import { EnhancedToaster } from "@/components/ui/enhanced-toaster"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,8 +41,14 @@ export default function RootLayout({
         {/* Open Graph Meta Tags */}
         <meta property="og:type" content="website" />
         <meta property="og:title" content="TMC - Task Management Core" />
-        <meta property="og:description" content="A comprehensive task management system for software development teams." />
-        <meta property="og:image" content="https://raw.githubusercontent.com/leonx04/tms-core/refs/heads/master/public/tmc.png" />
+        <meta
+          property="og:description"
+          content="A comprehensive task management system for software development teams."
+        />
+        <meta
+          property="og:image"
+          content="https://raw.githubusercontent.com/leonx04/tms-core/refs/heads/master/public/tmc.png"
+        />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta property="og:url" content="https://tms-core.vercel.app/" />
@@ -50,15 +57,18 @@ export default function RootLayout({
         {/* Twitter Card for better social preview */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="TMC - Task Management Core" />
-        <meta name="twitter:description" content="A comprehensive task management system for software development teams." />
-        <meta name="twitter:image" content="https://raw.githubusercontent.com/leonx04/tms-core/refs/heads/master/public/tmc.png" />
+        <meta
+          name="twitter:description"
+          content="A comprehensive task management system for software development teams."
+        />
+        <meta
+          name="twitter:image"
+          content="https://raw.githubusercontent.com/leonx04/tms-core/refs/heads/master/public/tmc.png"
+        />
         {/* Google Analytics */}
         {GA_TRACKING_ID && (
           <>
-            <Script
-              strategy="afterInteractive"
-              src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`}
-            />
+            <Script strategy="afterInteractive" src={`https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}`} />
             <Script id="google-analytics" strategy="afterInteractive">
               {`
                 window.dataLayer = window.dataLayer || [];
@@ -75,6 +85,7 @@ export default function RootLayout({
           <ThemeProvider defaultTheme="system">
             <AuthSessionManager />
             <LayoutWrapper>{children}</LayoutWrapper>
+            <EnhancedToaster />
           </ThemeProvider>
         </AuthProvider>
         <Analytics />
@@ -82,3 +93,4 @@ export default function RootLayout({
     </html>
   )
 }
+

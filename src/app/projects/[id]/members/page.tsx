@@ -12,7 +12,20 @@ import { database } from "@/lib/firebase"
 import { formatDate, getRoleColor, getRoleLabel } from "@/lib/utils"
 import type { Project, User } from "@/types"
 import { get, push, ref, remove, set } from "firebase/database"
-import { AlertCircle, ArrowLeft, CheckCircle, Code, FileText, Info, Mail, Shield, TestTube, Trash2, UserPlus, X } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle,
+  Code,
+  FileText,
+  Info,
+  Mail,
+  Shield,
+  TestTube,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -91,7 +104,9 @@ export default function ProjectMembersPage() {
   }, [user, projectId, router])
 
   const handleRoleToggle = (role: string) => {
-    setSelectedRoles((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]))
+    setSelectedRoles((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    )
   }
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -279,7 +294,6 @@ export default function ProjectMembersPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
           <LoadingSpinner />
         </div>
@@ -290,7 +304,6 @@ export default function ProjectMembersPage() {
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Project not found</h2>
@@ -308,8 +321,6 @@ export default function ProjectMembersPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-
       <main className="container mx-auto px-4 py-8">
         <Link
           href={`/projects/${projectId}`}
@@ -318,7 +329,10 @@ export default function ProjectMembersPage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
         </Link>
 
-        <PageHeader title="Manage Members" description={`Invite and manage team members for ${project.name}`} />
+        <PageHeader
+          title="Manage Members"
+          description={`Invite and manage team members for ${project.name}`}
+        />
 
         {!isAdmin && (
           <Alert className="mb-6 bg-muted/50 border-muted">
@@ -356,28 +370,36 @@ export default function ProjectMembersPage() {
                       <th className="px-4 py-3 text-left text-sm font-medium">User</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Roles</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Added</th>
-                      {isAdmin && <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>}
+                      {isAdmin && (
+                        <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {project.members &&
                       Object.entries(project.members).map(([memberId, memberData]) => (
-                        <tr key={memberId} className="hover:bg-muted/30 transition-colors">
+                        <tr
+                          key={memberId}
+                          className="hover:bg-muted/30 transition-colors"
+                        >
                           <td className="px-4 py-3">
                             <div className="flex items-center">
                               <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium mr-3">
                                 {users[memberId]?.displayName?.charAt(0) || "?"}
                               </div>
                               <div>
-                                <p className="font-medium flex items-center">
+                                {/* Sửa từ <p> sang <div> để tránh lồng <div> bên trong <p> */}
+                                <div className="font-medium flex items-center">
                                   {users[memberId]?.displayName || "Unknown user"}
                                   {memberId === project.ownerId && (
-                                    <Badge variant="primary" className="ml-2">
+                                    <Badge variant="default" className="ml-2">
                                       Owner
                                     </Badge>
                                   )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {users[memberId]?.email || "No email"}
                                 </p>
-                                <p className="text-xs text-muted-foreground">{users[memberId]?.email || "No email"}</p>
                               </div>
                             </div>
                           </td>
@@ -403,45 +425,54 @@ export default function ProjectMembersPage() {
                             <div className="flex flex-col">
                               <span>{formatDate(memberData.addedAt)}</span>
                               <span className="text-xs text-muted-foreground">
-                                by {users[memberData.addedBy]?.displayName || "Unknown"}
+                                by{" "}
+                                {users[memberData.addedBy]?.displayName || "Unknown"}
                               </span>
                             </div>
                           </td>
                           {isAdmin && (
                             <td className="px-4 py-3">
-                              {user && memberId !== user.uid && memberId !== project.ownerId && (
-                                <div className="flex items-center space-x-2">
-                                  {showDeleteConfirm === memberId ? (
-                                    <>
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={() => handleRemoveMember(memberId)}
-                                        className="rounded-lg"
-                                      >
-                                        Confirm
-                                      </Button>
+                              {user &&
+                                memberId !== user.uid &&
+                                memberId !== project.ownerId && (
+                                  <div className="flex items-center space-x-2">
+                                    {showDeleteConfirm === memberId ? (
+                                      <>
+                                        <Button
+                                          variant="destructive"
+                                          size="sm"
+                                          onClick={() =>
+                                            handleRemoveMember(memberId)
+                                          }
+                                          className="rounded-lg"
+                                        >
+                                          Confirm
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() =>
+                                            setShowDeleteConfirm(null)
+                                          }
+                                          className="rounded-lg"
+                                        >
+                                          <X className="h-4 w-4" />
+                                        </Button>
+                                      </>
+                                    ) : (
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() => setShowDeleteConfirm(null)}
-                                        className="rounded-lg"
+                                        onClick={() =>
+                                          setShowDeleteConfirm(memberId)
+                                        }
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
                                       >
-                                        <X className="h-4 w-4" />
+                                        <Trash2 className="h-4 w-4" />
                                       </Button>
-                                    </>
-                                  ) : (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setShowDeleteConfirm(memberId)}
-                                      className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                </div>
-                              )}
+                                    )}
+                                  </div>
+                                )}
                             </td>
                           )}
                         </tr>
@@ -460,8 +491,12 @@ export default function ProjectMembersPage() {
                 <div className="p-6">
                   <form onSubmit={handleInvite} className="space-y-5">
                     <div>
-                      <label htmlFor="email" className="block text-sm font-medium mb-1">
-                        Email Address <span className="text-destructive">*</span>
+                      <label
+                        htmlFor="email"
+                        className="block text-sm font-medium mb-1"
+                      >
+                        Email Address{" "}
+                        <span className="text-destructive">*</span>
                       </label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -480,7 +515,8 @@ export default function ProjectMembersPage() {
 
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        Roles <span className="text-destructive">*</span>
+                        Roles{" "}
+                        <span className="text-destructive">*</span>
                       </label>
                       <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
                         <div className="flex items-center">
@@ -492,7 +528,10 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("admin")}
                             disabled={isInviting}
                           />
-                          <label htmlFor="role-admin" className="ml-2 block text-sm">
+                          <label
+                            htmlFor="role-admin"
+                            className="ml-2 block text-sm"
+                          >
                             <span className="font-medium">Admin</span> - Can manage project settings and members
                           </label>
                         </div>
@@ -506,7 +545,10 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("dev")}
                             disabled={isInviting}
                           />
-                          <label htmlFor="role-dev" className="ml-2 block text-sm">
+                          <label
+                            htmlFor="role-dev"
+                            className="ml-2 block text-sm"
+                          >
                             <span className="font-medium">Developer</span> - Can update task status and link commits
                           </label>
                         </div>
@@ -520,7 +562,10 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("tester")}
                             disabled={isInviting}
                           />
-                          <label htmlFor="role-tester" className="ml-2 block text-sm">
+                          <label
+                            htmlFor="role-tester"
+                            className="ml-2 block text-sm"
+                          >
                             <span className="font-medium">Tester</span> - Can verify and close tasks
                           </label>
                         </div>
@@ -534,7 +579,10 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("documentWriter")}
                             disabled={isInviting}
                           />
-                          <label htmlFor="role-doc" className="ml-2 block text-sm">
+                          <label
+                            htmlFor="role-doc"
+                            className="ml-2 block text-sm"
+                          >
                             <span className="font-medium">Document Writer</span> - Can manage task documentation
                           </label>
                         </div>

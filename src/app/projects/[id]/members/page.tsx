@@ -12,20 +12,7 @@ import { database } from "@/lib/firebase"
 import { formatDate, getRoleColor, getRoleLabel } from "@/lib/utils"
 import type { Project, User } from "@/types"
 import { get, push, ref, remove, set } from "firebase/database"
-import {
-  AlertCircle,
-  ArrowLeft,
-  CheckCircle,
-  Code,
-  FileText,
-  Info,
-  Mail,
-  Shield,
-  TestTube,
-  Trash2,
-  UserPlus,
-  X,
-} from "lucide-react"
+import { AlertCircle, ArrowLeft, CheckCircle, Code, FileText, Info, Mail, Shield, TestTube, Trash2, UserPlus, X } from 'lucide-react'
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -388,7 +375,6 @@ export default function ProjectMembersPage() {
                                 {users[memberId]?.displayName?.charAt(0) || "?"}
                               </div>
                               <div>
-                                {/* Sửa từ <p> sang <div> để tránh lồng <div> bên trong <p> */}
                                 <div className="font-medium flex items-center">
                                   {users[memberId]?.displayName || "Unknown user"}
                                   {memberId === project.ownerId && (
@@ -406,7 +392,12 @@ export default function ProjectMembersPage() {
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1">
                               {memberData.roles.map((role) => (
-                                <Badge key={role} className={getRoleColor(role)}>
+                                <Badge
+                                  key={role}
+                                  variant="role"
+                                  className={getRoleColor(role)}
+                                  animation="fade"
+                                >
                                   {role === "admin" ? (
                                     <Shield className="mr-1 h-3 w-3" />
                                   ) : role === "dev" ? (

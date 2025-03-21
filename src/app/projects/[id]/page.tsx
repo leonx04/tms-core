@@ -674,16 +674,28 @@ export default function ProjectDetailPage() {
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <Badge className={getTypeColor(task.type)}>
+                              <Badge variant="type" className={getTypeColor(task.type)} animation="fade">
                                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
                               </Badge>
                             </td>
                             <td className="px-4 py-3">
-                              <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
+                              <Badge
+                                variant="status"
+                                className={getStatusColor(task.status)}
+                                animation={task.status === "todo" || task.status === "in_progress" ? "pulse" : "fade"}
+                              >
+                                {getStatusLabel(task.status)}
+                              </Badge>
                             </td>
                             {!isMobile && (
                               <td className="px-4 py-3">
-                                <Badge className={getPriorityColor(task.priority)}>
+                                <Badge
+                                  variant="priority"
+                                  className={getPriorityColor(task.priority)}
+                                  animation={
+                                    task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"
+                                  }
+                                >
                                   {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                                 </Badge>
                               </td>
@@ -790,7 +802,11 @@ export default function ProjectDetailPage() {
                       <div className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
-                          <Badge className={`${getStatusColor(task.status)} truncate`}>
+                          <Badge
+                            variant="status"
+                            className={getStatusColor(task.status)}
+                            animation={task.status === "todo" || task.status === "in_progress" ? "pulse" : "fade"}
+                          >
                             {getStatusLabel(task.status)}
                           </Badge>
                         </div>
@@ -798,10 +814,14 @@ export default function ProjectDetailPage() {
                           {task.description || "No description provided"}
                         </p>
                         <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge className={`${getTypeColor(task.type)} truncate`}>
+                          <Badge variant="type" className={getTypeColor(task.type)} animation="fade">
                             {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
                           </Badge>
-                          <Badge className={`${getPriorityColor(task.priority)} truncate`}>
+                          <Badge
+                            variant="priority"
+                            className={getPriorityColor(task.priority)}
+                            animation={task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"}
+                          >
                             {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                           </Badge>
                         </div>

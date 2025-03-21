@@ -4,6 +4,7 @@
 
 /* --- Base Styles & Variables --- */
 @layer base {
+
   /* Light Mode Variables */
   :root {
     --background: 0 0% 100%;
@@ -167,6 +168,7 @@
 
 /* --- Components & Custom Styles --- */
 @layer components {
+
   /* --- Form Elements --- */
   input,
   select,
@@ -309,6 +311,7 @@
       transform: translateY(calc(100% + 1rem));
       opacity: 0;
     }
+
     to {
       transform: translateY(0);
       opacity: 1;
@@ -320,6 +323,7 @@
       transform: translateY(0);
       opacity: 1;
     }
+
     to {
       transform: translateY(calc(100% + 1rem));
       opacity: 0;
@@ -474,11 +478,92 @@
       linear-gradient(to bottom, hsl(var(--border) / 0.1) 1px, transparent 1px);
   }
 
-  /* --- Status Badges --- */
+  /* --- Badge Animations --- */
+  @keyframes badge-scale {
+    0% {
+      transform: scale(1);
+    }
+
+    50% {
+      transform: scale(1.05);
+    }
+
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  @keyframes badge-glow {
+    0% {
+      box-shadow: 0 0 0 0 rgba(var(--badge-glow-color, 255, 255, 255), 0.4);
+    }
+
+    70% {
+      box-shadow: 0 0 0 5px rgba(var(--badge-glow-color, 255, 255, 255), 0);
+    }
+
+    100% {
+      box-shadow: 0 0 0 0 rgba(var(--badge-glow-color, 255, 255, 255), 0);
+    }
+  }
+
+  @keyframes badge-slide-in {
+    0% {
+      opacity: 0;
+      transform: translateX(-10px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes badge-fade-in {
+    0% {
+      opacity: 0;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes badge-shimmer {
+    0% {
+      background-position: -100% 0;
+    }
+
+    100% {
+      background-position: 200% 0;
+    }
+  }
+
+  /* Badge animation classes */
+  .badge-animation-pulse {
+    animation: badge-scale 1.5s ease-in-out infinite;
+  }
+
+  .badge-animation-fade {
+    animation: badge-fade-in 0.3s ease-in-out;
+  }
+
+  .badge-animation-slide {
+    animation: badge-slide-in 0.3s ease-out;
+  }
+
+  /* Enhanced Badge Styles */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-solid;
+    @apply inline-flex items-center rounded-full text-xs font-medium transition-all;
     position: relative;
+    padding: 0.25rem 0.75rem;
     padding-left: 1.5rem;
+    border-width: 1px;
+    border-style: solid;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    animation: badge-fade-in 0.3s ease-in-out;
+    transform-origin: center;
+    overflow: hidden;
   }
 
   .badge::before {
@@ -493,12 +578,27 @@
     box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
   }
 
-  /* Status Badges */
+  .badge::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .badge:hover::after {
+    opacity: 1;
+  }
+
+  /* Status Badges with Enhanced Styling */
   .badge-status-todo {
     background-color: hsla(var(--status-todo), 0.15);
     color: hsl(var(--status-todo));
     border-color: hsla(var(--status-todo), 0.3);
+    --badge-glow-color: 33, 150, 243;
   }
+
   .badge-status-todo::before {
     background-color: hsl(var(--status-todo));
   }
@@ -507,7 +607,9 @@
     background-color: hsla(var(--status-in-progress), 0.15);
     color: hsl(var(--status-in-progress));
     border-color: hsla(var(--status-in-progress), 0.3);
+    --badge-glow-color: 255, 152, 0;
   }
+
   .badge-status-in-progress::before {
     background-color: hsl(var(--status-in-progress));
   }
@@ -516,7 +618,9 @@
     background-color: hsla(var(--status-resolved), 0.15);
     color: hsl(var(--status-resolved));
     border-color: hsla(var(--status-resolved), 0.3);
+    --badge-glow-color: 76, 175, 80;
   }
+
   .badge-status-resolved::before {
     background-color: hsl(var(--status-resolved));
   }
@@ -525,17 +629,21 @@
     background-color: hsla(var(--status-closed), 0.15);
     color: hsl(var(--status-closed));
     border-color: hsla(var(--status-closed), 0.3);
+    --badge-glow-color: 158, 158, 158;
   }
+
   .badge-status-closed::before {
     background-color: hsl(var(--status-closed));
   }
 
-  /* Priority Badges */
+  /* Priority Badges with Enhanced Styling */
   .badge-priority-low {
     background-color: hsla(var(--priority-low), 0.15);
     color: hsl(var(--priority-low));
     border-color: hsla(var(--priority-low), 0.3);
+    --badge-glow-color: 33, 150, 243;
   }
+
   .badge-priority-low::before {
     background-color: hsl(var(--priority-low));
   }
@@ -544,7 +652,9 @@
     background-color: hsla(var(--priority-medium), 0.15);
     color: hsl(var(--priority-medium));
     border-color: hsla(var(--priority-medium), 0.3);
+    --badge-glow-color: 255, 152, 0;
   }
+
   .badge-priority-medium::before {
     background-color: hsl(var(--priority-medium));
   }
@@ -553,7 +663,9 @@
     background-color: hsla(var(--priority-high), 0.15);
     color: hsl(var(--priority-high));
     border-color: hsla(var(--priority-high), 0.3);
+    --badge-glow-color: 255, 87, 34;
   }
+
   .badge-priority-high::before {
     background-color: hsl(var(--priority-high));
   }
@@ -562,17 +674,21 @@
     background-color: hsla(var(--priority-critical), 0.15);
     color: hsl(var(--priority-critical));
     border-color: hsla(var(--priority-critical), 0.3);
+    --badge-glow-color: 244, 67, 54;
   }
+
   .badge-priority-critical::before {
     background-color: hsl(var(--priority-critical));
   }
 
-  /* Type Badges */
+  /* Type Badges with Enhanced Styling */
   .badge-type-bug {
     background-color: hsla(var(--type-bug), 0.15);
     color: hsl(var(--type-bug));
     border-color: hsla(var(--type-bug), 0.3);
+    --badge-glow-color: 244, 67, 54;
   }
+
   .badge-type-bug::before {
     background-color: hsl(var(--type-bug));
   }
@@ -581,7 +697,9 @@
     background-color: hsla(var(--type-feature), 0.15);
     color: hsl(var(--type-feature));
     border-color: hsla(var(--type-feature), 0.3);
+    --badge-glow-color: 156, 39, 176;
   }
+
   .badge-type-feature::before {
     background-color: hsl(var(--type-feature));
   }
@@ -590,7 +708,9 @@
     background-color: hsla(var(--type-enhancement), 0.15);
     color: hsl(var(--type-enhancement));
     border-color: hsla(var(--type-enhancement), 0.3);
+    --badge-glow-color: 33, 150, 243;
   }
+
   .badge-type-enhancement::before {
     background-color: hsl(var(--type-enhancement));
   }
@@ -599,17 +719,21 @@
     background-color: hsla(var(--type-documentation), 0.15);
     color: hsl(var(--type-documentation));
     border-color: hsla(var(--type-documentation), 0.3);
+    --badge-glow-color: 0, 200, 83;
   }
+
   .badge-type-documentation::before {
     background-color: hsl(var(--type-documentation));
   }
 
-  /* Role Badges */
+  /* Role Badges with Enhanced Styling */
   .badge-role-admin {
     background-color: hsla(var(--role-admin), 0.15);
     color: hsl(var(--role-admin));
     border-color: hsla(var(--role-admin), 0.3);
+    --badge-glow-color: 156, 39, 176;
   }
+
   .badge-role-admin::before {
     background-color: hsl(var(--role-admin));
   }
@@ -618,7 +742,9 @@
     background-color: hsla(var(--role-dev), 0.15);
     color: hsl(var(--role-dev));
     border-color: hsla(var(--role-dev), 0.3);
+    --badge-glow-color: 33, 150, 243;
   }
+
   .badge-role-dev::before {
     background-color: hsl(var(--role-dev));
   }
@@ -627,7 +753,9 @@
     background-color: hsla(var(--role-tester), 0.15);
     color: hsl(var(--role-tester));
     border-color: hsla(var(--role-tester), 0.3);
+    --badge-glow-color: 76, 175, 80;
   }
+
   .badge-role-tester::before {
     background-color: hsl(var(--role-tester));
   }
@@ -636,9 +764,75 @@
     background-color: hsla(var(--role-document-writer), 0.15);
     color: hsl(var(--role-document-writer));
     border-color: hsla(var(--role-document-writer), 0.3);
+    --badge-glow-color: 255, 152, 0;
   }
+
   .badge-role-documentWriter::before {
     background-color: hsl(var(--role-document-writer));
+  }
+
+  /* Pulse Animation for Status Indicators */
+  @keyframes pulse {
+    0% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(var(--badge-glow-color), 0.7);
+    }
+
+    70% {
+      transform: scale(1);
+      box-shadow: 0 0 0 6px rgba(var(--badge-glow-color), 0);
+    }
+
+    100% {
+      transform: scale(0.95);
+      box-shadow: 0 0 0 0 rgba(var(--badge-glow-color), 0);
+    }
+  }
+
+  .badge-pulse::before {
+    animation: pulse 2s infinite;
+  }
+
+  /* Hover Effects for Badges */
+  .badge {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .dark .badge:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Badge with count */
+  .badge-with-count {
+    @apply inline-flex items-center;
+  }
+
+  .badge-with-count .count {
+    @apply ml-1.5 bg-background text-foreground text-xs rounded-full h-4 min-w-4 flex items-center justify-center px-1;
+    animation: badge-scale 1s ease-in-out;
+  }
+
+  /* Shimmer effect for badges */
+  .badge-shimmer {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
+    animation: badge-shimmer 2s infinite;
+  }
+
+  .dark .badge-shimmer {
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0) 100%);
+    background-size: 200% 100%;
   }
 
   /* Alert Components with Blur Effect */
@@ -671,6 +865,7 @@
     color: hsl(var(--info));
     border-color: hsla(var(--info), 0.3);
   }
+
   .alert-info::before {
     background-color: hsl(var(--info));
   }
@@ -680,6 +875,7 @@
     color: hsl(var(--success));
     border-color: hsla(var(--success), 0.3);
   }
+
   .alert-success::before {
     background-color: hsl(var(--success));
   }
@@ -689,6 +885,7 @@
     color: hsl(var(--warning));
     border-color: hsla(var(--warning), 0.3);
   }
+
   .alert-warning::before {
     background-color: hsl(var(--warning));
   }
@@ -698,6 +895,7 @@
     color: hsl(var(--destructive));
     border-color: hsla(var(--destructive), 0.3);
   }
+
   .alert-error::before {
     background-color: hsl(var(--destructive));
   }
@@ -799,29 +997,6 @@
     --pulse-color: 244, 67, 54;
   }
 
-  /* Hover Effects for Badges */
-  .badge {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .badge:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .dark .badge:hover {
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
-
-  /* Badge with count */
-  .badge-with-count {
-    @apply inline-flex items-center;
-  }
-
-  .badge-with-count .count {
-    @apply ml-1.5 bg-background text-foreground text-xs rounded-full h-4 min-w-4 flex items-center justify-center px-1;
-  }
-
   /* Status Timeline */
   .status-timeline {
     @apply flex items-center;
@@ -860,6 +1035,7 @@
   .status-timeline-dot-todo {
     border-color: hsl(var(--status-todo));
   }
+
   .status-timeline-dot-todo.active {
     background-color: hsl(var(--status-todo));
   }
@@ -867,6 +1043,7 @@
   .status-timeline-dot-in-progress {
     border-color: hsl(var(--status-in-progress));
   }
+
   .status-timeline-dot-in-progress.active {
     background-color: hsl(var(--status-in-progress));
   }
@@ -874,6 +1051,7 @@
   .status-timeline-dot-resolved {
     border-color: hsl(var(--status-resolved));
   }
+
   .status-timeline-dot-resolved.active {
     background-color: hsl(var(--status-resolved));
   }
@@ -881,8 +1059,8 @@
   .status-timeline-dot-closed {
     border-color: hsl(var(--status-closed));
   }
+
   .status-timeline-dot-closed.active {
     background-color: hsl(var(--status-closed));
   }
 }
-

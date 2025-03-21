@@ -343,7 +343,7 @@ export default function TaskDetailPage() {
 
         setUsers(usersData)
       } catch (error) {
-        console.error("Error fetching task data:", error)
+        console.error("Error fetching task data:", error);
         toast({
           title: "Error",
           description: "Failed to load task data. Please try again.",
@@ -677,13 +677,27 @@ export default function TaskDetailPage() {
             </div>
 
             <div className="flex flex-wrap gap-2 mb-4">
-              <Badge className={getTypeColor(task.type)}>
+              <Badge 
+                variant="type" 
+                className={getTypeColor(task.type)}
+                animation="fade"
+              >
                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
               </Badge>
 
-              <Badge className={getStatusColor(task.status)}>{getStatusLabel(task.status)}</Badge>
+              <Badge 
+                variant="status" 
+                className={getStatusColor(task.status)}
+                animation={task.status === TASK_STATUS.TODO || task.status === TASK_STATUS.IN_PROGRESS ? "pulse" : "fade"}
+              >
+                {getStatusLabel(task.status)}
+              </Badge>
 
-              <Badge className={getPriorityColor(task.priority)}>
+              <Badge 
+                variant="priority" 
+                className={getPriorityColor(task.priority)}
+                animation={task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"}
+              >
                 {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
               </Badge>
             </div>
@@ -881,7 +895,11 @@ export default function TaskDetailPage() {
                                 </Link>
                               </td>
                               <td className="px-4 py-2">
-                                <Badge className={getStatusColor(childTask.status)}>
+                                <Badge 
+                                  variant="status" 
+                                  className={getStatusColor(childTask.status)}
+                                  animation={childTask.status === TASK_STATUS.TODO || childTask.status === TASK_STATUS.IN_PROGRESS ? "pulse" : "fade"}
+                                >
                                   {getStatusLabel(childTask.status)}
                                 </Badge>
                               </td>

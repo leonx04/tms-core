@@ -29,6 +29,7 @@ import {
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ProjectSettingsPage() {
   const [project, setProject] = useState<Project | null>(null)
@@ -364,9 +365,8 @@ export default function ProjectSettingsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-          <LoadingSpinner />
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     )
@@ -375,7 +375,6 @@ export default function ProjectSettingsPage() {
   if (!project) {
     return (
       <div className="min-h-screen bg-background">
-
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Project not found</h2>
@@ -383,7 +382,7 @@ export default function ProjectSettingsPage() {
               The project you're looking for doesn't exist or you don't have access to it.
             </p>
             <Link href="/projects">
-              <Button className="rounded-lg">Go to Projects</Button>
+              <Button className="rounded-lg shadow-sm">Go to Projects</Button>
             </Link>
           </div>
         </div>
@@ -393,8 +392,6 @@ export default function ProjectSettingsPage() {
 
   return (
     <div className="min-h-screen bg-background">
-
-
       <main className="container mx-auto px-4 py-8">
         <Link
           href={`/projects/${projectId}`}
@@ -406,17 +403,22 @@ export default function ProjectSettingsPage() {
         <PageHeader title="Project Settings" description={`Configure settings for ${project.name}`} />
 
         {error && (
-          <div className="bg-destructive/10 text-destructive p-4 rounded-xl mb-6 flex items-start animate-fadeIn">
-            <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <span>{error}</span>
-          </div>
+          <Alert variant="destructive" className="mb-6 animate-fadeIn">
+            <AlertCircle className="h-5 w-5" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         )}
 
         {success && (
-          <div className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 p-4 rounded-xl mb-6 flex items-start animate-fadeIn">
-            <CheckCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
-            <span>{success}</span>
-          </div>
+          <Alert
+            variant="default"
+            className="mb-6 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-300 border-green-200 dark:border-green-800/30 animate-fadeIn"
+          >
+            <CheckCircle className="h-5 w-5" />
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{success}</AlertDescription>
+          </Alert>
         )}
 
         <Tabs defaultValue="general" className="space-y-6">
@@ -426,7 +428,7 @@ export default function ProjectSettingsPage() {
             <TabsTrigger value="webhook">Webhook</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-6">
+          <TabsContent value="general" className="space-y-6 animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -486,7 +488,7 @@ export default function ProjectSettingsPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving} className="rounded-lg">
+                    <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
                       <Save className="mr-2 h-4 w-4" />
                       {isSaving ? "Saving..." : "Save Changes"}
                     </Button>
@@ -509,7 +511,11 @@ export default function ProjectSettingsPage() {
                     <p className="text-muted-foreground mb-4">
                       Deleting this project will remove all associated tasks, comments, and configurations.
                     </p>
-                    <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} className="rounded-lg">
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="rounded-lg shadow-sm"
+                    >
                       <Trash2 className="mr-2 h-4 w-4" />
                       Delete Project
                     </Button>
@@ -527,10 +533,14 @@ export default function ProjectSettingsPage() {
                       </div>
                     </div>
                     <div className="flex space-x-4">
-                      <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} className="rounded-lg">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowDeleteConfirm(false)}
+                        className="rounded-lg shadow-sm"
+                      >
                         Cancel
                       </Button>
-                      <Button variant="destructive" onClick={handleDeleteProject} className="rounded-lg">
+                      <Button variant="destructive" onClick={handleDeleteProject} className="rounded-lg shadow-sm">
                         Yes, Delete Project
                       </Button>
                     </div>
@@ -540,7 +550,7 @@ export default function ProjectSettingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="cloudinary" className="space-y-6">
+          <TabsContent value="cloudinary" className="space-y-6 animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -610,7 +620,8 @@ export default function ProjectSettingsPage() {
                       type="text"
                       value={folderName}
                       onChange={(e) => setFolderName(e.target.value)}
-                      className="w-full p-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                      className="w-full p-3 rounded-lg border border-input
+ bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                       disabled={isSaving}
                       required
                       placeholder="project-folder"
@@ -629,7 +640,7 @@ export default function ProjectSettingsPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving} className="rounded-lg">
+                    <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
                       <Save className="mr-2 h-4 w-4" />
                       {isSaving ? "Saving..." : "Save Configuration"}
                     </Button>
@@ -639,7 +650,7 @@ export default function ProjectSettingsPage() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="webhook" className="space-y-6">
+          <TabsContent value="webhook" className="space-y-6 animate-in fade-in-50">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
@@ -698,7 +709,7 @@ export default function ProjectSettingsPage() {
                         type={showWebhookSecret ? "text" : "password"}
                         value={webhookSecret}
                         onChange={(e) => setWebhookSecret(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                        className="w-full pl-10 pr-10 py-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                         disabled={isSaving}
                         placeholder="Optional: For verifying webhook payloads"
                       />
@@ -706,6 +717,7 @@ export default function ProjectSettingsPage() {
                         type="button"
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                         onClick={() => setShowWebhookSecret(!showWebhookSecret)}
+                        aria-label={showWebhookSecret ? "Hide secret" : "Show secret"}
                       >
                         {showWebhookSecret ? <Eye size={18} /> : <EyeOff size={18} />}
                       </button>
@@ -735,7 +747,7 @@ export default function ProjectSettingsPage() {
                   </div>
 
                   <div className="flex justify-end">
-                    <Button type="submit" disabled={isSaving} className="rounded-lg">
+                    <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
                       <Save className="mr-2 h-4 w-4" />
                       {isSaving ? "Saving..." : "Save Webhook"}
                     </Button>

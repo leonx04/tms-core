@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { useToast } from "@/hooks/use-toast"
 import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
 import { database } from "@/lib/firebase"
 import { formatDate } from "@/lib/utils"
 import type { Project } from "@/types"
 import { PACKAGE_LIMITS } from "@/types"
 import { get, ref } from "firebase/database"
-import { Calendar, Code, FileText, Github, Plus, Search, Settings, Shield, Star, TestTube, Users } from 'lucide-react'
+import { Calendar, Code, FileText, Github, Plus, Search, Settings, Shield, Star, TestTube, Users } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -89,7 +89,7 @@ export default function ProjectsPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-          <LoadingSpinner />
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     )
@@ -108,7 +108,7 @@ export default function ProjectsPage() {
               <input
                 type="text"
                 placeholder="Search projects..."
-                className="w-full pl-10 pr-4 py-2 rounded-lg shadow-sm bg-background focus:ring-2 focus:ring-primary/10 transition-colors"
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-input shadow-sm bg-background focus:ring-2 focus:ring-primary/10 focus:border-primary transition-colors"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -116,7 +116,7 @@ export default function ProjectsPage() {
 
             {canCreateProject() ? (
               <Link href="/projects/create">
-                <Button className="w-full sm:w-auto rounded-lg">
+                <Button className="w-full sm:w-auto rounded-lg shadow-sm">
                   <Plus className="mr-2 h-4 w-4" /> Create Project
                 </Button>
               </Link>
@@ -124,7 +124,7 @@ export default function ProjectsPage() {
               <Button
                 disabled
                 title="You've reached your project limit. Upgrade your plan to create more projects."
-                className="w-full sm:w-auto rounded-lg"
+                className="w-full sm:w-auto rounded-lg shadow-sm"
                 onClick={() => {
                   toast({
                     title: "Project Limit Reached",
@@ -152,7 +152,7 @@ export default function ProjectsPage() {
               canCreateProject() &&
               projects.length === 0 && (
                 <Link href="/projects/create">
-                  <Button className="rounded-lg">
+                  <Button className="rounded-lg shadow-sm">
                     <Plus className="mr-2 h-4 w-4" /> Create Project
                   </Button>
                 </Link>
@@ -181,7 +181,7 @@ function ProjectCard({ project }: { project: Project }) {
   return (
     <Card
       onClick={() => router.push(`/projects/${project.id}`)}
-      className="h-full shadow-modern card-hover transition-all animate-fadeIn cursor-pointer"
+      className="h-full shadow-sm hover:shadow-md border-border/60 hover:border-border card-hover transition-all duration-200 animate-fadeIn cursor-pointer"
       role="link"
       tabIndex={0}
       onKeyPress={(e) => {
@@ -204,18 +204,18 @@ function ProjectCard({ project }: { project: Project }) {
 
           <div className="flex flex-col space-y-2 text-sm">
             <div className="flex items-center text-muted-foreground">
-              <Calendar className="h-4 w-4 mr-2" />
-              <span>Created: {formatDate(project.createdAt)}</span>
+              <Calendar className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span className="truncate">Created: {formatDate(project.createdAt)}</span>
             </div>
             <div className="flex items-center text-muted-foreground">
-              <Users className="h-4 w-4 mr-2" />
-              <span>
+              <Users className="h-4 w-4 mr-2 flex-shrink-0" />
+              <span className="truncate">
                 {memberCount} {memberCount === 1 ? "member" : "members"}
               </span>
             </div>
             {project.githubRepo && (
               <div className="flex items-center text-muted-foreground">
-                <Github className="h-4 w-4 mr-2" />
+                <Github className="h-4 w-4 mr-2 flex-shrink-0" />
                 <RepoLink url={project.githubRepo} />
               </div>
             )}
@@ -249,9 +249,10 @@ function ProjectCard({ project }: { project: Project }) {
             <Link
               href={`/projects/${project.id}/settings`}
               onClick={(e) => e.stopPropagation()}
+              aria-label="Project settings"
             >
               {userRoles.includes("admin") && (
-                <Button variant="ghost" size="sm" className="ml-auto rounded-full">
+                <Button variant="ghost" size="sm" className="ml-auto rounded-full h-8 w-8 p-0">
                   <Settings className="h-4 w-4" />
                 </Button>
               )}
@@ -262,3 +263,4 @@ function ProjectCard({ project }: { project: Project }) {
     </Card>
   )
 }
+

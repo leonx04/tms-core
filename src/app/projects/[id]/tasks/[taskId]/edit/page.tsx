@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { PageHeader } from "@/components/layout/page-header"
-import { AssigneeGroup } from "@/components/ui/assignee-group"
+import { AssigneeGroup } from "@/components/assignee-group"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Input } from "@/components/ui/input"
@@ -16,28 +16,38 @@ import { useToast } from "@/hooks/use-toast"
 import { database } from "@/lib/firebase"
 import type { Project, Task } from "@/types"
 import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
-import { get, ref, update } from "firebase/database"
-import { ArrowLeft, GitCommit, Save } from 'lucide-react'
+import { get, ref, update, query, orderByChild, equalTo } from "firebase/database"
+import { ArrowLeft, GitCommit, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-// Hàm trích xuất commit id từ chuỗi đầu vào.
+// Extract commit ID from input string
 const extractCommitId = (input: string): string => {
-  if (!input) return "";
-  const trimmed = input.trim();
-  const urlRegex = /commit\/([a-f0-9]{7,40})/i;
-  const idRegex = /^[a-f0-9]{7,40}$/i;
+  if (!input) return ""
+  const trimmed = input.trim()
+  const urlRegex = /commit\/([a-f0-9]{7,40})/i
+  const idRegex = /^[a-f0-9]{7,40}$/i
 
-  const matchUrl = trimmed.match(urlRegex);
+  const matchUrl = trimmed.match(urlRegex)
   if (matchUrl) {
-    return matchUrl[1];
+    return matchUrl[1]
   }
   if (idRegex.test(trimmed)) {
-    return trimmed;
+    return trimmed
   }
-  return "";
-};
+  return ""
+}
 
 export default function EditTaskPage() {
   const [task, setTask] = useState<Task | null>(null)
@@ -65,6 +75,11 @@ export default function EditTaskPage() {
   const [tagInput, setTagInput] = useState<string>("")
   const [availableMembers, setAvailableMembers] = useState<Record<string, any>>({})
   const [commitId, setCommitId] = useState<string>("")
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [parentTaskId, setParentTaskId] = useState<string | null>(null)
+  const [parentTaskSearch, setParentTaskSearch] = useState("")
+  const [projectTasks, setProjectTasks] = useState<{ id: string; title: string; assignedTo?: string[] }[]>([])
+  const [showParentTaskPopover, setShowParentTaskPopover] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -80,7 +95,7 @@ export default function EditTaskPage() {
             title: "Task not found",
             description: "The task you're looking for doesn't exist",
             variant: "destructive",
-          });
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -96,7 +111,7 @@ export default function EditTaskPage() {
             title: "Invalid task",
             description: "This task doesn't belong to the current project",
             variant: "destructive",
-          });
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -115,6 +130,7 @@ export default function EditTaskPage() {
         setAssignedTo(taskData.assignedTo || [])
         setTags(taskData.tags ?? [])
         setCommitId(taskData.gitCommitId || "")
+        setParentTaskId(taskData.parentTaskId || null)
 
         // Fetch project details
         const projectRef = ref(database, `projects/${projectId}`)
@@ -125,7 +141,7 @@ export default function EditTaskPage() {
             title: "Project not found",
             description: "The project you're looking for doesn't exist",
             variant: "destructive",
-          });
+          })
           router.push("/projects")
           return
         }
@@ -146,7 +162,7 @@ export default function EditTaskPage() {
             title: "Access denied",
             description: "You don't have permission to edit this task",
             variant: "destructive",
-          });
+          })
           router.push(`/projects/${projectId}/tasks/${taskId}`)
           return
         }
@@ -170,13 +186,28 @@ export default function EditTaskPage() {
 
           setAvailableMembers(members)
         }
+
+        // Fetch project tasks for parent task selection
+        const tasksRef = ref(database, "tasks")
+        const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
+        const tasksSnapshot = await get(tasksQuery)
+
+        if (tasksSnapshot.exists()) {
+          const tasksData = tasksSnapshot.val()
+          const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
+            id,
+            title: data.title,
+            assignedTo: data.assignedTo || [],
+          }))
+          setProjectTasks(tasksList)
+        }
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({
           title: "Error",
           description: "Failed to load task data. Please try again.",
           variant: "destructive",
-        });
+        })
       } finally {
         setLoading(false)
       }
@@ -187,13 +218,18 @@ export default function EditTaskPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setShowConfirmDialog(true)
+  }
+
+  const handleConfirmSave = async () => {
+    setShowConfirmDialog(false)
 
     if (!user || !task) return
 
     setIsSaving(true)
 
     try {
-      const parsedCommitId = extractCommitId(commitId);
+      const parsedCommitId = extractCommitId(commitId)
 
       const updates: Partial<Task> = {
         title,
@@ -207,37 +243,18 @@ export default function EditTaskPage() {
         assignedTo,
         tags,
         updatedAt: new Date().toISOString(),
-      }
-
-      // Only update gitCommitId if it has changed
-      if (parsedCommitId !== task.gitCommitId) {
-        updates.gitCommitId = parsedCommitId || null;
+        parentTaskId: parentTaskId || null,
+        gitCommitId: parsedCommitId || null,
       }
 
       const taskRef = ref(database, `tasks/${taskId}`)
       await update(taskRef, updates)
 
-      const historyRef = ref(database, `taskHistory/${taskId}/${Date.now()}`)
-      await update(historyRef, {
-        taskId,
-        userId: user.uid,
-        timestamp: new Date().toISOString(),
-        changes: Object.entries(updates).map(([field, newValue]) => {
-          const oldValue = task[field as keyof Task]
-          return {
-            field,
-            oldValue: oldValue !== undefined ? oldValue : null,
-            newValue: newValue !== undefined ? newValue : null,
-          }
-        }),
-        comment: "Task updated",
-      })
-
       toast({
         title: "Task updated",
         description: "Task has been updated successfully",
         variant: "success",
-      });
+      })
 
       setTimeout(() => {
         router.push(`/projects/${projectId}/tasks/${taskId}`)
@@ -248,25 +265,27 @@ export default function EditTaskPage() {
         title: "Error",
         description: "Failed to update task. Please try again.",
         variant: "destructive",
-      });
+      })
     } finally {
       setIsSaving(false)
     }
   }
 
+  const filteredTasks = useMemo(() => {
+    return projectTasks.filter((task) => task.title.toLowerCase().includes(parentTaskSearch.toLowerCase()))
+  }, [parentTaskSearch, projectTasks])
+
   // Convert available members to array for AssigneeGroup component
   const getAssigneeUsers = () => {
-    if (!assignedTo) return [];
-    return assignedTo
-      .filter(id => availableMembers[id])
-      .map(id => availableMembers[id]);
-  };
+    if (!assignedTo) return []
+    return assignedTo.filter((id) => availableMembers[id]).map((id) => availableMembers[id])
+  }
 
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
         <div className="flex h-[calc(100vh-64px)] justify-center items-center">
-          <LoadingSpinner />
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     )
@@ -302,11 +321,11 @@ export default function EditTaskPage() {
 
         <PageHeader title="Edit Task" description={`Update task details for ${project.name}`} />
 
-        <div className="bg-card border border-border rounded-xl shadow-sm animate-bounce-in overflow-hidden">
+        <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn overflow-hidden">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="md:col-span-2 space-y-4">
-                <label htmlFor="title" className="text-sm block font-medium">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4 md:col-span-2">
+                <label htmlFor="title" className="block text-sm font-medium">
                   Task Title <span className="text-destructive">*</span>
                 </label>
                 <Input
@@ -316,11 +335,12 @@ export default function EditTaskPage() {
                   required
                   disabled={isSaving}
                   className="w-full"
+                  placeholder="Enter task title"
                 />
               </div>
 
-              <div className="md:col-span-2 space-y-4">
-                <label htmlFor="description" className="text-sm block font-medium">
+              <div className="space-y-4 md:col-span-2">
+                <label htmlFor="description" className="block text-sm font-medium">
                   Description
                 </label>
                 <Textarea
@@ -330,11 +350,12 @@ export default function EditTaskPage() {
                   rows={5}
                   disabled={isSaving}
                   className="w-full"
+                  placeholder="Describe the task in detail..."
                 />
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="type" className="text-sm block font-medium">
+                <label htmlFor="type" className="block text-sm font-medium">
                   Type <span className="text-destructive">*</span>
                 </label>
                 <Select value={type} onValueChange={setType} disabled={isSaving}>
@@ -351,7 +372,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="status" className="text-sm block font-medium">
+                <label htmlFor="status" className="block text-sm font-medium">
                   Status <span className="text-destructive">*</span>
                 </label>
                 <Select value={status} onValueChange={setStatus} disabled={isSaving}>
@@ -368,7 +389,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="priority" className="text-sm block font-medium">
+                <label htmlFor="priority" className="block text-sm font-medium">
                   Priority <span className="text-destructive">*</span>
                 </label>
                 <Select value={priority} onValueChange={setPriority} disabled={isSaving}>
@@ -385,14 +406,14 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="dueDate" className="text-sm block font-medium">
+                <label htmlFor="dueDate" className="block text-sm font-medium">
                   Due Date
                 </label>
                 <DatePicker date={dueDate} setDate={setDueDate} disabled={isSaving} />
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="percentDone" className="text-sm block font-medium">
+                <label htmlFor="percentDone" className="block text-sm font-medium">
                   Progress: {percentDone}%
                 </label>
                 <Slider
@@ -406,7 +427,7 @@ export default function EditTaskPage() {
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="estimatedTime" className="text-sm block font-medium">
+                <label htmlFor="estimatedTime" className="block text-sm font-medium">
                   Estimated Time (hours)
                 </label>
                 <Input
@@ -415,16 +436,15 @@ export default function EditTaskPage() {
                   min={0}
                   step={0.5}
                   value={estimatedTime || ""}
-                  onChange={(e) =>
-                    setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)
-                  }
+                  onChange={(e) => setEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)}
                   disabled={isSaving}
                   className="w-full"
+                  placeholder="0"
                 />
               </div>
 
               <div className="space-y-4">
-                <label htmlFor="commitId" className="flex text-sm font-medium items-center">
+                <label htmlFor="commitId" className="text-sm font-medium flex items-center">
                   <GitCommit className="h-4 w-4 mr-2" />
                   Commit ID or URL
                 </label>
@@ -436,15 +456,72 @@ export default function EditTaskPage() {
                   disabled={isSaving}
                   className="w-full"
                 />
-                <p className="text-muted-foreground text-xs">
-                  {project.githubRepo ?
-                    `Enter a commit ID or URL from ${project.githubRepo}` :
-                    "Enter a commit ID or GitHub commit URL"}
+                <p className="text-xs text-muted-foreground">
+                  {project.githubRepo
+                    ? `Enter a commit ID or URL from ${project.githubRepo}`
+                    : "Enter a commit ID or GitHub commit URL"}
                 </p>
               </div>
 
+              <div className="space-y-4">
+                <label htmlFor="parentTask" className="block text-sm font-medium">
+                  Parent Task (optional)
+                </label>
+                <Popover open={showParentTaskPopover} onOpenChange={setShowParentTaskPopover}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={showParentTaskPopover}
+                      className="w-full justify-between"
+                    >
+                      {parentTaskId
+                        ? projectTasks.find((task) => task.id === parentTaskId)?.title
+                        : "Select parent task"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <div className="p-2">
+                      <Input
+                        placeholder="Search tasks..."
+                        value={parentTaskSearch}
+                        onChange={(e) => setParentTaskSearch(e.target.value)}
+                        className="mb-2"
+                      />
+                      <div className="max-h-[200px] overflow-y-auto">
+                        <div
+                          className="px-2 py-1.5 text-sm cursor-pointer hover:bg-muted rounded-md"
+                          onClick={() => {
+                            setParentTaskId(null)
+                            setShowParentTaskPopover(false)
+                          }}
+                        >
+                          None
+                        </div>
+                        {filteredTasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="px-2 py-1.5 text-sm cursor-pointer hover:bg-muted rounded-md"
+                            onClick={() => {
+                              setParentTaskId(task.id)
+                              setShowParentTaskPopover(false)
+                            }}
+                          >
+                            <div className="truncate max-w-[300px]">
+                              {task.title}{" "}
+                              {(task.assignedTo ?? []).length > 0 &&
+                                `- ${(task.assignedTo ?? []).map((id) => availableMembers[id]?.displayName || availableMembers[id]?.email).join(", ")}`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               <div className="md:col-span-2 space-y-4">
-                <label className="text-sm block font-medium">Assigned To</label>
+                <label className="block text-sm font-medium">Assigned To</label>
 
                 {assignedTo.length > 0 && (
                   <div className="mb-2">
@@ -452,7 +529,7 @@ export default function EditTaskPage() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-2 md:grid-cols-3 sm:grid-cols-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                   {Object.entries(availableMembers).map(([memberId, memberData]: [string, any]) => (
                     <div key={memberId} className="flex items-center space-x-2">
                       <input
@@ -467,7 +544,7 @@ export default function EditTaskPage() {
                           }
                         }}
                         disabled={isSaving}
-                        className="border-gray-300 h-4 rounded text-primary w-4 focus:ring-primary"
+                        className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                       />
                       <label htmlFor={`member-${memberId}`} className="text-sm truncate">
                         {memberData.displayName || memberData.email}
@@ -478,23 +555,19 @@ export default function EditTaskPage() {
               </div>
 
               <div className="md:col-span-2 space-y-4">
-                <label htmlFor="tagInput" className="text-sm block font-medium">
+                <label htmlFor="tagInput" className="block text-sm font-medium">
                   Tags
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {tags.map((tag, index) => (
-                    <div
-                      key={index}
-                      className="flex border border-spacing-3 rounded-full text-sm items-center px-2 py-1"
-                    >
+                    <div key={index} className="flex items-center bg-muted px-2 py-1 rounded-full text-sm">
                       <span>{tag}</span>
                       <button
                         type="button"
-                        onClick={() =>
-                          setTags(tags.filter((t) => t !== tag))
-                        }
-                        className="text-red-500 ml-2"
+                        onClick={() => setTags(tags.filter((t) => t !== tag))}
+                        className="ml-2 text-destructive"
                         disabled={isSaving}
+                        aria-label={`Remove tag ${tag}`}
                       >
                         &times;
                       </button>
@@ -521,16 +594,34 @@ export default function EditTaskPage() {
               </div>
             </div>
 
-            <div className="flex border-border border-t justify-end pt-4 space-x-4">
+            <div className="flex justify-end space-x-4 pt-4 border-t border-border">
               <Link href={`/projects/${projectId}/tasks/${taskId}`}>
                 <Button type="button" variant="outline" disabled={isSaving} className="rounded-lg shadow-sm">
                   Cancel
                 </Button>
               </Link>
-              <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
-                <Save className="h-4 w-4 mr-2" />
-                {isSaving ? "Saving..." : "Save Changes"}
-              </Button>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
+                    <Save className="mr-2 h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save Changes"}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Confirm Changes</DialogTitle>
+                    <DialogDescription>Are you sure you want to save the changes to this task?</DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setShowConfirmDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="button" onClick={handleConfirmSave} disabled={isSaving}>
+                      {isSaving ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </div>
           </form>
         </div>
@@ -538,3 +629,4 @@ export default function EditTaskPage() {
     </div>
   )
 }
+

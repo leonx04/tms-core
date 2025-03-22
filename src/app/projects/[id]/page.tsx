@@ -40,6 +40,7 @@ import {
 import { ImportExportToolbar } from "@/components/import-export-toolbar"
 import { AssigneeGroup } from "@/components/assignee-group"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null)
@@ -51,10 +52,6 @@ export default function ProjectDetailPage() {
   const [memberFilter, setMemberFilter] = useState<string | null>(null)
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [showStatusFilter, setShowStatusFilter] = useState(false)
-  const [showTypeFilter, setShowTypeFilter] = useState(false)
-  const [showMemberFilter, setShowMemberFilter] = useState(false)
-  const [showPriorityFilter, setShowPriorityFilter] = useState(false)
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 9
@@ -86,7 +83,7 @@ export default function ProjectDetailPage() {
           ...projectSnapshot.val(),
         }
 
-        // Check if user là member của project
+        // Check if user is a member of the project
         if (!projectData.members || !projectData.members[user.uid]) {
           router.push("/projects")
           return
@@ -94,7 +91,7 @@ export default function ProjectDetailPage() {
 
         setProject(projectData)
 
-        // Fetch tasks cho project
+        // Fetch tasks for the project
         const tasksRef = ref(database, "tasks")
         const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
         const tasksSnapshot = await get(tasksQuery)
@@ -108,7 +105,7 @@ export default function ProjectDetailPage() {
           setTasks(tasksList)
         }
 
-        // Fetch tất cả users của project
+        // Fetch all users of the project
         const userIds = Object.keys(projectData.members)
         const usersData: Record<string, User> = {}
 
@@ -133,12 +130,12 @@ export default function ProjectDetailPage() {
     fetchProjectData()
   }, [user, projectId, router])
 
-  // Reset trang khi filter hoặc view mode thay đổi
+  // Reset page when filter or view mode changes
   useEffect(() => {
     setCurrentPage(1)
   }, [statusFilter, typeFilter, memberFilter, priorityFilter, searchQuery, viewMode])
 
-  // Lọc task theo các tiêu chí: status, type, member, priority và search (title, description, tags)
+  // Filter tasks by status, type, member, priority and search (title, description, tags)
   const filteredTasks = tasks.filter((task) => {
     if (statusFilter && task.status !== statusFilter) return false
     if (typeFilter && task.type !== typeFilter) return false
@@ -166,7 +163,7 @@ export default function ProjectDetailPage() {
     }))
   }
 
-  // Nhóm task theo parent (dùng cho chế độ list)
+  // Group tasks by parent (used for list view)
   const groupTasksByParent = () => {
     const taskMap: Record<string, Task> = {}
     const rootTasks: Task[] = []
@@ -190,7 +187,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-          <LoadingSpinner />
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     )
@@ -206,7 +203,7 @@ export default function ProjectDetailPage() {
             description="The project you're looking for doesn't exist or you don't have access to it."
             action={
               <Link href="/projects">
-                <Button className="rounded-lg">Go to Projects</Button>
+                <Button className="rounded-lg shadow-sm">Go to Projects</Button>
               </Link>
             }
           />
@@ -218,7 +215,7 @@ export default function ProjectDetailPage() {
   const { rootTasks } = groupTasksByParent()
   const autoExpand = searchQuery.trim() !== ""
 
-  // Phân trang: đối với list view thì phân trang theo rootTasks, đối với grid view thì phân trang theo filteredTasks
+  // Pagination: for list view paginate by rootTasks, for grid view paginate by filteredTasks
   let paginatedData: Task[] = []
   let totalPages = 0
 
@@ -262,7 +259,7 @@ export default function ProjectDetailPage() {
 
                 try {
                   setLoading(true)
-                  // Fetch tasks cho project
+                  // Fetch tasks for the project
                   const tasksRef = ref(database, "tasks")
                   const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
                   const tasksSnapshot = await get(tasksQuery)
@@ -290,266 +287,168 @@ export default function ProjectDetailPage() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 md:flex gap-2 w-full md:w-auto">
             {/* Status Filter */}
-            <div className="relative h-10">
-              <Button
-                variant="outline"
-                className="w-full h-10 rounded-lg shadow-sm"
-                onClick={() => {
-                  setShowStatusFilter(!showStatusFilter)
-                  setShowTypeFilter(false)
-                  setShowMemberFilter(false)
-                  setShowPriorityFilter(false)
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
                   <div className="flex items-center gap-2 overflow-hidden">
                     <Filter className="h-4 w-4 flex-shrink-0" />
                     <span className="block truncate">{statusFilter ? getStatusLabel(statusFilter) : "Status"}</span>
                   </div>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
-                </div>
-              </Button>
-              {showStatusFilter && (
-                <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
-                  <div className="p-1">
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setStatusFilter(null)
-                        setShowStatusFilter(false)
-                      }}
-                    >
-                      All Statuses
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setStatusFilter("todo")
-                        setShowStatusFilter(false)
-                      }}
-                    >
-                      To Do
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setStatusFilter("in_progress")
-                        setShowStatusFilter(false)
-                      }}
-                    >
-                      In Progress
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setStatusFilter("resolved")
-                        setShowStatusFilter(false)
-                      }}
-                    >
-                      Resolved
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setStatusFilter("closed")
-                        setShowStatusFilter(false)
-                      }}
-                    >
-                      Closed
-                    </button>
-                  </div>
-                </Card>
-              )}
-            </div>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1">
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setStatusFilter(null)}
+                >
+                  All Statuses
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setStatusFilter("todo")}
+                >
+                  To Do
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setStatusFilter("in_progress")}
+                >
+                  In Progress
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setStatusFilter("resolved")}
+                >
+                  Resolved
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setStatusFilter("closed")}
+                >
+                  Closed
+                </button>
+              </PopoverContent>
+            </Popover>
 
             {/* Type Filter */}
-            <div className="relative h-10">
-              <Button
-                variant="outline"
-                className="w-full h-10 rounded-lg shadow-sm"
-                onClick={() => {
-                  setShowTypeFilter(!showTypeFilter)
-                  setShowStatusFilter(false)
-                  setShowMemberFilter(false)
-                  setShowPriorityFilter(false)
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
                   <div className="flex items-center gap-2 overflow-hidden">
                     <Layers className="h-4 w-4 flex-shrink-0" />
                     <span className="block truncate">
                       {typeFilter ? typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1) : "Type"}
                     </span>
                   </div>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
-                </div>
-              </Button>
-              {showTypeFilter && (
-                <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
-                  <div className="p-1">
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setTypeFilter(null)
-                        setShowTypeFilter(false)
-                      }}
-                    >
-                      All Types
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setTypeFilter("bug")
-                        setShowTypeFilter(false)
-                      }}
-                    >
-                      Bug
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setTypeFilter("feature")
-                        setShowTypeFilter(false)
-                      }}
-                    >
-                      Feature
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setTypeFilter("enhancement")
-                        setShowTypeFilter(false)
-                      }}
-                    >
-                      Enhancement
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setTypeFilter("documentation")
-                        setShowTypeFilter(false)
-                      }}
-                    >
-                      Documentation
-                    </button>
-                  </div>
-                </Card>
-              )}
-            </div>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1">
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setTypeFilter(null)}
+                >
+                  All Types
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setTypeFilter("bug")}
+                >
+                  Bug
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setTypeFilter("feature")}
+                >
+                  Feature
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setTypeFilter("enhancement")}
+                >
+                  Enhancement
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setTypeFilter("documentation")}
+                >
+                  Documentation
+                </button>
+              </PopoverContent>
+            </Popover>
 
             {/* Member Filter */}
-            <div className="relative h-10">
-              <Button
-                variant="outline"
-                className="w-full h-10 rounded-lg shadow-sm flex items-center justify-between"
-                onClick={() => {
-                  setShowMemberFilter(!showMemberFilter)
-                  setShowStatusFilter(false)
-                  setShowTypeFilter(false)
-                  setShowPriorityFilter(false)
-                }}
-              >
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <Users className="h-4 w-4 flex-shrink-0" />
-                  <span className="block truncate">
-                    {memberFilter ? users[memberFilter]?.displayName || "Member" : "Assigned To"}
-                  </span>
-                </div>
-                <ChevronDown className="h-4 w-4 flex-shrink-0" />
-              </Button>
-              {showMemberFilter && (
-                <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
-                  <div className="p-1">
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setMemberFilter(null)
-                        setShowMemberFilter(false)
-                      }}
-                    >
-                      All Members
-                    </button>
-                    {Object.values(users).map((member) => (
-                      <button
-                        key={member.id}
-                        className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                        onClick={() => {
-                          setMemberFilter(member.id)
-                          setShowMemberFilter(false)
-                        }}
-                      >
-                        {member.displayName || "Unknown"}
-                      </button>
-                    ))}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <Users className="h-4 w-4 flex-shrink-0" />
+                    <span className="block truncate">
+                      {memberFilter ? users[memberFilter]?.displayName || "Member" : "Assigned To"}
+                    </span>
                   </div>
-                </Card>
-              )}
-            </div>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1">
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setMemberFilter(null)}
+                >
+                  All Members
+                </button>
+                {Object.values(users).map((member) => (
+                  <button
+                    key={member.id}
+                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                    onClick={() => setMemberFilter(member.id)}
+                  >
+                    {member.displayName || "Unknown"}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
 
             {/* Priority Filter */}
-            <div className="relative h-10">
-              <Button
-                variant="outline"
-                className="w-full h-10 rounded-lg shadow-sm"
-                onClick={() => {
-                  setShowPriorityFilter(!showPriorityFilter)
-                  setShowStatusFilter(false)
-                  setShowTypeFilter(false)
-                  setShowMemberFilter(false)
-                }}
-              >
-                <div className="flex items-center justify-between w-full">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
                   <div className="flex items-center gap-2 overflow-hidden">
                     <span className="block truncate">
                       {priorityFilter ? priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1) : "Priority"}
                     </span>
                   </div>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0" />
-                </div>
-              </Button>
-              {showPriorityFilter && (
-                <Card className="absolute top-full left-0 mt-1 w-48 z-10 animate-fadeIn shadow-modern">
-                  <div className="p-1">
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setPriorityFilter(null)
-                        setShowPriorityFilter(false)
-                      }}
-                    >
-                      All Priorities
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setPriorityFilter("low")
-                        setShowPriorityFilter(false)
-                      }}
-                    >
-                      Low
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setPriorityFilter("medium")
-                        setShowPriorityFilter(false)
-                      }}
-                    >
-                      Medium
-                    </button>
-                    <button
-                      className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                      onClick={() => {
-                        setPriorityFilter("high")
-                        setShowPriorityFilter(false)
-                      }}
-                    >
-                      High
-                    </button>
-                  </div>
-                </Card>
-              )}
-            </div>
+                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1">
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setPriorityFilter(null)}
+                >
+                  All Priorities
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setPriorityFilter("low")}
+                >
+                  Low
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setPriorityFilter("medium")}
+                >
+                  Medium
+                </button>
+                <button
+                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
+                  onClick={() => setPriorityFilter("high")}
+                >
+                  High
+                </button>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Search input - make it full width on mobile */}
@@ -559,7 +458,7 @@ export default function ProjectDetailPage() {
               <input
                 type="text"
                 placeholder="Search tasks..."
-                className="w-full h-10 pl-10 pr-4 py-2 rounded-lg shadow-sm bg-background focus:ring-2 focus:ring-primary/10 transition-colors"
+                className="w-full h-10 pl-10 pr-4 py-2 rounded-lg border border-input shadow-sm bg-background focus:ring-2 focus:ring-primary/10 focus:border-primary transition-colors"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -567,7 +466,7 @@ export default function ProjectDetailPage() {
           </div>
 
           <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="flex items-center border border-border/10 rounded-lg overflow-hidden shadow-sm h-10">
+            <div className="flex items-center border border-border rounded-lg overflow-hidden shadow-sm h-10">
               <button
                 className={`p-2 h-full ${viewMode === "list" ? "bg-muted" : "hover:bg-muted/50"} transition-colors`}
                 onClick={() => setViewMode("list")}
@@ -603,16 +502,16 @@ export default function ProjectDetailPage() {
             }
             action={
               <Link href={`/projects/${projectId}/tasks/create`}>
-                <Button className="rounded-lg">
-                  <Plus className="mr-2 h-4 w-2" /> Create Task
+                <Button className="rounded-lg shadow-sm">
+                  <Plus className="mr-2 h-4 w-4" /> Create Task
                 </Button>
               </Link>
             }
           />
         ) : viewMode === "list" ? (
-          <Card className="shadow-modern animate-fadeIn overflow-hidden">
+          <Card className="shadow-sm border-border/60 animate-fadeIn overflow-hidden">
             <div className="overflow-x-auto">
-              <table className={`w-full table-auto table-vercel ${isMobile ? "min-w-[600px]" : "min-w-[900px]"}`}>
+              <table className={`w-full table-auto ${isMobile ? "min-w-[600px]" : "min-w-[900px]"}`}>
                 <thead>
                   <tr className="bg-muted/50">
                     <th className="px-4 py-3 text-left text-sm font-medium min-w-[200px]">Title</th>
@@ -643,7 +542,7 @@ export default function ProjectDetailPage() {
                               <div className="flex items-center">
                                 {Array.from({ length: level }).map((_, index) => (
                                   <div key={index} className="flex items-center justify-center w-6">
-                                    <div className="w-0.5 h-6 bg-gray-300"></div>
+                                    <div className="w-0.5 h-6 bg-border/50"></div>
                                   </div>
                                 ))}
                                 {hasChildren ? (
@@ -655,6 +554,7 @@ export default function ProjectDetailPage() {
                                       }
                                     }}
                                     className="mr-2 focus:outline-none flex-shrink-0"
+                                    aria-label={isExpanded ? "Collapse" : "Expand"}
                                   >
                                     {isExpanded ? (
                                       <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -732,11 +632,12 @@ export default function ProjectDetailPage() {
               </table>
             </div>
             {totalPages > 1 && (
-              <Pagination className="mt-4">
+              <Pagination className="py-4 px-2">
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
                       onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
                   {currentPage > 2 && (
@@ -780,7 +681,10 @@ export default function ProjectDetailPage() {
                     </>
                   )}
                   <PaginationItem>
-                    {currentPage < totalPages && <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />}
+                    <PaginationNext
+                      onClick={currentPage < totalPages ? () => setCurrentPage(currentPage + 1) : undefined}
+                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>
@@ -798,7 +702,7 @@ export default function ProjectDetailPage() {
 
                 return (
                   <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
-                    <Card className="h-full shadow-modern card-hover transition-all animate-fadeIn">
+                    <Card className="h-full shadow-sm hover:shadow-md border-border/60 hover:border-border transition-all duration-200 animate-fadeIn">
                       <div className="p-4">
                         <div className="flex justify-between items-start mb-2">
                           <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
@@ -810,7 +714,7 @@ export default function ProjectDetailPage() {
                             {getStatusLabel(task.status)}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2 truncate">
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                           {task.description || "No description provided"}
                         </p>
                         <div className="flex flex-wrap gap-2 mb-3">
@@ -830,7 +734,7 @@ export default function ProjectDetailPage() {
                           <div className="flex items-center gap-2">
                             {task.dueDate && (
                               <div className="flex items-center text-xs text-muted-foreground truncate">
-                                <Calendar className="h-3 w-3 mr-1" />
+                                <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                                 {formatDate(task.dueDate)}
                               </div>
                             )}
@@ -849,11 +753,12 @@ export default function ProjectDetailPage() {
               })}
             </div>
             {totalPages > 1 && (
-              <Pagination className="mt-4">
+              <Pagination className="mt-6">
                 <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
                       onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
+                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
                     />
                   </PaginationItem>
                   {currentPage > 3 && (
@@ -882,7 +787,10 @@ export default function ProjectDetailPage() {
                     </>
                   )}
                   <PaginationItem>
-                    {currentPage < totalPages && <PaginationNext onClick={() => setCurrentPage(currentPage + 1)} />}
+                    <PaginationNext
+                      onClick={currentPage < totalPages ? () => setCurrentPage(currentPage + 1) : undefined}
+                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
                   </PaginationItem>
                 </PaginationContent>
               </Pagination>

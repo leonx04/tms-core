@@ -1,24 +1,7 @@
 "use client"
-
-import { Suspense } from "react"
 import { loadStripe } from "@stripe/stripe-js"
 import { onValue, ref, update } from "firebase/database"
-import {
-  ArrowLeft,
-  Check,
-  CreditCard,
-  Lock,
-  Shield,
-  Users,
-  Zap,
-  CheckCircle,
-  AlertCircle,
-  Sparkles,
-  Loader2,
-  Calendar,
-  History,
-  Receipt,
-} from "lucide-react"
+import { ArrowLeft, Check, CheckCircle, AlertCircle, Sparkles, Calendar, History, Receipt } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -26,7 +9,6 @@ import { useEffect, useState } from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
@@ -162,7 +144,7 @@ function UpgradePageContent() {
       // Clear URL parameters
       window.history.replaceState({}, document.title, "/upgrade")
     }
-  }, [toast])
+  }, [toast, searchParams])
 
   const handleUpgrade = async (packageId: string) => {
     // Require login before upgrading
@@ -587,132 +569,5 @@ function UpgradePageContent() {
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto bg-muted/40 p-8 rounded-xl border border-border shadow-sm">
-          <div className="flex items-start">
-            <Shield className="h-8 w-8 text-primary mr-4 mt-1 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-xl mb-3">Secure Payment Processing</h3>
-              <p className="text-muted-foreground mb-5">
-                All payments are securely processed through Stripe. Your payment information is never stored on our
-                servers.
-              </p>
-              <div className="flex flex-wrap gap-6">
-                <div className="flex items-center space-x-3">
-                  <CreditCard className="h-5 w-5 text-muted-foreground" />
-                  <span>All major credit cards accepted</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Lock className="h-5 w-5 text-muted-foreground" />
-                  <span>256-bit SSL encryption</span>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <Zap className="h-5 w-5 text-muted-foreground" />
-                  <span>Instant account activation</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="max-w-3xl mx-auto mt-12 text-center">
-          <h3 className="text-xl font-semibold mb-4">Need help choosing a plan?</h3>
-          <p className="text-muted-foreground mb-6">
-            Our team is ready to help you find the perfect plan for your needs.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Button variant="outline" className="gap-2">
-              <Users className="h-4 w-4" />
-              Contact Sales
-            </Button>
-            <Button variant="ghost" className="gap-2" asChild>
-              <Link href="/subscription-history">
-                <History className="h-4 w-4" />
-                View Payment History
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-function PricingCard({
-  title,
-  price,
-  period,
-  description,
-  features,
-  buttonText,
-  onClick,
-  disabled,
-  current,
-  highlighted = false,
-  processingPayment,
-}: {
-  title: string
-  price: string
-  period?: string
-  description: string
-  features: string[]
-  buttonText: string
-  onClick: () => void
-  disabled: boolean
-  current: boolean
-  highlighted?: boolean
-  processingPayment: boolean
-}) {
-  return (
-    <Card
-      className={`overflow-hidden transition-all duration-200 ${highlighted
-          ? "border-primary shadow-lg dark:shadow-primary/10 scale-105 z-10"
-          : "hover:border-border/80 hover:shadow-md"
-        }`}
-    >
-      {highlighted && (
-        <div className="bg-primary text-primary-foreground text-center py-2 text-sm font-medium">Most Popular</div>
-      )}
-      <CardHeader className={highlighted ? "pb-4" : "pb-2"}>
-        <CardTitle className="text-2xl">{title}</CardTitle>
-        <CardDescription className="text-base">{description}</CardDescription>
-        <div className="mt-4">
-          <span className="text-4xl font-bold">{price}</span>
-          {period && <span className="text-muted-foreground ml-2">{period}</span>}
-        </div>
-      </CardHeader>
-      <CardContent className="pb-6">
-        <ul className="space-y-3">
-          {features.map((feature, index) => (
-            <li key={index} className="flex items-start">
-              <Check className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
-              <span className="text-foreground/90">{feature}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-      <CardFooter className="pt-2 pb-6">
-        <Button
-          onClick={onClick}
-          disabled={disabled}
-          variant={current ? "outline" : highlighted ? "default" : "outline"}
-          className={`w-full py-6 text-base ${current ? "bg-primary/5 border-primary/20" : ""}`}
-          size="lg"
-        >
-          {current && <CheckCircle className="mr-2 h-4 w-4" />}
-          {buttonText}
-          {processingPayment && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-        </Button>
-      </CardFooter>
-    </Card>
-  )
-}
-
-// Main component with Suspense
-export default function UpgradePage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
-      <UpgradePageContent />
-    </Suspense>
-  )
-}
+        <div className="max-w-3xl mx-auto bg-muted/40 p-8 rounded-xl border border-border shadow-sm">\
 

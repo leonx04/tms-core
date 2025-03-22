@@ -19,9 +19,10 @@ import { ArrowLeft, GitCommit, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
-import { AssigneeGroup } from "@/components/ui/assignee-group"
+import { AssigneeGroup } from "@/components/assignee-group"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-// Hàm trích xuất commit id từ chuỗi đầu vào.
+// Extract commit ID from input string
 const extractCommitId = (input: string): string => {
   if (!input) return ""
   const trimmed = input.trim()
@@ -56,15 +57,14 @@ export default function CreateTaskPage() {
   const [type, setType] = useState(TASK_TYPE.FEATURE)
   const [priority, setPriority] = useState(TASK_PRIORITY.MEDIUM)
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined)
-  const [percentDone, setPercentDone] = useState(0)
   const [estimatedTime, setEstimatedTime] = useState<number | undefined>(undefined)
   const [assignedTo, setAssignedTo] = useState<string[]>([])
   const [tags, setTags] = useState<string[]>([])
   const [tagInput, setTagInput] = useState<string>("")
   const [parentTaskId, setParentTaskId] = useState<string | null>(null)
-  const [parentTaskTitle, setParentTaskTitle] = useState<string>("")
   const [parentTaskSearch, setParentTaskSearch] = useState("")
   const [commitId, setCommitId] = useState<string>("")
+  const [showParentTaskPopover, setShowParentTaskPopover] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -261,7 +261,7 @@ export default function CreateTaskPage() {
     return (
       <div className="min-h-screen bg-background">
         <div className="flex items-center justify-center h-[calc(100vh-64px)]">
-          <LoadingSpinner />
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     )
@@ -297,7 +297,7 @@ export default function CreateTaskPage() {
 
         <PageHeader title="Create Task" description={`Add a new task to ${project.name}`} />
 
-        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-bounce-in">
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm animate-fadeIn">
           <form onSubmit={handleSubmit} className="p-6 space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4 md:col-span-2">
@@ -427,43 +427,57 @@ export default function CreateTaskPage() {
                 <label htmlFor="parentTask" className="block text-sm font-medium">
                   Parent Task (optional)
                 </label>
-                <Select
-                  value={parentTaskId || ""}
-                  onValueChange={(value) => {
-                    setParentTaskId(value === "none" ? null : value)
-                    const taskTitle = projectTasks.find((task) => task.id === value)?.title || ""
-                    setParentTaskTitle(taskTitle)
-                  }}
-                  disabled={isSaving}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select parent task" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Thanh tìm kiếm tích hợp trong dropdown */}
+                <Popover open={showParentTaskPopover} onOpenChange={setShowParentTaskPopover}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={showParentTaskPopover}
+                      className="w-full justify-between"
+                    >
+                      {parentTaskId
+                        ? projectTasks.find((task) => task.id === parentTaskId)?.title
+                        : "Select parent task"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
                     <div className="p-2">
                       <Input
-                        autoFocus
+                        placeholder="Search tasks..."
                         value={parentTaskSearch}
                         onChange={(e) => setParentTaskSearch(e.target.value)}
-                        placeholder="Search tasks..."
-                        onClick={(e) => e.stopPropagation()}
+                        className="mb-2"
                       />
-                    </div>
-                    <SelectItem value="none">None</SelectItem>
-                    {filteredTasks.map((task) => (
-                      <SelectItem key={task.id} value={task.id}>
-                        <div className="truncate max-w-[200px]">
-                          {task.title}{" "}
-                          {(task.assignedTo ?? []).length > 0 &&
-                            `- ${(task.assignedTo ?? [])
-                              .map((id) => availableMembers[id]?.displayName || availableMembers[id]?.email)
-                              .join(", ")}`}
+                      <div className="max-h-[200px] overflow-y-auto">
+                        <div
+                          className="px-2 py-1.5 text-sm cursor-pointer hover:bg-muted rounded-md"
+                          onClick={() => {
+                            setParentTaskId(null)
+                            setShowParentTaskPopover(false)
+                          }}
+                        >
+                          None
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        {filteredTasks.map((task) => (
+                          <div
+                            key={task.id}
+                            className="px-2 py-1.5 text-sm cursor-pointer hover:bg-muted rounded-md"
+                            onClick={() => {
+                              setParentTaskId(task.id)
+                              setShowParentTaskPopover(false)
+                            }}
+                          >
+                            <div className="truncate max-w-[300px]">
+                              {task.title}{" "}
+                              {(task.assignedTo ?? []).length > 0 &&
+                                `- ${(task.assignedTo ?? []).map((id) => availableMembers[id]?.displayName || availableMembers[id]?.email).join(", ")}`}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="space-y-4 md:col-span-2">
@@ -490,7 +504,7 @@ export default function CreateTaskPage() {
                           }
                         }}
                         disabled={isSaving}
-                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                        className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                       />
                       <label htmlFor={`member-${memberId}`} className="text-sm truncate">
                         {memberData.displayName || memberData.email}
@@ -511,8 +525,9 @@ export default function CreateTaskPage() {
                       <button
                         type="button"
                         onClick={() => setTags(tags.filter((t) => t !== tag))}
-                        className="ml-2 text-red-500"
+                        className="ml-2 text-destructive"
                         disabled={isSaving}
+                        aria-label={`Remove tag ${tag}`}
                       >
                         &times;
                       </button>
@@ -547,7 +562,7 @@ export default function CreateTaskPage() {
               </Link>
               <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
                 <Save className="mr-2 h-4 w-4" />
-                {isSaving ? "Creating..." : "Create Task"}
+                {isSaving ? "Create Task" : "Creating..."}
               </Button>
             </div>
           </form>

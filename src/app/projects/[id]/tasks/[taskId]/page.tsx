@@ -20,37 +20,49 @@ import {
 } from "@/lib/utils"
 import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
-import { ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit, GitCommit, MessageSquare, User } from 'lucide-react'
+import {
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Edit,
+  GitCommit,
+  MessageSquare,
+  User,
+} from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { CommitLink } from "@/components/github/commit-preview"
-import { AssigneeGroup } from "@/components/ui/assignee-group"
+import { AssigneeGroup } from "@/components/assignee-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-// Hàm trích xuất commit id từ chuỗi đầu vào.
-// Nếu đầu vào chứa URL commit thì chỉ lấy phần id. Nếu không thì kiểm tra xem chuỗi nhập vào có phải là commit id hợp lệ (7-40 ký tự hexa) hay không.
+// Extract commit ID from input string.
+// If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
 const extractCommitId = (input: string): string => {
-  if (!input) return "";
-  const trimmed = input.trim();
-  const urlRegex = /commit\/([a-f0-9]{7,40})/i;
-  const idRegex = /^[a-f0-9]{7,40}$/i;
+  if (!input) return ""
+  const trimmed = input.trim()
+  const urlRegex = /commit\/([a-f0-9]{7,40})/i
+  const idRegex = /^[a-f0-9]{7,40}$/i
 
-  const matchUrl = trimmed.match(urlRegex);
+  const matchUrl = trimmed.match(urlRegex)
   if (matchUrl) {
-    return matchUrl[1];
+    return matchUrl[1]
   }
   if (idRegex.test(trimmed)) {
-    return trimmed;
+    return trimmed
   }
-  return "";
-};
+  return ""
+}
 
-// Hàm loại bỏ phần "https://github.com/" nếu có trong chuỗi repo.
+// Remove "https://github.com/" from repo string if present
 const getRepoSlug = (repo: string): string => {
-  if (!repo) return '';
-  return repo.replace(/^(https?:\/\/github\.com\/)/i, '');
-};
+  if (!repo) return ""
+  return repo.replace(/^(https?:\/\/github\.com\/)/i, "")
+}
 
 export default function TaskDetailPage() {
   const [task, setTask] = useState<Task | null>(null)
@@ -66,56 +78,57 @@ export default function TaskDetailPage() {
   const [commitId, setCommitId] = useState("")
   const [showChildTasks, setShowChildTasks] = useState(true)
   const [projectData, setProjectData] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState("details")
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
   const projectId = params.id as string
   const taskId = params.taskId as string
-  const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({});
+  const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
 
-  // Hàm tính % hoàn thành dựa trên các child task
+  // Calculate completion percentage based on child tasks
   const calculatePercentDone = (tasks: Task[]) => {
-    if (!tasks || tasks.length === 0) return 0;
+    if (!tasks || tasks.length === 0) return 0
 
     const totalPercent = tasks.reduce((sum, task) => {
-      return sum + (task.percentDone || 0);
-    }, 0);
+      return sum + (task.percentDone || 0)
+    }, 0)
 
-    return Math.round(totalPercent / tasks.length);
-  };
+    return Math.round(totalPercent / tasks.length)
+  }
 
-  // Hàm ghi lại lịch sử của task
+  // Log task history
   const logTaskHistory = async (entry: Omit<TaskHistory, "id">) => {
     try {
-      const historyRef = push(ref(database, "taskHistory"));
-      await set(historyRef, entry);
-      setHistory(prev => [{ id: historyRef.key as string, ...entry }, ...prev]);
+      const historyRef = push(ref(database, "taskHistory"))
+      await set(historyRef, entry)
+      setHistory((prev) => [{ id: historyRef.key as string, ...entry }, ...prev])
     } catch (error) {
-      console.error("Error logging task history:", error);
+      console.error("Error logging task history:", error)
       toast({
         title: "Error",
         description: "Failed to log task history",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
-  // Cập nhật tiến độ cho parent task (nếu có)
+  // Update parent task progress (if exists)
   const updateParentTaskProgress = async (parentTaskId: string, childTasks: Task[]) => {
-    if (!parentTaskId || childTasks.length === 0) return;
+    if (!parentTaskId || childTasks.length === 0) return
 
     try {
-      const newPercentDone = calculatePercentDone(childTasks);
+      const newPercentDone = calculatePercentDone(childTasks)
 
-      const parentTaskRef = ref(database, `tasks/${parentTaskId}`);
+      const parentTaskRef = ref(database, `tasks/${parentTaskId}`)
       await update(parentTaskRef, {
         percentDone: newPercentDone,
         updatedAt: new Date().toISOString(),
-      });
+      })
 
       if (task && task.id === parentTaskId) {
-        setTask(prev => prev ? { ...prev, percentDone: newPercentDone, updatedAt: new Date().toISOString() } : prev);
+        setTask((prev) => (prev ? { ...prev, percentDone: newPercentDone, updatedAt: new Date().toISOString() } : prev))
       }
 
       if (user) {
@@ -131,17 +144,17 @@ export default function TaskDetailPage() {
             },
           ],
           comment: "Progress updated automatically based on subtasks",
-        });
+        })
       }
     } catch (error) {
-      console.error("Error updating parent task progress:", error);
+      console.error("Error updating parent task progress:", error)
       toast({
         title: "Error",
         description: "Failed to update parent task progress",
         variant: "destructive",
-      });
+      })
     }
-  };
+  }
 
   useEffect(() => {
     const fetchTaskData = async () => {
@@ -156,8 +169,8 @@ export default function TaskDetailPage() {
           toast({
             title: "Task not found",
             description: "The task you're looking for doesn't exist",
-            variant: "success",
-          });
+            variant: "destructive",
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -173,7 +186,7 @@ export default function TaskDetailPage() {
             title: "Invalid task",
             description: "This task doesn't belong to the current project",
             variant: "destructive",
-          });
+          })
           router.push(`/projects/${projectId}`)
           return
         }
@@ -189,7 +202,7 @@ export default function TaskDetailPage() {
             title: "Project not found",
             description: "The project you're looking for doesn't exist",
             variant: "destructive",
-          });
+          })
           router.push("/projects")
           return
         }
@@ -203,7 +216,7 @@ export default function TaskDetailPage() {
             title: "Access denied",
             description: "You don't have access to this project",
             variant: "destructive",
-          });
+          })
           router.push("/projects")
           return
         }
@@ -324,31 +337,31 @@ export default function TaskDetailPage() {
           setChildTasks(childTasksList)
 
           if (childTasksList.length > 0) {
-            const calculatedPercent = calculatePercentDone(childTasksList);
+            const calculatedPercent = calculatePercentDone(childTasksList)
             if (taskData.percentDone === undefined || taskData.percentDone !== calculatedPercent) {
-              const taskRef = ref(database, `tasks/${taskId}`);
+              const taskRef = ref(database, `tasks/${taskId}`)
               await update(taskRef, {
                 percentDone: calculatedPercent,
-                updatedAt: new Date().toISOString()
-              });
+                updatedAt: new Date().toISOString(),
+              })
 
               setTask({
                 ...taskData,
                 percentDone: calculatedPercent,
-                updatedAt: new Date().toISOString()
-              });
+                updatedAt: new Date().toISOString(),
+              })
             }
           }
         }
 
         setUsers(usersData)
       } catch (error) {
-        console.error("Error fetching task data:", error);
+        console.error("Error fetching task data:", error)
         toast({
           title: "Error",
           description: "Failed to load task data. Please try again.",
           variant: "destructive",
-        });
+        })
       } finally {
         setLoading(false)
       }
@@ -365,7 +378,7 @@ export default function TaskDetailPage() {
     setIsSubmittingComment(true)
 
     try {
-      // Tạo mới comment
+      // Create new comment
       const newCommentRef = push(ref(database, "comments"))
 
       const newComment = {
@@ -377,7 +390,7 @@ export default function TaskDetailPage() {
 
       await set(newCommentRef, newComment)
 
-      // Tạo thông báo cho các thành viên được giao task
+      // Create notifications for assigned members
       if (task?.assignedTo) {
         for (const assignedUserId of task.assignedTo) {
           if (assignedUserId !== user.uid) {
@@ -396,7 +409,7 @@ export default function TaskDetailPage() {
         }
       }
 
-      // Cập nhật state cho comment mới
+      // Update local state with new comment
       setComments([
         ...comments,
         {
@@ -405,31 +418,30 @@ export default function TaskDetailPage() {
         },
       ])
 
-      // Lưu lịch sử hành động "thêm comment"
-      const commentLog = commentText.trim().length <= 100
-        ? commentText.trim()
-        : commentText.trim().slice(0, 100) + "...";
+      // Log "add comment" action to history
+      const commentLog =
+        commentText.trim().length <= 100 ? commentText.trim() : commentText.trim().slice(0, 100) + "..."
       await logTaskHistory({
         taskId,
         userId: user.uid,
         timestamp: new Date().toISOString(),
         changes: [],
         comment: `Comment added: ${commentLog}`,
-      });
+      })
 
       setCommentText("")
       toast({
         title: "Comment added",
         description: "Your comment has been added successfully",
         variant: "success",
-      });
+      })
     } catch (error) {
       console.error("Error submitting comment:", error)
       toast({
         title: "Error",
         description: "Failed to add comment. Please try again.",
         variant: "destructive",
-      });
+      })
     } finally {
       setIsSubmittingComment(false)
     }
@@ -443,7 +455,7 @@ export default function TaskDetailPage() {
     try {
       const oldStatus = task.status
 
-      // Cập nhật trạng thái của task
+      // Update task status
       const taskRef = ref(database, `tasks/${taskId}`)
 
       const updates: { status: string; updatedAt: string; gitCommitId?: string } = {
@@ -451,15 +463,15 @@ export default function TaskDetailPage() {
         updatedAt: new Date().toISOString(),
       }
 
-      // Nếu chuyển sang RESOLVED và có commit id, chỉ lưu lại commit id được trích xuất từ link/commit id nhập vào.
-      const parsedCommitId = extractCommitId(commitId);
+      // If changing to RESOLVED and commit ID provided, extract and save the commit ID
+      const parsedCommitId = extractCommitId(commitId)
       if (newStatus === TASK_STATUS.RESOLVED && parsedCommitId) {
-        updates.gitCommitId = parsedCommitId;
+        updates.gitCommitId = parsedCommitId
       }
 
       await update(taskRef, updates)
 
-      // Chuẩn bị các thay đổi cần lưu vào lịch sử
+      // Prepare changes to log in history
       const changes = [
         {
           field: "status",
@@ -480,12 +492,13 @@ export default function TaskDetailPage() {
         userId: user.uid,
         timestamp: new Date().toISOString(),
         changes,
-        comment: newStatus === TASK_STATUS.RESOLVED && parsedCommitId
-          ? `Status updated with commit: ${parsedCommitId}`
-          : "Status updated",
-      });
+        comment:
+          newStatus === TASK_STATUS.RESOLVED && parsedCommitId
+            ? `Status updated with commit: ${parsedCommitId}`
+            : "Status updated",
+      })
 
-      // Tạo thông báo cho các thành viên được giao task (ngoại trừ người cập nhật)
+      // Create notifications for assigned members (except the updater)
       if (task.assignedTo) {
         for (const assignedUserId of task.assignedTo) {
           if (assignedUserId !== user.uid) {
@@ -504,7 +517,7 @@ export default function TaskDetailPage() {
         }
       }
 
-      // Cập nhật state cục bộ
+      // Update local state
       setTask({
         ...task,
         status: newStatus,
@@ -517,14 +530,14 @@ export default function TaskDetailPage() {
         title: "Status updated",
         description: `Task status changed to ${getStatusLabel(newStatus)}`,
         variant: "success",
-      });
+      })
     } catch (error) {
       console.error("Error updating status:", error)
       toast({
         title: "Error",
         description: "Failed to update task status. Please try again.",
         variant: "destructive",
-      });
+      })
     } finally {
       setIsUpdatingStatus(false)
     }
@@ -580,44 +593,42 @@ export default function TaskDetailPage() {
   }
 
   const fetchUserData = async (userId: string) => {
-    setUsersLoading(prev => ({ ...prev, [userId]: true }));
+    setUsersLoading((prev) => ({ ...prev, [userId]: true }))
     try {
-      const userRef = ref(database, `users/${userId}`);
-      const userSnapshot = await get(userRef);
+      const userRef = ref(database, `users/${userId}`)
+      const userSnapshot = await get(userRef)
       if (userSnapshot.exists()) {
-        setUsers(prev => ({
+        setUsers((prev) => ({
           ...prev,
           [userId]: {
             id: userId,
-            ...userSnapshot.val()
-          }
-        }));
+            ...userSnapshot.val(),
+          },
+        }))
       }
     } catch (error) {
-      console.error("Error fetching user data:", error);
+      console.error("Error fetching user data:", error)
       toast({
         title: "Error",
         description: "Failed to load user data",
         variant: "destructive",
-      });
+      })
     } finally {
-      setUsersLoading(prev => ({ ...prev, [userId]: false }));
+      setUsersLoading((prev) => ({ ...prev, [userId]: false }))
     }
-  };
+  }
 
   // Convert users object to array for AssigneeGroup component
   const getAssigneeUsers = () => {
-    if (!task?.assignedTo) return [];
-    return task.assignedTo
-      .filter(id => users[id])
-      .map(id => users[id]);
-  };
+    if (!task?.assignedTo) return []
+    return task.assignedTo.filter((id) => users[id]).map((id) => users[id])
+  }
 
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
         <div className="flex h-[calc(100vh-64px)] justify-center items-center">
-          <LoadingSpinner />
+          <LoadingSpinner size="lg" />
         </div>
       </div>
     )
@@ -651,7 +662,7 @@ export default function TaskDetailPage() {
           <ArrowLeft className="h-4 w-4 mr-2" /> Back to Project
         </Link>
 
-        <div className="bg-card border border-border rounded-xl shadow-sm animate-bounce-in mb-8 overflow-hidden">
+        <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn mb-8 overflow-hidden">
           <div className="bg-muted/50 border-b border-border p-4 md:p-6">
             <div className="flex flex-col justify-between gap-4 items-start mb-4 md:flex-row md:items-center">
               <h1 className="text-xl break-words font-bold md:text-2xl">{task.title}</h1>
@@ -677,24 +688,22 @@ export default function TaskDetailPage() {
             </div>
 
             <div className="flex flex-wrap gap-2 mb-4">
-              <Badge 
-                variant="type" 
-                className={getTypeColor(task.type)}
-                animation="fade"
-              >
+              <Badge variant="type" className={getTypeColor(task.type)} animation="fade">
                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
               </Badge>
 
-              <Badge 
-                variant="status" 
+              <Badge
+                variant="status"
                 className={getStatusColor(task.status)}
-                animation={task.status === TASK_STATUS.TODO || task.status === TASK_STATUS.IN_PROGRESS ? "pulse" : "fade"}
+                animation={
+                  task.status === TASK_STATUS.TODO || task.status === TASK_STATUS.IN_PROGRESS ? "pulse" : "fade"
+                }
               >
                 {getStatusLabel(task.status)}
               </Badge>
 
-              <Badge 
-                variant="priority" 
+              <Badge
+                variant="priority"
                 className={getPriorityColor(task.priority)}
                 animation={task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"}
               >
@@ -717,355 +726,378 @@ export default function TaskDetailPage() {
               </div>
             )}
 
-            <div className="dark:prose-invert max-w-none mb-6 prose">
-              {task.description ? (
-                <div
-                  className="break-words"
-                  dangerouslySetInnerHTML={{
-                    __html: formatTextWithLinks(task.description, projectData?.githubRepo),
-                  }}
-                />
-              ) : (
-                <p className="text-muted-foreground italic">No description provided</p>
-              )}
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+              <TabsList className="mb-4">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="comments">Comments ({comments.length})</TabsTrigger>
+                <TabsTrigger value="history">History ({history.length})</TabsTrigger>
+                {childTasks.length > 0 && <TabsTrigger value="subtasks">Subtasks ({childTasks.length})</TabsTrigger>}
+              </TabsList>
 
-            <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2">
-              <div className="flex items-center">
-                <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                <span className="text-muted-foreground text-sm">Created by:</span>
-                <span className="text-sm font-medium ml-2 truncate">
-                  {users[task.createdBy]?.displayName || "Unknown user"}
-                </span>
-              </div>
-
-              <div className="flex items-center">
-                <Calendar className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                <span className="text-muted-foreground text-sm">Created:</span>
-                <span className="text-sm ml-2">{formatDate(task.createdAt)}</span>
-              </div>
-
-              <div className="flex items-center">
-                <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                <span className="text-muted-foreground text-sm">Assigned to:</span>
-                <div className="ml-2">
-                  {task.assignedTo && task.assignedTo.length > 0 ? (
-                    <div className="flex items-center">
-                      <AssigneeGroup users={getAssigneeUsers()} size="sm" />
-
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="ml-2 text-sm text-muted-foreground hidden md:inline-block">
-                              {task.assignedTo.map(id => users[id]?.displayName || "Unknown").join(", ")}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Assigned to: {task.assignedTo.map(id => users[id]?.displayName || "Unknown").join(", ")}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
+              <TabsContent value="details" className="animate-in fade-in-50">
+                <div className="dark:prose-invert max-w-none mb-6 prose">
+                  {task.description ? (
+                    <div
+                      className="break-words"
+                      dangerouslySetInnerHTML={{
+                        __html: formatTextWithLinks(task.description, projectData?.githubRepo),
+                      }}
+                    />
                   ) : (
-                    <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                    <p className="text-muted-foreground italic">No description provided</p>
                   )}
                 </div>
-              </div>
 
-              {task.dueDate && (
-                <div className="flex items-center">
-                  <Calendar className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                  <span className="text-muted-foreground text-sm">Due date:</span>
-                  <span className="text-sm ml-2">{formatDate(task.dueDate)}</span>
-                </div>
-              )}
-
-              {task.estimatedTime && (
-                <div className="flex items-center">
-                  <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                  <span className="text-muted-foreground text-sm">Estimated time:</span>
-                  <span className="text-sm ml-2">{task.estimatedTime} hours</span>
-                </div>
-              )}
-              {task.percentDone !== undefined && (
-                <div className="col-span-1 flex items-center sm:col-span-2">
-                  <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                  <span className="text-muted-foreground text-sm">Progress:</span>
-                  <div className="bg-muted h-2.5 rounded-full w-full dark:bg-muted max-w-xs ml-2 overflow-hidden">
-                    <div
-                      className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-in-out"
-                      style={{ width: `${task.percentDone}%` }}
-                      title={`${task.percentDone}% complete`}
-                    ></div>
+                <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2">
+                  <div className="flex items-center">
+                    <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                    <span className="text-muted-foreground text-sm">Created by:</span>
+                    <span className="text-sm font-medium ml-2 truncate">
+                      {users[task.createdBy]?.displayName || "Unknown user"}
+                    </span>
                   </div>
-                  <span className="text-xs ml-2">{task.percentDone}%</span>
-                </div>
-              )}
 
-              {task.tags && task.tags.length > 0 && (
-                <div className="col-span-1 flex items-center sm:col-span-2">
-                  <span className="text-muted-foreground text-sm mr-2">Tags:</span>
-                  <div className="flex flex-wrap gap-1">
-                    {task.tags.map((tag, index) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {tag}
-                      </Badge>
-                    ))}
+                  <div className="flex items-center">
+                    <Calendar className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                    <span className="text-muted-foreground text-sm">Created:</span>
+                    <span className="text-sm ml-2">{formatDate(task.createdAt)}</span>
                   </div>
-                </div>
-              )}
 
-              {task.gitCommitId && projectData?.githubRepo && (
-                <div className="col-span-1 flex items-center sm:col-span-2">
-                  <GitCommit className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                  <span className="text-muted-foreground text-sm mr-2">Commit:</span>
-                  <div className="max-w-[300px] truncate">
-                    <CommitLink url={`https://github.com/${getRepoSlug(projectData.githubRepo)}/commit/${task.gitCommitId}`} />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {task.status === TASK_STATUS.IN_PROGRESS && user && (
-              <div className="bg-card border border-border p-4 rounded-lg mb-6">
-                <h3 className="text-sm font-medium mb-2">Link a commit when resolving</h3>
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <input
-                    type="text"
-                    placeholder="Enter commit ID or URL"
-                    value={commitId}
-                    onChange={(e) => setCommitId(e.target.value)}
-                    className="flex-1 bg-background border border-input p-2 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
-                  />
-                  <Button
-                    onClick={() => handleStatusUpdate(TASK_STATUS.RESOLVED)}
-                    disabled={isUpdatingStatus}
-                    size="sm"
-                    className="rounded-lg shadow-sm"
-                  >
-                    Resolve with Commit
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {childTasks.length > 0 && (
-              <div className="mb-6">
-                <div
-                  className="flex justify-between cursor-pointer items-center mb-2"
-                  onClick={() => setShowChildTasks(!showChildTasks)}
-                >
-                  <h3 className="text-lg font-medium">Subtasks ({childTasks.length})</h3>
-                  <Button variant="ghost" size="sm" className="h-7 p-0 rounded-full w-7">
-                    {showChildTasks ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </Button>
-                </div>
-
-                {showChildTasks && (
-                  <div className="bg-muted rounded-lg overflow-hidden overflow-x-auto">
-                    <table className="w-full min-w-[500px]">
-                      <thead>
-                        <tr className="border-b border-border">
-                          <th className="text-left text-sm font-medium px-4 py-2">Title</th>
-                          <th className="text-left text-sm font-medium px-4 py-2">Status</th>
-                          <th className="text-left text-sm font-medium px-4 py-2">Assigned To</th>
-                          <th className="text-left text-sm font-medium px-4 py-2">Progress</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {childTasks.map((childTask) => {
-                          // Convert child task assignees to user objects for AssigneeGroup
-                          const childTaskUsers = childTask.assignedTo
-                            ? childTask.assignedTo
-                              .filter(id => users[id])
-                              .map(id => users[id])
-                            : [];
-
-                          return (
-                            <tr
-                              key={childTask.id}
-                              className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors"
-                            >
-                              <td className="px-4 py-2">
-                                <Link
-                                  href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                  className="text-primary hover:underline"
-                                >
-                                  {childTask.title}
-                                </Link>
-                              </td>
-                              <td className="px-4 py-2">
-                                <Badge 
-                                  variant="status" 
-                                  className={getStatusColor(childTask.status)}
-                                  animation={childTask.status === TASK_STATUS.TODO || childTask.status === TASK_STATUS.IN_PROGRESS ? "pulse" : "fade"}
-                                >
-                                  {getStatusLabel(childTask.status)}
-                                </Badge>
-                              </td>
-                              <td className="px-4 py-2">
-                                {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
-                                  <div className="flex items-center">
-                                    <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
-
-                                    <span className="ml-2 text-sm text-muted-foreground hidden lg:inline-block truncate max-w-[150px]">
-                                      {childTask.assignedTo.map(id => users[id]?.displayName || "Unknown").join(", ")}
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-2">
-                                {childTask.percentDone !== undefined && (
-                                  <div className="flex items-center gap-2">
-                                    <div className="bg-muted h-2 rounded-full w-24 overflow-hidden">
-                                      <div
-                                        className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
-                                        style={{ width: `${childTask.percentDone}%` }}
-                                      ></div>
-                                    </div>
-                                    <span className="text-xs">{childTask.percentDone}%</span>
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <h2 className="text-xl font-semibold mb-4">Comments</h2>
-
-            <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn mb-6 overflow-hidden">
-              <div className="p-4">
-                <form onSubmit={handleCommentSubmit}>
-                  <textarea
-                    placeholder="Add a comment..."
-                    value={commentText}
-                    onChange={(e) => setCommentText(e.target.value)}
-                    className="bg-background border border-input p-3 rounded-lg w-full focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-y transition-colors"
-                    disabled={isSubmittingComment}
-                  />
-                  <div className="flex justify-end mt-2">
-                    <Button
-                      type="submit"
-                      disabled={isSubmittingComment || !commentText.trim()}
-                      className="rounded-lg shadow-sm"
-                    >
-                      {isSubmittingComment ? "Submitting..." : "Add Comment"}
-                    </Button>
-                  </div>
-                </form>
-              </div>
-            </div>
-
-            {comments.length === 0 ? (
-              <div className="bg-card border border-border rounded-xl shadow-sm text-center animate-fadeIn py-12">
-                <MessageSquare className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
-                <h3 className="text-lg font-medium mb-1">No comments yet</h3>
-                <p className="text-muted-foreground">Be the first to comment on this task</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {comments.map((comment) => (
-                  <div
-                    key={comment.id}
-                    className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn overflow-hidden"
-                  >
-                    <div className="p-4">
-                      <div className="flex justify-between items-start mb-3">
+                  <div className="flex items-center">
+                    <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                    <span className="text-muted-foreground text-sm">Assigned to:</span>
+                    <div className="ml-2">
+                      {task.assignedTo && task.assignedTo.length > 0 ? (
                         <div className="flex items-center">
-                          <div className="flex bg-primary h-9 justify-center rounded-full text-primary-foreground text-sm w-9 font-medium items-center mr-3">
-                            {users[comment.userId]?.displayName?.charAt(0) || "?"}
-                          </div>
-                          <div>
-                            <p className="font-medium">{users[comment.userId]?.displayName || "Unknown user"}</p>
-                            <p className="text-muted-foreground text-xs">
-                              {formatDateTime(comment.createdAt)}
-                              {comment.updatedAt && " (edited)"}
-                            </p>
-                          </div>
+                          <AssigneeGroup users={getAssigneeUsers()} size="sm" />
+
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="ml-2 text-sm text-muted-foreground hidden md:inline-block">
+                                  {task.assignedTo.map((id) => users[id]?.displayName || "Unknown").join(", ")}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>
+                                  Assigned to:{" "}
+                                  {task.assignedTo.map((id) => users[id]?.displayName || "Unknown").join(", ")}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
-                      </div>
-                      <div className="dark:prose-invert max-w-none pl-12 prose">
+                      ) : (
+                        <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {task.dueDate && (
+                    <div className="flex items-center">
+                      <Calendar className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                      <span className="text-muted-foreground text-sm">Due date:</span>
+                      <span className="text-sm ml-2">{formatDate(task.dueDate)}</span>
+                    </div>
+                  )}
+
+                  {task.estimatedTime && (
+                    <div className="flex items-center">
+                      <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                      <span className="text-muted-foreground text-sm">Estimated time:</span>
+                      <span className="text-sm ml-2">{task.estimatedTime} hours</span>
+                    </div>
+                  )}
+                  {task.percentDone !== undefined && (
+                    <div className="col-span-1 flex items-center sm:col-span-2">
+                      <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                      <span className="text-muted-foreground text-sm">Progress:</span>
+                      <div className="bg-muted h-2.5 rounded-full w-full dark:bg-muted max-w-xs ml-2 overflow-hidden">
                         <div
-                          dangerouslySetInnerHTML={{
-                            __html: formatTextWithLinks(comment.content, projectData?.githubRepo),
-                          }}
+                          className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-in-out"
+                          style={{ width: `${task.percentDone}%` }}
+                          title={`${task.percentDone}% complete`}
+                        ></div>
+                      </div>
+                      <span className="text-xs ml-2">{task.percentDone}%</span>
+                    </div>
+                  )}
+
+                  {task.tags && task.tags.length > 0 && (
+                    <div className="col-span-1 flex items-center sm:col-span-2">
+                      <span className="text-muted-foreground text-sm mr-2">Tags:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {task.tags.map((tag, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {task.gitCommitId && projectData?.githubRepo && (
+                    <div className="col-span-1 flex items-center sm:col-span-2">
+                      <GitCommit className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                      <span className="text-muted-foreground text-sm mr-2">Commit:</span>
+                      <div className="max-w-[300px] truncate">
+                        <CommitLink
+                          url={`https://github.com/${getRepoSlug(projectData.githubRepo)}/commit/${task.gitCommitId}`}
                         />
                       </div>
                     </div>
+                  )}
+                </div>
+
+                {task.status === TASK_STATUS.IN_PROGRESS && user && (
+                  <div className="bg-card border border-border p-4 rounded-lg mb-6">
+                    <h3 className="text-sm font-medium mb-2">Link a commit when resolving</h3>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <input
+                        type="text"
+                        placeholder="Enter commit ID or URL"
+                        value={commitId}
+                        onChange={(e) => setCommitId(e.target.value)}
+                        className="flex-1 bg-background border border-input p-2 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
+                      />
+                      <Button
+                        onClick={() => handleStatusUpdate(TASK_STATUS.RESOLVED)}
+                        disabled={isUpdatingStatus}
+                        size="sm"
+                        className="rounded-lg shadow-sm"
+                      >
+                        Resolve with Commit
+                      </Button>
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                )}
+              </TabsContent>
 
-          <div>
-            <h2 className="text-xl font-semibold mb-4">History</h2>
+              <TabsContent value="comments" className="animate-in fade-in-50">
+                <div className="bg-card border border-border rounded-lg shadow-sm mb-6 overflow-hidden">
+                  <div className="p-4">
+                    <form onSubmit={handleCommentSubmit}>
+                      <textarea
+                        placeholder="Add a comment..."
+                        value={commentText}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        className="bg-background border border-input p-3 rounded-lg w-full focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-y transition-colors"
+                        disabled={isSubmittingComment}
+                      />
+                      <div className="flex justify-end mt-2">
+                        <Button
+                          type="submit"
+                          disabled={isSubmittingComment || !commentText.trim()}
+                          className="rounded-lg shadow-sm"
+                        >
+                          {isSubmittingComment ? "Submitting..." : "Add Comment"}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
 
-            {history.length === 0 ? (
-              <div className="bg-card border border-border rounded-xl shadow-sm text-center animate-fadeIn py-12">
-                <Clock className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
-                <h3 className="text-lg font-medium mb-1">No history yet</h3>
-                <p className="text-muted-foreground">Task history will appear here</p>
-              </div>
-            ) : (
-              <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn overflow-hidden">
-                <div className="p-4">
-                  <ul className="space-y-4">
-                    {history.map((entry) => (
-                      <li key={entry.id} className="border-b border-border last:border-0 last:pb-0 pb-4">
-                        <div className="flex items-start mb-1">
-                          <div className="flex flex-shrink-0 bg-muted h-7 justify-center rounded-full text-muted-foreground text-xs w-7 font-medium items-center mr-2 mt-0.5">
-                            {users[entry.userId]?.displayName?.charAt(0) || "?"}
+                {comments.length === 0 ? (
+                  <div className="bg-card border border-border rounded-lg shadow-sm text-center py-12">
+                    <MessageSquare className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
+                    <h3 className="text-lg font-medium mb-1">No comments yet</h3>
+                    <p className="text-muted-foreground">Be the first to comment on this task</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {comments.map((comment) => (
+                      <div
+                        key={comment.id}
+                        className="bg-card border border-border rounded-lg shadow-sm animate-fadeIn overflow-hidden"
+                      >
+                        <div className="p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center">
+                              <div className="flex bg-primary h-9 justify-center rounded-full text-primary-foreground text-sm w-9 font-medium items-center mr-3">
+                                {users[comment.userId]?.displayName?.charAt(0) || "?"}
+                              </div>
+                              <div>
+                                <p className="font-medium">{users[comment.userId]?.displayName || "Unknown user"}</p>
+                                <p className="text-muted-foreground text-xs">
+                                  {formatDateTime(comment.createdAt)}
+                                  {comment.updatedAt && " (edited)"}
+                                </p>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 break-words">
-                            <p className="text-sm">
-                              <span className="font-medium">{users[entry.userId]?.displayName || "Unknown user"}</span>{" "}
-                              {entry.changes.map((change, index) => (
-                                <span key={index} className="inline-block">
-                                  {index > 0 && ", "}
-                                  changed {change.field} from{" "}
-                                  <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
-                                    {change.oldValue || "none"}
-                                  </span>{" "}
-                                  to{" "}
-                                  <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
-                                    {change.newValue}
-                                  </span>
-                                </span>
-                              ))}
-                            </p>
-                            <p className="text-muted-foreground text-xs">{formatDateTime(entry.timestamp)}</p>
+                          <div className="dark:prose-invert max-w-none pl-12 prose">
+                            <div
+                              dangerouslySetInnerHTML={{
+                                __html: formatTextWithLinks(comment.content, projectData?.githubRepo),
+                              }}
+                            />
                           </div>
                         </div>
-                        {entry.comment && (
-                          <div
-                            className="text-muted-foreground text-sm ml-9 mt-1 break-words"
-                            dangerouslySetInnerHTML={{
-                              __html: formatTextWithLinks(entry.comment, getRepoSlug(projectData?.githubRepo)),
-                            }}
-                          />
-                        )}
-                      </li>
+                      </div>
                     ))}
-                  </ul>
-                </div>
-              </div>
-            )}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="history" className="animate-in fade-in-50">
+                {history.length === 0 ? (
+                  <div className="bg-card border border-border rounded-lg shadow-sm text-center py-12">
+                    <Clock className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
+                    <h3 className="text-lg font-medium mb-1">No history yet</h3>
+                    <p className="text-muted-foreground">Task history will appear here</p>
+                  </div>
+                ) : (
+                  <div className="bg-card border border-border rounded-lg shadow-sm animate-fadeIn overflow-hidden">
+                    <div className="p-4">
+                      <ul className="space-y-4">
+                        {history.map((entry) => (
+                          <li key={entry.id} className="border-b border-border last:border-0 last:pb-0 pb-4">
+                            <div className="flex items-start mb-1">
+                              <div className="flex flex-shrink-0 bg-muted h-7 justify-center rounded-full text-muted-foreground text-xs w-7 font-medium items-center mr-2 mt-0.5">
+                                {users[entry.userId]?.displayName?.charAt(0) || "?"}
+                              </div>
+                              <div className="flex-1 break-words">
+                                <p className="text-sm">
+                                  <span className="font-medium">
+                                    {users[entry.userId]?.displayName || "Unknown user"}
+                                  </span>{" "}
+                                  {entry.changes.map((change, index) => (
+                                    <span key={index} className="inline-block">
+                                      {index > 0 && ", "}
+                                      changed {change.field} from{" "}
+                                      <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
+                                        {change.oldValue || "none"}
+                                      </span>{" "}
+                                      to{" "}
+                                      <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
+                                        {change.newValue}
+                                      </span>
+                                    </span>
+                                  ))}
+                                </p>
+                                <p className="text-muted-foreground text-xs">{formatDateTime(entry.timestamp)}</p>
+                              </div>
+                            </div>
+                            {entry.comment && (
+                              <div
+                                className="text-muted-foreground text-sm ml-9 mt-1 break-words"
+                                dangerouslySetInnerHTML={{
+                                  __html: formatTextWithLinks(entry.comment, getRepoSlug(projectData?.githubRepo)),
+                                }}
+                              />
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              {childTasks.length > 0 && (
+                <TabsContent value="subtasks" className="animate-in fade-in-50">
+                  <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
+                    <div className="bg-muted/50 p-3 border-b border-border flex justify-between items-center">
+                      <h3 className="font-medium">Subtasks ({childTasks.length})</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 p-0 rounded-full w-7"
+                        onClick={() => setShowChildTasks(!showChildTasks)}
+                        aria-label={showChildTasks ? "Hide subtasks" : "Show subtasks"}
+                      >
+                        {showChildTasks ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </Button>
+                    </div>
+
+                    {showChildTasks && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[500px]">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left text-sm font-medium px-4 py-2">Title</th>
+                              <th className="text-left text-sm font-medium px-4 py-2">Status</th>
+                              <th className="text-left text-sm font-medium px-4 py-2">Assigned To</th>
+                              <th className="text-left text-sm font-medium px-4 py-2">Progress</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {childTasks.map((childTask) => {
+                              // Convert child task assignees to user objects for AssigneeGroup
+                              const childTaskUsers = childTask.assignedTo
+                                ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
+                                : []
+
+                              return (
+                                <tr
+                                  key={childTask.id}
+                                  className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors"
+                                >
+                                  <td className="px-4 py-2">
+                                    <Link
+                                      href={`/projects/${projectId}/tasks/${childTask.id}`}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {childTask.title}
+                                    </Link>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    <Badge
+                                      variant="status"
+                                      className={getStatusColor(childTask.status)}
+                                      animation={
+                                        childTask.status === TASK_STATUS.TODO ||
+                                          childTask.status === TASK_STATUS.IN_PROGRESS
+                                          ? "pulse"
+                                          : "fade"
+                                      }
+                                    >
+                                      {getStatusLabel(childTask.status)}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
+                                      <div className="flex items-center">
+                                        <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
+
+                                        <span className="ml-2 text-sm text-muted-foreground hidden lg:inline-block truncate max-w-[150px]">
+                                          {childTask.assignedTo
+                                            .map((id) => users[id]?.displayName || "Unknown")
+                                            .join(", ")}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    {childTask.percentDone !== undefined && (
+                                      <div className="flex items-center gap-2">
+                                        <div className="bg-muted h-2 rounded-full w-24 overflow-hidden">
+                                          <div
+                                            className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
+                                            style={{ width: `${childTask.percentDone}%` }}
+                                          ></div>
+                                        </div>
+                                        <span className="text-xs">{childTask.percentDone}%</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              )}
+            </Tabs>
           </div>
         </div>
       </main>
     </div>
   )
 }
+

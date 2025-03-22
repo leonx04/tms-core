@@ -1,5 +1,6 @@
 import { emailTemplates, sendEmail } from "@/lib/email"
-import { auth, database } from "@/lib/firebase/firebase"
+import { database } from "@/lib/firebase/firebase"
+import { getAuth } from "firebase-admin/auth"
 import { equalTo, get, orderByChild, query, ref, remove, set, update } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     }
 
     const token = authHeader.split(" ")[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await getAuth().verifyIdToken(token)
     const userId = decodedToken.uid
 
     // Get notifications for this user
@@ -139,7 +140,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const token = authHeader.split(" ")[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await getAuth().verifyIdToken(token)
     const userId = decodedToken.uid
 
     const { notificationId, status } = await request.json()
@@ -182,7 +183,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const token = authHeader.split(" ")[1]
-    const decodedToken = await auth.verifyIdToken(token)
+    const decodedToken = await getAuth().verifyIdToken(token)
     const userId = decodedToken.uid
 
     const url = new URL(request.url)

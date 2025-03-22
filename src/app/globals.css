@@ -4,7 +4,6 @@
 
 /* --- Base Styles & Variables --- */
 @layer base {
-
   /* Light Mode Variables */
   :root {
     --background: 0 0% 100%;
@@ -168,7 +167,6 @@
 
 /* --- Components & Custom Styles --- */
 @layer components {
-
   /* --- Form Elements --- */
   input,
   select,
@@ -819,19 +817,23 @@
 
   /* Shimmer effect for badges */
   .badge-shimmer {
-    background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.2) 50%,
-        rgba(255, 255, 255, 0) 100%);
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
     background-size: 200% 100%;
     animation: badge-shimmer 2s infinite;
   }
 
   .dark .badge-shimmer {
-    background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.1) 50%,
-        rgba(255, 255, 255, 0) 100%);
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
     background-size: 200% 100%;
   }
 
@@ -1063,4 +1065,65 @@
   .status-timeline-dot-closed.active {
     background-color: hsl(var(--status-closed));
   }
+
+  /* Swiper Testimonial Styles */
+  .testimonial-swiper {
+    width: 100%;
+    padding-top: 20px;
+    padding-bottom: 50px;
+  }
+
+  .testimonial-swiper .swiper-slide {
+    width: 350px;
+    height: auto;
+    opacity: 0.7;
+    transform: scale(0.85);
+    transition: all 0.3s ease;
+  }
+
+  .testimonial-swiper .swiper-slide-active {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .testimonial-swiper .swiper-pagination {
+    bottom: 0;
+  }
+
+  .testimonial-swiper .swiper-pagination-bullet {
+    width: 10px;
+    height: 10px;
+    background: hsl(var(--muted-foreground));
+    opacity: 0.5;
+  }
+
+  .testimonial-swiper .swiper-pagination-bullet-active {
+    background: hsl(var(--primary));
+    opacity: 1;
+  }
+
+  .testimonial-swiper .swiper-button-next,
+  .testimonial-swiper .swiper-button-prev {
+    color: hsl(var(--primary));
+    background: hsl(var(--background));
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .testimonial-swiper .swiper-button-next:after,
+  .testimonial-swiper .swiper-button-prev:after {
+    font-size: 18px;
+  }
+
+  .dark .testimonial-swiper .swiper-button-next,
+  .dark .testimonial-swiper .swiper-button-prev {
+    background: hsl(var(--muted));
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  }
 }
+

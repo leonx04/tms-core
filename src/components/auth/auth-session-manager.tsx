@@ -17,7 +17,24 @@ export const AuthSessionManager = () => {
   // Handle authentication state and redirects
   useEffect(() => {
     // Public routes that don't require authentication
-    const publicRoutes = ["/", "/login", "/register", "/reset-password", "/upgrade", "/forgot-password"]
+    const publicRoutes = [
+      "/",
+      "/login",
+      "/register",
+      "/reset-password",
+      "/upgrade",
+      "/forgot-password",
+      // Footer pages
+      "/roadmap",
+      "/changelog",
+      "/about",
+      "/blog",
+      "/careers",
+      "/contact",
+      "/terms",
+      "/privacy",
+      "/cookies",
+    ]
 
     // Check if the route is public
     const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))

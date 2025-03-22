@@ -1,5 +1,5 @@
-import { Github, Linkedin, Twitter } from "lucide-react"
-import Link from "next/link"
+import { Github, Linkedin, Twitter } from "lucide-react";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -12,14 +12,17 @@ export default function Footer() {
                 T
               </div>
               <span className="text-xl font-bold ml-2">TMC</span>
-              <span className="text-xs text-muted-foreground ml-1 mt-1">v1</span>
+              <span className="text-xs text-muted-foreground ml-1 mt-1">
+                v1
+              </span>
             </div>
             <p className="text-sm text-muted-foreground mb-4">
-              A comprehensive task management system designed for software development teams.
+              A comprehensive task management system designed for software
+              development teams.
             </p>
             <div className="flex space-x-4">
               <a
-                href="https://github.com"
+                href="https://github.com/leonx04"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-foreground transition-colors"
@@ -48,107 +51,114 @@ export default function Footer() {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider">Product</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link
-                  href="/#features"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Features
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/#pricing"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="/roadmap" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Roadmap
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/changelog"
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  Changelog
-                </Link>
-              </li>
-            </ul>
-          </div>
+          <div className="md:col-span-3">
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider">
+                  Product
+                </h3>
+                <ul className="space-y-3">
+                  <li>
+                    <Link
+                      href="/#features"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Features
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/#pricing"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Pricing
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/roadmap"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Roadmap
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/changelog"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Changelog
+                    </Link>
+                  </li>
+                </ul>
+              </div>
 
-          <div>
-            <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider">Resources</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Documentation
-                </Link>
-              </li>
-              <li>
-                <Link href="/guides" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Guides
-                </Link>
-              </li>
-              <li>
-                <Link href="/support" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Support
-                </Link>
-              </li>
-              <li>
-                <Link href="/api" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  API
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider">Company</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link href="/about" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="/careers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Careers
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Contact
-                </Link>
-              </li>
-            </ul>
+              <div>
+                <h3 className="text-sm font-semibold mb-4 uppercase tracking-wider">
+                  Company
+                </h3>
+                <ul className="space-y-3">
+                  <li>
+                    <Link
+                      href="/about"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      About Us
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/blog"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Blog
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/careers"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Careers
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/contact"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Contact
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="border-t border-border/10 pt-8 mt-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground mb-4 md:mb-0">
-              © {new Date().getFullYear()} Task Management System. All rights reserved.
+              © {new Date().getFullYear()} Task Management System. All rights
+              reserved.
             </p>
             <div className="flex space-x-6">
-              <Link href="/terms" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/terms"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Terms
               </Link>
-              <Link href="/privacy" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/privacy"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Privacy
               </Link>
-              <Link href="/cookies" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/cookies"
+                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
                 Cookies
               </Link>
             </div>
@@ -156,6 +166,5 @@ export default function Footer() {
         </div>
       </div>
     </footer>
-  )
+  );
 }
-

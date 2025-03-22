@@ -39,6 +39,7 @@ import { CommitLink } from "@/components/github/commit-preview"
 import { AssigneeGroup } from "@/components/assignee-group"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
@@ -86,6 +87,9 @@ export default function TaskDetailPage() {
   const taskId = params.taskId as string
   const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
+
+  // Check if we're on a mobile device
+  const isMobile = useMediaQuery("(max-width: 640px)")
 
   // Calculate completion percentage based on child tasks
   const calculatePercentDone = (tasks: Task[]) => {
@@ -652,6 +656,17 @@ export default function TaskDetailPage() {
     )
   }
 
+  // Determine which tabs to show
+  const tabItems = [
+    { id: "details", label: "Details" },
+    { id: "comments", label: `Comments (${comments.length})` },
+    { id: "history", label: `History (${history.length})` },
+  ]
+
+  if (childTasks.length > 0) {
+    tabItems.push({ id: "subtasks", label: `Subtasks (${childTasks.length})` })
+  }
+
   return (
     <div className="bg-background min-h-screen">
       <main className="container mx-auto px-4 py-8">
@@ -727,12 +742,34 @@ export default function TaskDetailPage() {
             )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-              <TabsList className="mb-4">
-                <TabsTrigger value="details">Details</TabsTrigger>
-                <TabsTrigger value="comments">Comments ({comments.length})</TabsTrigger>
-                <TabsTrigger value="history">History ({history.length})</TabsTrigger>
-                {childTasks.length > 0 && <TabsTrigger value="subtasks">Subtasks ({childTasks.length})</TabsTrigger>}
-              </TabsList>
+              {/* Responsive TabsList with horizontal scrolling for small screens */}
+              <div className="relative mb-4">
+                <TabsList
+                  className={`w-full flex ${
+                    isMobile ? "overflow-x-auto scrollbar-hide" : ""
+                  } bg-muted/50 p-1 rounded-lg`}
+                >
+                  {tabItems.map((tab) => (
+                    <TabsTrigger
+                      key={tab.id}
+                      value={tab.id}
+                      className={`flex-1 min-w-[100px] ${
+                        isMobile ? "flex-shrink-0" : ""
+                      } text-sm whitespace-nowrap px-3 py-2`}
+                    >
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+
+                {/* Shadow indicators for scroll on mobile */}
+                {isMobile && (
+                  <>
+                    <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent pointer-events-none z-10"></div>
+                    <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent pointer-events-none z-10"></div>
+                  </>
+                )}
+              </div>
 
               <TabsContent value="details" className="animate-in fade-in-50">
                 <div className="dark:prose-invert max-w-none mb-6 prose">
@@ -1047,7 +1084,7 @@ export default function TaskDetailPage() {
                                       className={getStatusColor(childTask.status)}
                                       animation={
                                         childTask.status === TASK_STATUS.TODO ||
-                                          childTask.status === TASK_STATUS.IN_PROGRESS
+                                        childTask.status === TASK_STATUS.IN_PROGRESS
                                           ? "pulse"
                                           : "fade"
                                       }

@@ -24,9 +24,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { database } from "@/lib/firebase/firebase"
-import type { Project, Task } from "@/types"
+import type { Project, Task, TaskHistory } from "@/types"
 import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
-import { equalTo, get, orderByChild, query, ref, update } from "firebase/database"
+import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
 import { ArrowLeft, GitCommit, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -49,8 +49,59 @@ const extractCommitId = (input: string): string => {
   return ""
 }
 
+// Compare two values and determine if they're different
+// This handles various types including arrays, dates, and primitives
+const isDifferent = (oldValue: any, newValue: any): boolean => {
+  // Handle null/undefined cases
+  if (oldValue === null && newValue === null) return false
+  if (oldValue === undefined && newValue === undefined) return false
+  if (oldValue === null && newValue === undefined) return false
+  if (oldValue === undefined && newValue === null) return false
+  if ((oldValue === null || oldValue === undefined) && newValue) return true
+  if (oldValue && (newValue === null || newValue === undefined)) return true
+
+  // Handle arrays (like assignedTo, tags)
+  if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+    if (oldValue.length !== newValue.length) return true
+
+    // Sort arrays to ensure consistent comparison
+    const sortedOld = [...oldValue].sort()
+    const sortedNew = [...newValue].sort()
+
+    return sortedOld.some((val, idx) => val !== sortedNew[idx])
+  }
+
+  // Handle dates
+  if (
+    oldValue &&
+    newValue &&
+    (oldValue instanceof Date || (typeof oldValue === "string" && oldValue.match(/^\d{4}-\d{2}-\d{2}/)))
+  ) {
+    const oldDate = oldValue instanceof Date ? oldValue : new Date(oldValue)
+    const newDate = newValue instanceof Date ? newValue : new Date(newValue)
+    return oldDate.getTime() !== newDate.getTime()
+  }
+
+  // Handle numbers
+  if (typeof oldValue === "number" && typeof newValue === "number") {
+    return oldValue !== newValue
+  }
+
+  // Handle strings and other primitives
+  return String(oldValue) !== String(newValue)
+}
+
+// Format value for display in history
+const formatValueForHistory = (value: any): string => {
+  if (value === null || value === undefined) return "none"
+  if (Array.isArray(value)) return value.join(", ") || "none"
+  if (value instanceof Date) return value.toISOString()
+  return String(value)
+}
+
 export default function EditTaskPage() {
   const [task, setTask] = useState<Task | null>(null)
+  const [originalTask, setOriginalTask] = useState<Task | null>(null) // Store original task for comparison
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -117,6 +168,7 @@ export default function EditTaskPage() {
         }
 
         setTask(taskData)
+        setOriginalTask(JSON.parse(JSON.stringify(taskData))) // Deep copy for comparison later
 
         // Populate form fields
         setTitle(taskData.title)
@@ -221,10 +273,36 @@ export default function EditTaskPage() {
     setShowConfirmDialog(true)
   }
 
+  // Log task history with detailed changes
+  const logTaskHistory = async (taskId: string, changes: { field: string; oldValue: any; newValue: any }[]) => {
+    if (!user || changes.length === 0) return
+
+    try {
+      const historyEntry: Omit<TaskHistory, "id"> = {
+        taskId,
+        userId: user.uid,
+        timestamp: new Date().toISOString(),
+        changes: changes.map((change) => ({
+          field: change.field,
+          oldValue: formatValueForHistory(change.oldValue),
+          newValue: formatValueForHistory(change.newValue),
+        })),
+      }
+
+      const historyRef = push(ref(database, "taskHistory"))
+      await set(historyRef, historyEntry)
+
+      return historyRef.key
+    } catch (error) {
+      console.error("Error logging task history:", error)
+      throw error
+    }
+  }
+
   const handleConfirmSave = async () => {
     setShowConfirmDialog(false)
 
-    if (!user || !task) return
+    if (!user || !task || !originalTask) return
 
     setIsSaving(true)
 
@@ -247,14 +325,86 @@ export default function EditTaskPage() {
         gitCommitId: parsedCommitId || null,
       }
 
-      const taskRef = ref(database, `tasks/${taskId}`)
-      await update(taskRef, updates)
+      // Track changes for history
+      const changes: { field: string; oldValue: any; newValue: any }[] = []
 
-      toast({
-        title: "Task updated",
-        description: "Task has been updated successfully",
-        variant: "success",
-      })
+      // Compare each field to detect changes
+      if (isDifferent(originalTask.title, title)) {
+        changes.push({ field: "title", oldValue: originalTask.title, newValue: title })
+      }
+
+      if (isDifferent(originalTask.description, description)) {
+        changes.push({ field: "description", oldValue: originalTask.description, newValue: description })
+      }
+
+      if (isDifferent(originalTask.type, type)) {
+        changes.push({ field: "type", oldValue: originalTask.type, newValue: type })
+      }
+
+      if (isDifferent(originalTask.status, status)) {
+        changes.push({ field: "status", oldValue: originalTask.status, newValue: status })
+      }
+
+      if (isDifferent(originalTask.priority, priority)) {
+        changes.push({ field: "priority", oldValue: originalTask.priority, newValue: priority })
+      }
+
+      // Compare dates
+      const originalDueDate = originalTask.dueDate ? new Date(originalTask.dueDate) : null
+      const newDueDate = dueDate || null
+      if (isDifferent(originalDueDate, newDueDate)) {
+        changes.push({
+          field: "dueDate",
+          oldValue: originalDueDate,
+          newValue: newDueDate,
+        })
+      }
+
+      if (isDifferent(originalTask.percentDone, percentDone)) {
+        changes.push({ field: "percentDone", oldValue: originalTask.percentDone, newValue: percentDone })
+      }
+
+      if (isDifferent(originalTask.estimatedTime, estimatedTime)) {
+        changes.push({ field: "estimatedTime", oldValue: originalTask.estimatedTime, newValue: estimatedTime })
+      }
+
+      if (isDifferent(originalTask.assignedTo || [], assignedTo)) {
+        changes.push({ field: "assignedTo", oldValue: originalTask.assignedTo || [], newValue: assignedTo })
+      }
+
+      if (isDifferent(originalTask.tags || [], tags)) {
+        changes.push({ field: "tags", oldValue: originalTask.tags || [], newValue: tags })
+      }
+
+      if (isDifferent(originalTask.parentTaskId, parentTaskId)) {
+        changes.push({ field: "parentTaskId", oldValue: originalTask.parentTaskId, newValue: parentTaskId })
+      }
+
+      const originalCommitId = originalTask.gitCommitId || ""
+      if (isDifferent(originalCommitId, parsedCommitId)) {
+        changes.push({ field: "gitCommitId", oldValue: originalCommitId, newValue: parsedCommitId })
+      }
+
+      // Only update if there are actual changes
+      if (changes.length > 0) {
+        const taskRef = ref(database, `tasks/${taskId}`)
+        await update(taskRef, updates)
+
+        // Log the changes to history
+        await logTaskHistory(taskId, changes)
+
+        toast({
+          title: "Task updated",
+          description: "Task has been updated successfully",
+          variant: "success",
+        })
+      } else {
+        toast({
+          title: "No changes detected",
+          description: "No changes were made to the task",
+          variant: "info",
+        })
+      }
 
       setTimeout(() => {
         router.push(`/projects/${projectId}/tasks/${taskId}`)

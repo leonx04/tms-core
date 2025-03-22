@@ -1,29 +1,29 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useEffect, useState } from "react"
-import {
-  type User,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  signOut as firebaseSignOut,
-  updateProfile,
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  signInWithPopup,
-  linkWithPopup,
-  fetchSignInMethodsForEmail,
-  EmailAuthProvider,
-  reauthenticateWithCredential,
-  updateEmail,
-  updatePassword,
-} from "firebase/auth"
-import { auth, database } from "@/lib/firebase"
-import { ref, get, set, update } from "firebase/database"
+import { useToast } from "@/hooks/use-toast"
+import { auth, database } from "@/lib/firebase/firebase"
 import { secureRoutes } from "@/lib/secure-routes"
 import type { UserData } from "@/types"
-import { useToast } from "@/hooks/use-toast"
+import {
+  EmailAuthProvider,
+  GithubAuthProvider,
+  GoogleAuthProvider,
+  type User,
+  createUserWithEmailAndPassword,
+  fetchSignInMethodsForEmail,
+  signOut as firebaseSignOut,
+  linkWithPopup,
+  onAuthStateChanged,
+  reauthenticateWithCredential,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  updateEmail,
+  updatePassword,
+  updateProfile,
+} from "firebase/auth"
+import { get, ref, set, update } from "firebase/database"
+import type React from "react"
+import { createContext, useContext, useEffect, useState } from "react"
 
 type AuthContextType = {
   user: User | null

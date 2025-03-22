@@ -3,24 +3,9 @@
 import type React from "react"
 
 import { PageHeader } from "@/components/layout/page-header"
-import { AssigneeGroup } from "@/components/assignee-group"
+import { AssigneeGroup } from "@/components/ui/assignee-group"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Input } from "@/components/ui/input"
-import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
-import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/contexts/auth-context"
-import { useToast } from "@/hooks/use-toast"
-import { database } from "@/lib/firebase"
-import type { Project, Task } from "@/types"
-import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
-import { get, ref, update, query, orderByChild, equalTo } from "firebase/database"
-import { ArrowLeft, GitCommit, Save } from "lucide-react"
-import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState, useMemo } from "react"
 import {
   Dialog,
   DialogContent,
@@ -30,7 +15,22 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Slider } from "@/components/ui/slider"
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import { database } from "@/lib/firebase/firebase"
+import type { Project, Task } from "@/types"
+import { TASK_PRIORITY, TASK_STATUS, TASK_TYPE } from "@/types"
+import { equalTo, get, orderByChild, query, ref, update } from "firebase/database"
+import { ArrowLeft, GitCommit, Save } from "lucide-react"
+import Link from "next/link"
+import { useParams, useRouter } from "next/navigation"
+import { useEffect, useMemo, useState } from "react"
 
 // Extract commit ID from input string
 const extractCommitId = (input: string): string => {

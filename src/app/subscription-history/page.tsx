@@ -1,19 +1,19 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
 import { onValue, ref } from "firebase/database"
-import { ArrowLeft, Calendar, CreditCard, Download, Receipt, Clock, ExternalLink, FileText } from "lucide-react"
+import { ArrowLeft, Calendar, Clock, CreditCard, Download, ExternalLink, FileText, Receipt } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase"
+import { database } from "@/lib/firebase/firebase"
 
 type PaymentRecord = {
     packageId: string

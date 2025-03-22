@@ -2,12 +2,17 @@
 
 import type React from "react"
 
+import { CommitLink } from "@/components/github/commit-preview"
+import { AssigneeGroup } from "@/components/ui/assignee-group"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { useToast } from "@/hooks/use-toast"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase"
+import { useMediaQuery } from "@/hooks/use-media-query"
+import { useToast } from "@/hooks/use-toast"
+import { database } from "@/lib/firebase/firebase"
 import { formatTextWithLinks } from "@/lib/format-text-with-links"
 import {
   formatDate,
@@ -35,11 +40,6 @@ import {
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { CommitLink } from "@/components/github/commit-preview"
-import { AssigneeGroup } from "@/components/assignee-group"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useMediaQuery } from "@/hooks/use-media-query"
 
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).

@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase"
+import { database } from "@/lib/firebase/firebase"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { get, push, ref, set } from "firebase/database"
 import { ArrowLeft, GitBranch, Save } from "lucide-react"

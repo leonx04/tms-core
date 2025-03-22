@@ -3,12 +3,13 @@
 import type React from "react"
 
 import { PageHeader } from "@/components/layout/page-header"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase"
+import { database } from "@/lib/firebase/firebase"
 import type { CloudinaryConfig, Project, WebhookConfig } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, remove, set, update } from "firebase/database"
 import {
@@ -29,7 +30,6 @@ import {
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function ProjectSettingsPage() {
   const [project, setProject] = useState<Project | null>(null)

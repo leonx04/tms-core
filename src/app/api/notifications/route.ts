@@ -1,7 +1,7 @@
+import { emailTemplates, sendEmail } from "@/lib/email"
+import { auth, database } from "@/lib/firebase/firebase"
+import { equalTo, get, orderByChild, query, ref, remove, set, update } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
-import { ref, get, set, remove, update, query, orderByChild, equalTo } from "firebase/database"
-import { database, auth } from "@/lib/firebase"
-import { sendEmail, emailTemplates } from "@/lib/email"
 
 export async function GET(request: NextRequest) {
   try {

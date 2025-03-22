@@ -1,8 +1,8 @@
-import * as XLSX from "xlsx"
-import type { Task } from "@/types"
-import { database } from "@/lib/firebase"
+import { database } from "@/lib/firebase/firebase"
 import { mockDatabase } from "@/lib/mock-database"
-import { get, ref, set, push } from "firebase/database"
+import type { Task } from "@/types"
+import { get, push, ref, set } from "firebase/database"
+import * as XLSX from "xlsx"
 
 // Flag to track if we're using the mock database
 let usingMockDatabase = false

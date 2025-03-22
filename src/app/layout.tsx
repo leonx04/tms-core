@@ -1,5 +1,7 @@
+import { AuthSessionManager } from "@/components/auth/auth-session-manager"
 import LayoutWrapper from "@/components/layout/layout-wrapper"
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/theme/theme-provider"
+import { EnhancedToaster } from "@/components/ui/enhanced-toaster"
 import { AuthProvider } from "@/contexts/auth-context"
 import { Analytics } from "@vercel/analytics/react"
 import type { Metadata } from "next"
@@ -7,8 +9,6 @@ import { Geist, Geist_Mono } from "next/font/google"
 import Script from "next/script"
 import type React from "react"
 import "./globals.css"
-import { AuthSessionManager } from "@/components/auth-session-manager"
-import { EnhancedToaster } from "@/components/ui/enhanced-toaster"
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

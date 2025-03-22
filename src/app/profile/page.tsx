@@ -1,6 +1,6 @@
 "use client"
 
-import { useTheme } from "@/components/theme-provider"
+import { useTheme } from "@/components/theme/theme-provider"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -393,7 +393,7 @@ export default function ProfilePage() {
                       {/* Current Password Section (conditional) */}
                       {(email !== user?.email || newPassword) && (
                         <div className="space-y-2 bg-amber-50 dark:bg-amber-950/30 p-4 rounded-lg border border-amber-200 dark:border-amber-800 transition-all">
-                          <label htmlFor="currentPassword" className="block text-sm font-medium flex items-center">
+                          <label htmlFor="currentPassword" className="text-sm font-medium flex items-center">
                             <AlertCircle className="h-4 w-4 mr-2 text-amber-600 dark:text-amber-400" />
                             Current Password <span className="text-destructive ml-1">*</span>
                           </label>

@@ -14,12 +14,74 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase"
+import { database } from "@/lib/firebase/firebase"
 import { secureRoutes } from "@/lib/secure-routes"
 import { type SubscriptionPlan, PACKAGE_LIMITS } from "@/types"
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "")
+
+// PricingCard component
+interface PricingCardProps {
+  title: string
+  price: string
+  period?: string
+  description: string
+  features: string[]
+  buttonText: string
+  onClick: () => void
+  disabled: boolean
+  current: boolean
+  highlighted: boolean
+  processingPayment: boolean
+}
+
+function PricingCard({
+  title,
+  price,
+  period,
+  description,
+  features,
+  buttonText,
+  onClick,
+  disabled,
+  current,
+  highlighted,
+  processingPayment,
+}: PricingCardProps) {
+  return (
+    <div
+      className={`flex flex-col p-6 rounded-xl border ${
+        highlighted ? "border-primary/50 bg-primary/5 shadow-md dark:bg-primary/10" : "border-border bg-card"
+      }`}
+    >
+      {highlighted && <Badge className="self-start mb-4 bg-primary text-primary-foreground">Most Popular</Badge>}
+      <h3 className="text-xl font-bold">{title}</h3>
+      <p className="text-muted-foreground mt-2 mb-4">{description}</p>
+      <div className="mt-2 mb-6">
+        <span className="text-3xl font-bold">{price}</span>
+        {period && <span className="text-muted-foreground ml-1">{period}</span>}
+      </div>
+      <ul className="space-y-3 mb-8 flex-1">
+        {features.map((feature, index) => (
+          <li key={index} className="flex items-start">
+            <Check className="h-5 w-5 text-green-500 mr-2 shrink-0" />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+      <Button
+        onClick={onClick}
+        disabled={disabled}
+        variant={current ? "outline" : highlighted ? "default" : "outline"}
+        className={`mt-auto ${processingPayment ? "opacity-70 cursor-not-allowed" : ""}`}
+      >
+        {processingPayment ? "Processing..." : buttonText}
+      </Button>
+      {current && <p className="text-sm text-center mt-2 text-muted-foreground">Your current plan</p>}
+    </div>
+  )
+}
 
 // Component that uses useSearchParams
 function UpgradePageContent() {
@@ -569,5 +631,44 @@ function UpgradePageContent() {
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto bg-muted/40 p-8 rounded-xl border border-border shadow-sm">\
+        <div className="max-w-3xl mx-auto bg-muted/40 p-8 rounded-xl border border-border shadow-sm">
+          <h3 className="text-xl font-semibold mb-4">Frequently Asked Questions</h3>
+          <div className="space-y-6">
+            <div>
+              <h4 className="font-medium mb-2">How do I change my plan?</h4>
+              <p className="text-muted-foreground">
+                You can upgrade or downgrade your plan at any time from this page. Changes take effect immediately.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Will I be charged immediately?</h4>
+              <p className="text-muted-foreground">
+                Yes, when upgrading to a paid plan, you'll be charged immediately. For yearly plans, you'll be billed
+                for the entire year upfront.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Can I get a refund?</h4>
+              <p className="text-muted-foreground">
+                We offer a 14-day money-back guarantee. If you're not satisfied with your purchase, please contact our
+                support team.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">What payment methods do you accept?</h4>
+              <p className="text-muted-foreground">
+                We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment
+                processor, Stripe.
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}
+
+export default function Page() {
+  return <UpgradePageContent />
+}
 

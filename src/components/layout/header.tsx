@@ -1,7 +1,7 @@
 "use client"
 
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from "lucide-react"

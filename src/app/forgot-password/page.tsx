@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { auth } from "@/lib/firebase"
+import { auth } from "@/lib/firebase/firebase"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { sendPasswordResetEmail } from "firebase/auth"
 import { AlertCircle, ArrowLeft, CheckCircle, Mail } from "lucide-react"

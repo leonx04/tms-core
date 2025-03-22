@@ -1,13 +1,13 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { Bell, Check, CheckCheck, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/lib/firebase/firebase"
 import { formatDistanceToNow } from "date-fns"
-import { ref, onValue, update, remove } from "firebase/database"
-import { database } from "@/lib/firebase"
+import { onValue, ref, remove, update } from "firebase/database"
+import { Bell, Check, CheckCheck, Trash2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 // Define the notification type
 type NotificationType = {

@@ -26,11 +26,37 @@ import {
     MessageSquare,
     RefreshCw,
     Bell,
-    Webhook
+    Webhook,
+    FileCode,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { CodeDiffViewer } from "@/components/github/code-diff-viewer"
+import { RepoLink } from "@/components/github/repo-preview"
+import { CommitLink } from "@/components/github/commit-preview"
+
+// Function to fetch file content from GitHub
+async function fetchFileContent(repo: string, path: string, ref: string) {
+    try {
+        const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${ref}`, {
+            headers: {
+                "User-Agent": "Project-Management-App",
+            },
+        })
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch file content: ${response.status}`)
+        }
+
+        const data = await response.json()
+        return atob(data.content) // Decode base64 content
+    } catch (error) {
+        console.error("Error fetching file content:", error)
+        return null
+    }
+}
 
 export default function ProjectWebhooksPage() {
     const [project, setProject] = useState<any>(null)
@@ -44,6 +70,18 @@ export default function ProjectWebhooksPage() {
     const params = useParams()
     const router = useRouter()
     const projectId = params.id as string
+    const [showFileDialog, setShowFileDialog] = useState(false)
+    const [selectedFile, setSelectedFile] = useState<any>(null)
+    const [fileContent, setFileContent] = useState<{
+        before: string | null
+        after: string | null
+        patch: string | null
+    }>({
+        before: null,
+        after: null,
+        patch: null,
+    })
+    const [loadingFileContent, setLoadingFileContent] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -228,6 +266,85 @@ export default function ProjectWebhooksPage() {
         }
     }
 
+    // Function to view file changes
+    const handleViewFile = async (file: any, repoUrl: string) => {
+        setSelectedFile(file)
+        setShowFileDialog(true)
+        setLoadingFileContent(true)
+        setFileContent({
+            before: null,
+            after: null,
+            patch: file.patch || null,
+        })
+
+        try {
+            // Extract repo owner and name from URL
+            const repoMatch = repoUrl.match(/github\.com\/([^/]+\/[^/]+)/)
+            if (!repoMatch) return
+
+            const repo = repoMatch[1]
+
+            // Get the parent commit to fetch the "before" version
+            if (file.filename) {
+                // For commits, we need to fetch the parent commit
+                if (file.sha) {
+                    // Fetch the commit to get its parent
+                    const commitResponse = await fetch(`https://api.github.com/repos/${repo}/commits/${file.sha}`, {
+                        headers: { "User-Agent": "Project-Management-App" },
+                    })
+
+                    if (commitResponse.ok) {
+                        const commitData = await commitResponse.json()
+                        const parentSha = commitData.parents[0]?.sha
+
+                        if (parentSha) {
+                            // Fetch the file content before the change
+                            const beforeContent = await fetchFileContent(repo, file.filename, parentSha)
+
+                            // Fetch the file content after the change
+                            let afterContent = null
+                            if (file.status !== "removed") {
+                                afterContent = await fetchFileContent(repo, file.filename, file.sha)
+                            }
+
+                            setFileContent({
+                                before: beforeContent,
+                                after: afterContent,
+                                patch: file.patch || null,
+                            })
+                        }
+                    }
+                } else {
+                    // For other events, just try to fetch the current file
+                    const currentContent = await fetchFileContent(repo, file.filename, "HEAD")
+                    setFileContent({
+                        before: null,
+                        after: currentContent,
+                        patch: file.patch || null,
+                    })
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching file content:", error)
+        } finally {
+            setLoadingFileContent(false)
+        }
+    }
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case "added":
+                return "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800/30"
+            case "removed":
+                return "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/30"
+            case "modified":
+            case "changed":
+                return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30"
+            default:
+                return ""
+        }
+    }
+
     if (loading) {
         return (
             <div className="min-h-screen bg-background">
@@ -258,10 +375,10 @@ export default function ProjectWebhooksPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <main className="container mx-auto px-4 py-8">
+            <main className="container mx-auto px-4 py-6 md:py-8">
                 <Link
                     href={`/projects/${projectId}`}
-                    className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+                    className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 md:mb-6"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
                 </Link>
@@ -287,8 +404,8 @@ export default function ProjectWebhooksPage() {
                     </Alert>
                 )}
 
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="grid grid-cols-2 w-full max-w-md">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 md:space-y-6">
+                    <TabsList className="grid grid-cols-2 w-full max-w-md mx-auto">
                         <TabsTrigger value="github">GitHub Events</TabsTrigger>
                         <TabsTrigger value="cloudinary">Cloudinary Events</TabsTrigger>
                     </TabsList>
@@ -321,10 +438,10 @@ export default function ProjectWebhooksPage() {
                                         </AlertDescription>
                                     </Alert>
                                 ) : githubEvents.length === 0 ? (
-                                    <div className="text-center py-12 border border-dashed border-border rounded-lg">
-                                        <GitBranch className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                    <div className="text-center py-8 md:py-12 border border-dashed border-border rounded-lg">
+                                        <GitBranch className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-4" />
                                         <h3 className="text-lg font-medium mb-2">No GitHub events yet</h3>
-                                        <p className="text-muted-foreground mb-4">
+                                        <p className="text-muted-foreground mb-4 max-w-md mx-auto px-4">
                                             Once you set up the webhook, events from your GitHub repository will appear here.
                                         </p>
                                         <Link href={`/projects/${projectId}/settings`} className="inline-block">
@@ -334,16 +451,16 @@ export default function ProjectWebhooksPage() {
                                         </Link>
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                                         {githubEvents.map((event) => (
                                             <div
                                                 key={`${event.type}-${event.id}`}
                                                 className="border border-border rounded-lg p-4 hover:bg-muted/30 transition-colors"
                                             >
                                                 <div className="flex items-start gap-3">
-                                                    <div className="mt-1">{getEventIcon(event.type)}</div>
+                                                    <div className="mt-1 flex-shrink-0">{getEventIcon(event.type)}</div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
+                                                        <div className="flex flex-wrap items-center gap-2 mb-1">
                                                             <Badge
                                                                 variant="outline"
                                                                 className={`capitalize ${event.type === "commit" || event.type === "push"
@@ -377,16 +494,22 @@ export default function ProjectWebhooksPage() {
 
                                                         {event.type === "commit" ? (
                                                             <>
-                                                                <h3 className="font-medium text-foreground break-words">
+                                                                <h3 className="font-medium text-foreground break-words line-clamp-2">
                                                                     {event.message?.split("\n")[0] || "No commit message"}
                                                                 </h3>
-                                                                <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                                                    <span className="font-mono">{event.id.substring(0, 7)}</span>
+                                                                <div className="flex flex-wrap items-center text-sm text-muted-foreground mt-1 gap-y-1">
+                                                                    <CommitLink
+                                                                        url={event.url || `https://github.com/${project.githubRepo}/commit/${event.id}`}
+                                                                    />
                                                                     <span className="mx-2">•</span>
-                                                                    <span>{event.author?.name || "Unknown author"}</span>
+                                                                    <span className="truncate max-w-[150px]">
+                                                                        {event.author?.name || "Unknown author"}
+                                                                    </span>
                                                                     <span className="mx-2">•</span>
-                                                                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                                                                    <span>{formatDate(event.timestamp)}</span>
+                                                                    <span className="flex items-center">
+                                                                        <Calendar className="h-3.5 w-3.5 mr-1" />
+                                                                        <span>{formatDate(event.timestamp)}</span>
+                                                                    </span>
                                                                 </div>
                                                             </>
                                                         ) : event.type === "ping" ? (
@@ -394,49 +517,61 @@ export default function ProjectWebhooksPage() {
                                                                 <h3 className="font-medium text-foreground break-words">
                                                                     Webhook successfully configured
                                                                 </h3>
-                                                                <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                                                    <span>{event.repository?.name || "Unknown repository"}</span>
+                                                                <div className="flex flex-wrap items-center text-sm text-muted-foreground mt-1 gap-y-1">
+                                                                    <RepoLink url={event.repository?.url || `https://github.com/${project.githubRepo}`} />
                                                                     <span className="mx-2">•</span>
-                                                                    <span>{event.sender?.login || "Unknown user"}</span>
+                                                                    <span className="truncate max-w-[150px]">
+                                                                        {event.sender?.login || "Unknown user"}
+                                                                    </span>
                                                                     <span className="mx-2">•</span>
-                                                                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                                                                    <span>{formatDate(event.timestamp)}</span>
+                                                                    <span className="flex items-center">
+                                                                        <Calendar className="h-3.5 w-3.5 mr-1" />
+                                                                        <span>{formatDate(event.timestamp)}</span>
+                                                                    </span>
                                                                 </div>
                                                                 {event.zen && (
-                                                                    <p className="text-sm text-muted-foreground mt-2 italic">"{event.zen}"</p>
+                                                                    <p className="text-sm text-muted-foreground mt-2 italic line-clamp-2">
+                                                                        "{event.zen}"
+                                                                    </p>
                                                                 )}
                                                             </>
                                                         ) : event.type === "push" ? (
                                                             <>
                                                                 <h3 className="font-medium text-foreground break-words">
                                                                     {event.commits_count} commit{event.commits_count !== 1 ? "s" : ""} to{" "}
-                                                                    {event.ref.replace("refs/heads/", "")}
+                                                                    <span className="font-mono">{event.ref.replace("refs/heads/", "")}</span>
                                                                 </h3>
-                                                                <div className="flex items-center text-sm text-muted-foreground mt-1">
-                                                                    <span>{event.repository?.name || "Unknown repository"}</span>
+                                                                <div className="flex flex-wrap items-center text-sm text-muted-foreground mt-1 gap-y-1">
+                                                                    <RepoLink url={event.repository?.url || `https://github.com/${project.githubRepo}`} />
                                                                     <span className="mx-2">•</span>
-                                                                    <span>{event.sender?.login || "Unknown user"}</span>
+                                                                    <span className="truncate max-w-[150px]">
+                                                                        {event.sender?.login || "Unknown user"}
+                                                                    </span>
                                                                     <span className="mx-2">•</span>
-                                                                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                                                                    <span>{formatDate(event.timestamp)}</span>
+                                                                    <span className="flex items-center">
+                                                                        <Calendar className="h-3.5 w-3.5 mr-1" />
+                                                                        <span>{formatDate(event.timestamp)}</span>
+                                                                    </span>
                                                                 </div>
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <h3 className="font-medium text-foreground break-words">
+                                                                <h3 className="font-medium text-foreground break-words line-clamp-2">
                                                                     {event.title || `#${event.id}`}
                                                                 </h3>
-                                                                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                                                <div className="flex flex-wrap items-center text-sm text-muted-foreground mt-1 gap-y-1">
                                                                     <span>
                                                                         {event.type === "pull_request"
                                                                             ? `${event.base?.ref || "base"} ← ${event.head?.ref || "head"}`
                                                                             : `#${event.id}`}
                                                                     </span>
                                                                     <span className="mx-2">•</span>
-                                                                    <span>{event.user?.login || "Unknown user"}</span>
+                                                                    <span className="truncate max-w-[150px]">{event.user?.login || "Unknown user"}</span>
                                                                     <span className="mx-2">•</span>
-                                                                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                                                                    <span>{formatDate(event.updated_at || event.created_at)}</span>
+                                                                    <span className="flex items-center">
+                                                                        <Calendar className="h-3.5 w-3.5 mr-1" />
+                                                                        <span>{formatDate(event.updated_at || event.created_at)}</span>
+                                                                    </span>
                                                                 </div>
                                                             </>
                                                         )}
@@ -489,10 +624,10 @@ export default function ProjectWebhooksPage() {
                             </CardHeader>
                             <CardContent>
                                 {cloudinaryEvents.length === 0 ? (
-                                    <div className="text-center py-12 border border-dashed border-border rounded-lg">
-                                        <Cloud className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                    <div className="text-center py-8 md:py-12 border border-dashed border-border rounded-lg">
+                                        <Cloud className="h-10 w-10 md:h-12 md:w-12 text-muted-foreground mx-auto mb-4" />
                                         <h3 className="text-lg font-medium mb-2">No Cloudinary events yet</h3>
-                                        <p className="text-muted-foreground mb-4">
+                                        <p className="text-muted-foreground mb-4 max-w-md mx-auto px-4">
                                             Once you set up the webhook, events from Cloudinary will appear here.
                                         </p>
                                         <Link href={`/projects/${projectId}/settings`} className="inline-block">
@@ -502,16 +637,16 @@ export default function ProjectWebhooksPage() {
                                         </Link>
                                     </div>
                                 ) : (
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
                                         {cloudinaryEvents.map((event) => (
                                             <div
                                                 key={event.id}
                                                 className="border border-border rounded-lg p-4 hover:bg-muted/30 transition-colors"
                                             >
                                                 <div className="flex items-start gap-3">
-                                                    <div className="mt-1">{getCloudinaryEventIcon(event.event)}</div>
+                                                    <div className="mt-1 flex-shrink-0">{getCloudinaryEventIcon(event.event)}</div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
+                                                        <div className="flex flex-wrap items-center gap-2 mb-1">
                                                             <Badge
                                                                 variant="outline"
                                                                 className={`capitalize ${event.event === "upload"
@@ -526,7 +661,7 @@ export default function ProjectWebhooksPage() {
                                                             <Badge variant="outline">{event.resource?.type || "unknown"}</Badge>
                                                         </div>
 
-                                                        <h3 className="font-medium text-foreground break-words">
+                                                        <h3 className="font-medium text-foreground break-words line-clamp-2">
                                                             {event.resource?.publicId || "Unknown resource"}
                                                         </h3>
 
@@ -559,6 +694,53 @@ export default function ProjectWebhooksPage() {
                     </TabsContent>
                 </Tabs>
             </main>
+
+            {/* File content dialog */}
+            <Dialog open={showFileDialog} onOpenChange={setShowFileDialog}>
+                <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] h-[90vh] overflow-hidden flex flex-col">
+                    <DialogHeader className="flex-shrink-0">
+                        <DialogTitle>
+                            {selectedFile ? (
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <FileCode className="h-5 w-5 flex-shrink-0" />
+                                    <span className="truncate">{selectedFile.filename}</span>
+                                    <Badge variant="outline" className={getStatusColor(selectedFile.status)}>
+                                        {selectedFile.status}
+                                    </Badge>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <FileCode className="h-5 w-5" />
+                                    <span>File Content</span>
+                                </div>
+                            )}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 overflow-hidden">
+                        {loadingFileContent ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin mr-2" />
+                                <p className="text-sm text-muted-foreground">Loading file content...</p>
+                            </div>
+                        ) : selectedFile ? (
+                            <div className="h-full">
+                                <CodeDiffViewer
+                                    filename={selectedFile.filename}
+                                    status={selectedFile.status}
+                                    patch={fileContent.patch ?? undefined}
+                                    beforeContent={fileContent.before}
+                                    afterContent={fileContent.after}
+                                    githubUrl={`https://github.com/${project.githubRepo}/blob/${selectedFile.sha || "HEAD"}/${selectedFile.filename}`}
+                                />
+                            </div>
+                        ) : (
+                            <div className="py-8 text-center h-full flex items-center justify-center">
+                                <p className="text-muted-foreground">No file selected</p>
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }

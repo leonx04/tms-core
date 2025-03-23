@@ -187,10 +187,6 @@ export function RepoLink({ url }: { url: string }) {
     // Close tooltip when clicking outside
     useEffect(() => {
         setIsMounted(true)
-    }, [])
-
-    useEffect(() => {
-        if (!isMounted) return
 
         const handleClickOutside = (event: MouseEvent) => {
             if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node) && isOpen) {
@@ -202,7 +198,11 @@ export function RepoLink({ url }: { url: string }) {
         return () => {
             document.removeEventListener("mousedown", handleClickOutside)
         }
-    }, [isOpen, isMounted])
+    }, [isOpen])
+
+    useEffect(() => {
+        if (!isMounted) return;
+    }, [isMounted])
 
     return (
         <TooltipProvider delayDuration={300}>

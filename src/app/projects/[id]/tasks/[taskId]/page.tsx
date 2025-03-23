@@ -112,6 +112,7 @@ export default function TaskDetailPage() {
 
   // Check if we're on a mobile device
   const isMobile = useMediaQuery("(max-width: 640px)")
+  const isTablet = useMediaQuery("(max-width: 1024px)")
 
   // Calculate completion percentage based on child tasks
   const calculatePercentDone = (tasks: Task[]) => {
@@ -812,12 +813,21 @@ export default function TaskDetailPage() {
   return (
     <div className="bg-background min-h-screen">
       <main className="container mx-auto px-4 py-8">
-        <Link
-          href={`/projects/${projectId}`}
-          className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center mb-6 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Project
-        </Link>
+        {parentTask ? (
+          <Link
+            href={`/projects/${projectId}/tasks/${parentTask.id}`}
+            className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center mb-6 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Parent Task
+          </Link>
+        ) : (
+          <Link
+            href={`/projects/${projectId}`}
+            className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center mb-6 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Project
+          </Link>
+        )}
 
         <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn mb-8 overflow-hidden">
           <div className="bg-muted/50 border-b border-border p-4 md:p-6">
@@ -892,26 +902,28 @@ export default function TaskDetailPage() {
             )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-              {/* Responsive TabsList with horizontal scrolling for small screens */}
+              {/* Responsive TabsList with improved horizontal scrolling for all screen sizes */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${isMobile ? "overflow-x-auto scrollbar-hide" : ""
-                    } bg-muted/50 p-1 rounded-lg`}
+                  className={`w-full flex ${
+                    isMobile ? "overflow-x-auto scrollbar-hide" : ""
+                  } bg-muted/50 p-1 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${isMobile ? "flex-shrink-0" : ""
-                        } text-sm whitespace-nowrap px-3 py-2`}
+                      className={`flex-1 min-w-[100px] ${
+                        isMobile ? "flex-shrink-0" : ""
+                      } text-sm whitespace-nowrap px-3 py-2`}
                     >
                       {tab.label}
                     </TabsTrigger>
                   ))}
                 </TabsList>
 
-                {/* Shadow indicators for scroll on mobile */}
-                {isMobile && (
+                {/* Shadow indicators for scroll on mobile and tablet */}
+                {(isMobile || isTablet) && (
                   <>
                     <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent pointer-events-none z-10"></div>
                     <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent pointer-events-none z-10"></div>
@@ -1206,13 +1218,13 @@ export default function TaskDetailPage() {
 
                   {showChildTasks && (
                     <div className="overflow-x-auto">
-                      <table className="w-full min-w-[500px]">
+                      <table className="w-full min-w-[700px]">
                         <thead>
                           <tr className="border-b border-border">
-                            <th className="text-left text-sm font-medium px-4 py-2">Title</th>
-                            <th className="text-left text-sm font-medium px-4 py-2">Status</th>
-                            <th className="text-left text-sm font-medium px-4 py-2">Assigned To</th>
-                            <th className="text-left text-sm font-medium px-4 py-2">Progress</th>
+                            <th className="text-left text-sm font-medium px-4 py-2 w-[40%]">Title</th>
+                            <th className="text-left text-sm font-medium px-4 py-2 w-[20%]">Status</th>
+                            <th className="text-left text-sm font-medium px-4 py-2 w-[25%]">Assigned To</th>
+                            <th className="text-left text-sm font-medium px-4 py-2 w-[15%]">Progress</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1225,23 +1237,24 @@ export default function TaskDetailPage() {
                             return (
                               <tr
                                 key={childTask.id}
-                                className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors"
+                                className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
                               >
                                 <td className="px-4 py-2">
                                   <Link
                                     href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                    className="text-primary hover:underline"
+                                    className="text-primary hover:underline truncate block max-w-full"
+                                    title={childTask.title}
                                   >
                                     {childTask.title}
                                   </Link>
                                 </td>
-                                <td className="px-4 py-2">
+                                <td className="px-4 py-2 whitespace-nowrap">
                                   <Badge
                                     variant="status"
                                     className={getStatusColor(childTask.status)}
                                     animation={
                                       childTask.status === TASK_STATUS.TODO ||
-                                        childTask.status === TASK_STATUS.IN_PROGRESS
+                                      childTask.status === TASK_STATUS.IN_PROGRESS
                                         ? "pulse"
                                         : "fade"
                                     }
@@ -1254,11 +1267,24 @@ export default function TaskDetailPage() {
                                     <div className="flex items-center">
                                       <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
 
-                                      <span className="ml-2 text-sm text-muted-foreground hidden lg:inline-block truncate max-w-[150px]">
-                                        {childTask.assignedTo
-                                          .map((id) => users[id]?.displayName || "Unknown")
-                                          .join(", ")}
-                                      </span>
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
+                                              {childTask.assignedTo
+                                                .map((id) => users[id]?.displayName || "Unknown")
+                                                .join(", ")}
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>
+                                              {childTask.assignedTo
+                                                .map((id) => users[id]?.displayName || "Unknown")
+                                                .join(", ")}
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
                                     </div>
                                   ) : (
                                     <span className="text-muted-foreground text-sm italic">Unassigned</span>
@@ -1267,13 +1293,13 @@ export default function TaskDetailPage() {
                                 <td className="px-4 py-2">
                                   {childTask.percentDone !== undefined && (
                                     <div className="flex items-center gap-2">
-                                      <div className="bg-muted h-2 rounded-full w-24 overflow-hidden">
+                                      <div className="bg-muted h-2 rounded-full w-full max-w-24 overflow-hidden">
                                         <div
                                           className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
                                           style={{ width: `${childTask.percentDone}%` }}
                                         ></div>
                                       </div>
-                                      <span className="text-xs">{childTask.percentDone}%</span>
+                                      <span className="text-xs whitespace-nowrap">{childTask.percentDone}%</span>
                                     </div>
                                   )}
                                 </td>

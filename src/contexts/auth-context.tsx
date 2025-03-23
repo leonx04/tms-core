@@ -22,6 +22,7 @@ import {
   updateProfile,
 } from "firebase/auth"
 import { get, ref, set, update } from "firebase/database"
+import { useRouter } from "next/navigation"
 import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 
@@ -51,24 +52,34 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+/**
+ * AuthProvider is a React context provider that manages user authentication and provides
+ * authentication-related functions and state to its children components.
+ *
+ * @param {object} props - The props passed to the AuthProvider component.
+ * @param {React.ReactNode} props.children - The children components that will be wrapped by the AuthProvider.
+ *
+ * @returns {React.ReactElement} - The AuthProvider component with the provided children.
+ */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userData, setUserData] = useState<UserData | null>(null)
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
+  const router = useRouter()
 
-  // Function to update token in localStorage and cookie
+  // Function to update token in localStorage and cookie - optimized
   const updateAuthToken = async (user: User) => {
     try {
       const token = await user.getIdToken(true) // Force refresh
       localStorage.setItem("jwt", token)
 
-      // Set token expiry (30 minutes)
-      const expiryTime = Date.now() + 30 * 60 * 1000
+      // Set token expiry (1 hour instead of 30 minutes to reduce refreshes)
+      const expiryTime = Date.now() + 60 * 60 * 1000
       localStorage.setItem("jwt_expiry", expiryTime.toString())
 
       // Also set token in cookie for middleware
-      document.cookie = `jwt=${token}; path=/; max-age=${30 * 60}; SameSite=Strict; Secure`
+      document.cookie = `jwt=${token}; path=/; max-age=${60 * 60}; SameSite=Strict; Secure`
 
       return token
     } catch (error) {
@@ -110,7 +121,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (snapshot.exists()) {
           setUserData(snapshot.val() as UserData)
-          await update(userRef, { lastActive: new Date().toISOString() })
+          // Update lastActive in a separate operation to not block the main flow
+          update(userRef, { lastActive: new Date().toISOString() }).catch(console.error)
         } else {
           // Create new user data if it doesn't exist
           const newUserData: UserData = {
@@ -134,23 +146,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     })
 
-    // Check token expiry periodically
-    const checkTokenExpiry = () => {
-      const expiryTime = localStorage.getItem("jwt_expiry")
-      if (expiryTime && Date.now() > Number.parseInt(expiryTime)) {
-        clearAuthTokens()
-        if (auth.currentUser) {
-          firebaseSignOut(auth)
-        }
-      }
-    }
-
-    checkTokenExpiry()
-    const interval = setInterval(checkTokenExpiry, 60000) // Check every minute
-
     return () => {
       unsubscribe()
-      clearInterval(interval)
     }
   }, [])
 
@@ -159,15 +156,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       await updateAuthToken(userCredential.user)
 
+      // Update lastActive in the background
       if (auth.currentUser) {
         const userRef = ref(database, `users/${auth.currentUser.uid}/lastActive`)
-        await set(userRef, new Date().toISOString())
+        set(userRef, new Date().toISOString()).catch(console.error)
       }
 
       toast({
         title: "Welcome back!",
         description: "You've successfully signed in.",
       })
+
+      // Check for redirect after auth
+      const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
+      if (redirectUrl) {
+        sessionStorage.removeItem("redirectAfterAuth")
+        router.push(redirectUrl)
+      } else {
+        router.push("/projects")
+      }
 
       return
     } catch (error: any) {
@@ -214,13 +221,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         await set(userRef, newUserData)
       } else {
-        await set(ref(database, `users/${result.user.uid}/lastActive`), new Date().toISOString())
+        // Update lastActive in the background
+        set(ref(database, `users/${result.user.uid}/lastActive`), new Date().toISOString()).catch(console.error)
       }
 
       toast({
         title: "Welcome!",
         description: `You've successfully signed in with ${providerName}.`,
       })
+
+      // Check for redirect after auth
+      const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
+      if (redirectUrl) {
+        sessionStorage.removeItem("redirectAfterAuth")
+        router.push(redirectUrl)
+      } else {
+        router.push("/projects")
+      }
 
       return result.user
     } catch (error: any) {
@@ -306,6 +323,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Account created",
         description: "Your account has been successfully created.",
       })
+
+      // Navigate to projects page
+      router.push("/projects")
     } catch (error: any) {
       console.error("Sign up error:", error)
 
@@ -335,6 +355,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Signed out",
         description: "You've been successfully signed out.",
       })
+
+      // Use router instead of window.location
+      router.push("/login")
     } catch (error) {
       console.error("Sign out error:", error)
       toast({
@@ -361,9 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         updates[`users/${user.uid}/${key}`] = value
       })
 
-      for (const [path, value] of Object.entries(updates)) {
-        await set(ref(database, path), value)
-      }
+      await update(ref(database), updates)
 
       setUserData((prev) => (prev ? { ...prev, ...data } : null))
 

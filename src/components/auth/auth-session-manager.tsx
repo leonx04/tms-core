@@ -1,18 +1,18 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
-import { useAuth } from "@/contexts/auth-context"
 import { Toaster } from "@/components/ui/toaster"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/hooks/use-toast"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 
 export const AuthSessionManager = () => {
   const { user, loading, refreshToken } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
-  const [redirectAfterAuth, setRedirectAfterAuth] = useState<string | null>(null)
 
   // Public routes that don't require authentication
   const publicRoutes = [
@@ -44,158 +44,87 @@ export const AuthSessionManager = () => {
 
   // Check if the JWT token is expired
   const checkTokenExpiry = useCallback(() => {
-    const token = localStorage.getItem("jwt")
     const expiryTime = localStorage.getItem("jwt_expiry")
-
-    // If no token or expiry, consider it expired
-    if (!token || !expiryTime) return true
-
+    // If no expiry, consider it expired
+    if (!expiryTime) return true
     // Check if token is expired
     return Date.now() > Number.parseInt(expiryTime)
   }, [])
 
-  // Handle redirect after successful authentication
-  const handleRedirectAfterAuth = useCallback(() => {
-    // Check for redirect URL in state or sessionStorage
-    const redirectUrl = redirectAfterAuth || sessionStorage.getItem("redirectAfterAuth")
-
-    if (redirectUrl) {
-      // Clear the stored redirect URL
-      sessionStorage.removeItem("redirectAfterAuth")
-      setRedirectAfterAuth(null)
-
-      // Use window.location for navigation to avoid RSC fetch issues
-      window.location.href = redirectUrl
-      return true
-    }
-    // If we're authenticated and on an auth page, redirect to projects
-    else if (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password") {
-      window.location.href = "/projects"
-      return true
-    }
-
-    return false
-  }, [redirectAfterAuth, pathname])
-
-  // Attempt to restore session from localStorage if needed
-  const attemptSessionRestore = useCallback(async () => {
-    const token = localStorage.getItem("jwt")
-
-    if (token && !checkTokenExpiry() && !user) {
-      try {
-        // Try to refresh the token to ensure it's valid
-        await refreshToken()
-
-        // Wait for auth context to update
-        return new Promise<void>((resolve) => {
-          const checkInterval = setInterval(() => {
-            if (!loading) {
-              clearInterval(checkInterval)
-              resolve()
-            }
-          }, 100)
-        })
-      } catch (error) {
-        console.error("Failed to restore session:", error)
-      }
-    }
-    return Promise.resolve()
-  }, [user, loading, checkTokenExpiry, refreshToken])
-
   // Get callbackUrl from URL if present
   useEffect(() => {
-    if (typeof window !== "undefined" && pathname === "/login") {
-      const params = new URLSearchParams(window.location.search)
-      const callbackUrl = params.get("callbackUrl")
+    if (pathname === "/login") {
+      const callbackUrl = searchParams.get("callbackUrl")
+      const isMiddlewareRedirect = searchParams.get("mw") === "1"
 
       if (callbackUrl) {
         // Store the callback URL to redirect after successful login
         const decodedUrl = decodeURIComponent(callbackUrl)
-        setRedirectAfterAuth(decodedUrl)
-
-        // Also store in sessionStorage as a backup
         sessionStorage.setItem("redirectAfterAuth", decodedUrl)
+
+        // If this is a middleware redirect and we have a valid user, redirect immediately
+        if (isMiddlewareRedirect && user && !loading) {
+          router.push(decodedUrl)
+        }
       }
     }
-  }, [pathname])
+  }, [pathname, searchParams, user, loading, router])
 
-  // Main authentication state handler
+  // Main authentication state handler - simplified to avoid conflicts with middleware
   useEffect(() => {
     const handleAuthState = async () => {
+      if (loading) return
+
       setIsCheckingAuth(true)
 
       try {
-        // Try to restore session if needed
-        await attemptSessionRestore()
-
-        // If token is expired, clear it
-        if (checkTokenExpiry()) {
-          localStorage.removeItem("jwt")
-          localStorage.removeItem("jwt_expiry")
+        // If token is expired, refresh it if we have a user
+        if (user && checkTokenExpiry()) {
+          await refreshToken()
         }
 
-        // If we're on a protected route and not authenticated, redirect to login
-        if (!isPublicRoute(pathname) && !user && !loading) {
-          // Store the current URL to redirect back after login
-          const currentUrl = pathname + (window.location.search ? window.location.search : "")
-          sessionStorage.setItem("redirectAfterAuth", currentUrl)
-
-          const returnUrl = encodeURIComponent(currentUrl)
-
-          // Use window.location for navigation to avoid potential issues with router
-          window.location.href = `/login?callbackUrl=${returnUrl}`
-
-          // Show toast notification
-          toast({
-            title: "Authentication Required",
-            description: "Please sign in to access this page.",
-            variant: "destructive",
-          })
-
+        // Client-side handling for auth pages when user is logged in
+        if (user && (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password")) {
+          const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
+          if (redirectUrl) {
+            sessionStorage.removeItem("redirectAfterAuth")
+            router.push(redirectUrl)
+          } else {
+            router.push("/projects")
+          }
           return
         }
 
-        // If we're authenticated and have a redirect target, go there
-        if (user && !loading) {
-          const redirected = handleRedirectAfterAuth()
-          if (redirected) return
+        // Handle redirect after login
+        if (user && pathname === "/login") {
+          const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
+          if (redirectUrl) {
+            sessionStorage.removeItem("redirectAfterAuth")
+            router.push(redirectUrl)
+          } else {
+            router.push("/projects")
+          }
         }
       } finally {
         setIsCheckingAuth(false)
       }
     }
 
-    // Only run auth checks when loading is complete
-    if (!loading) {
-      handleAuthState()
-    }
-  }, [
-    user,
-    loading,
-    pathname,
-    toast,
-    redirectAfterAuth,
-    attemptSessionRestore,
-    checkTokenExpiry,
-    handleRedirectAfterAuth,
-    isPublicRoute,
-  ])
+    handleAuthState()
+  }, [user, loading, pathname, router, checkTokenExpiry, refreshToken, isPublicRoute])
 
-  // Set up interval to check token expiry regularly
+  // Set up interval to check token expiry regularly - but less frequently
   useEffect(() => {
     const tokenCheckInterval = setInterval(() => {
       if (checkTokenExpiry() && user) {
-        // If token expired but we still have a user object, force sign out
-        localStorage.removeItem("jwt")
-        localStorage.removeItem("jwt_expiry")
-        window.location.reload() // Force reload to clear auth state
+        refreshToken()
       }
-    }, 60000) // Check every minute
+    }, 300000) // Check every 5 minutes instead of every minute
 
     return () => {
       clearInterval(tokenCheckInterval)
     }
-  }, [user, checkTokenExpiry])
+  }, [user, checkTokenExpiry, refreshToken])
 
   // This component doesn't render anything visible, just the toaster
   return <Toaster />

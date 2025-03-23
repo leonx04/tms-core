@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
   // Check if the route is public
   const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 
-  // Skip middleware for static assets and API routes
+  // Skip middleware for static assets, API routes, and files
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/static/") ||
@@ -43,9 +43,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Get JWT from Authorization header or cookie
-  const authHeader = request.headers.get("authorization")
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : request.cookies.get("jwt")?.value
+  // Get JWT from cookie only (not from Authorization header to avoid conflicts)
+  const token = request.cookies.get("jwt")?.value
 
   let isValidToken = false
 
@@ -55,23 +54,19 @@ export async function middleware(request: NextRequest) {
       await jwtVerify(token, JWT_SECRET)
       isValidToken = true
     } catch (error) {
-      console.error("Token verification failed:", error)
       // Token is invalid, we'll handle this below
+      console.error("Token verification failed:", error)
     }
   }
 
   // If the route is not public and there's no valid token, redirect to login
   if (!isPublicRoute && !isValidToken) {
     const url = new URL("/login", request.url)
+    // Use a special parameter to indicate this is a middleware redirect
     url.searchParams.set("callbackUrl", encodeURIComponent(pathname))
+    url.searchParams.set("mw", "1") // Add a flag to indicate middleware redirect
 
-    // Create a response with a redirect
-    const response = NextResponse.redirect(url)
-
-    // Add a header to indicate authentication is required (for client-side handling)
-    response.headers.set("X-Auth-Required", "true")
-
-    return response
+    return NextResponse.redirect(url)
   }
 
   // If the user is authenticated and trying to access login/register, redirect to projects

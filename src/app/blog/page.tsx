@@ -1,3 +1,6 @@
+
+"use client"
+
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, Calendar, Clock, User } from 'lucide-react';

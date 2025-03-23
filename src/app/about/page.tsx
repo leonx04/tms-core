@@ -1,3 +1,6 @@
+
+"use client"
+
 import type React from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"

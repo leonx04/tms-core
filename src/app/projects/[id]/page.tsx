@@ -218,14 +218,21 @@ export default function ProjectDetailPage() {
   // Pagination: for list view paginate by rootTasks, for grid view paginate by filteredTasks
   let paginatedData: Task[] = []
   let totalPages = 0
+  let totalItems = 0
 
   if (viewMode === "list") {
-    totalPages = Math.ceil(rootTasks.length / itemsPerPage)
+    totalItems = rootTasks.length
+    totalPages = Math.ceil(totalItems / itemsPerPage)
     paginatedData = rootTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   } else {
-    totalPages = Math.ceil(filteredTasks.length / itemsPerPage)
+    totalItems = filteredTasks.length
+    totalPages = Math.ceil(totalItems / itemsPerPage)
     paginatedData = filteredTasks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
   }
+
+  // Calculate pagination info
+  const startItem = Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1)
+  const endItem = Math.min(totalItems, currentPage * itemsPerPage)
 
   return (
     <div className="min-h-screen bg-background">
@@ -514,12 +521,12 @@ export default function ProjectDetailPage() {
               <table className={`w-full table-auto ${isMobile ? "min-w-[600px]" : "min-w-[900px]"}`}>
                 <thead>
                   <tr className="bg-muted/50">
-                    <th className="px-4 py-3 text-left text-sm font-medium min-w-[200px]">Title</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
-                    <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                    {!isMobile && <th className="px-4 py-3 text-left text-sm font-medium">Priority</th>}
-                    <th className="px-4 py-3 text-left text-sm font-medium">Assigned</th>
-                    {!isSmallScreen && <th className="px-4 py-3 text-left text-sm font-medium">Due Date</th>}
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[250px] max-w-[250px]">Title</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[120px]">Type</th>
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[140px]">Status</th>
+                    {!isMobile && <th className="px-4 py-3 text-left text-sm font-medium w-[120px]">Priority</th>}
+                    <th className="px-4 py-3 text-left text-sm font-medium w-[140px]">Assigned</th>
+                    {!isSmallScreen && <th className="px-4 py-3 text-left text-sm font-medium w-[150px]">Due Date</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/10">
@@ -538,7 +545,7 @@ export default function ProjectDetailPage() {
                       return (
                         <React.Fragment key={task.id}>
                           <tr className="hover:bg-muted/30 transition-colors">
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 w-[250px] max-w-[250px]">
                               <div className="flex items-center">
                                 {Array.from({ length: level }).map((_, index) => (
                                   <div key={index} className="flex items-center justify-center w-6">
@@ -567,31 +574,36 @@ export default function ProjectDetailPage() {
                                 )}
                                 <Link
                                   href={`/projects/${projectId}/tasks/${task.id}`}
-                                  className="hover:text-primary transition-colors block truncate"
+                                  className="hover:text-primary transition-colors block truncate max-w-[180px]"
+                                  title={task.title}
                                 >
                                   {task.title}
                                 </Link>
                               </div>
                             </td>
-                            <td className="px-4 py-3">
-                              <Badge variant="type" className={getTypeColor(task.type)} animation="fade">
+                            <td className="px-4 py-3 w-[120px]">
+                              <Badge
+                                variant="type"
+                                className={`${getTypeColor(task.type)} whitespace-nowrap`}
+                                animation="fade"
+                              >
                                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
                               </Badge>
                             </td>
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 w-[140px]">
                               <Badge
                                 variant="status"
-                                className={getStatusColor(task.status)}
+                                className={`${getStatusColor(task.status)} whitespace-nowrap`}
                                 animation={task.status === "todo" || task.status === "in_progress" ? "pulse" : "fade"}
                               >
                                 {getStatusLabel(task.status)}
                               </Badge>
                             </td>
                             {!isMobile && (
-                              <td className="px-4 py-3">
+                              <td className="px-4 py-3 w-[120px]">
                                 <Badge
                                   variant="priority"
-                                  className={getPriorityColor(task.priority)}
+                                  className={`${getPriorityColor(task.priority)} whitespace-nowrap`}
                                   animation={
                                     task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"
                                   }
@@ -600,7 +612,7 @@ export default function ProjectDetailPage() {
                                 </Badge>
                               </td>
                             )}
-                            <td className="px-4 py-3">
+                            <td className="px-4 py-3 w-[140px]">
                               <AssigneeGroup
                                 users={assignedUsers}
                                 maxVisible={isMobile ? 2 : 3}
@@ -608,7 +620,7 @@ export default function ProjectDetailPage() {
                               />
                             </td>
                             {!isSmallScreen && (
-                              <td className="px-4 py-3 text-sm">
+                              <td className="px-4 py-3 text-sm w-[150px]">
                                 {task.dueDate ? (
                                   <div className="flex items-center">
                                     <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
@@ -632,62 +644,67 @@ export default function ProjectDetailPage() {
               </table>
             </div>
             {totalPages > 1 && (
-              <Pagination className="py-4 px-2">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  {currentPage > 2 && (
-                    <>
-                      <PaginationItem className="hidden sm:inline-block">
-                        <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
-                      </PaginationItem>
-                      {currentPage > 3 && (
+              <div className="py-4 px-4 flex flex-col sm:flex-row justify-between items-center gap-2">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startItem} to {endItem} of {totalItems} tasks
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                    {currentPage > 2 && (
+                      <>
                         <PaginationItem className="hidden sm:inline-block">
-                          <PaginationEllipsis />
+                          <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
                         </PaginationItem>
-                      )}
-                    </>
-                  )}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((page) => {
-                      if (isMobile) {
-                        // On mobile, show only current page and adjacent pages
-                        return page >= currentPage - 1 && page <= currentPage + 1
-                      }
-                      // On desktop, show more pages
-                      return page >= currentPage - 2 && page <= currentPage + 2
-                    })
-                    .map((page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                  {currentPage < totalPages - 1 && (
-                    <>
-                      {currentPage < totalPages - 2 && (
+                        {currentPage > 3 && (
+                          <PaginationItem className="hidden sm:inline-block">
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
+                      </>
+                    )}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((page) => {
+                        if (isMobile) {
+                          // On mobile, show only current page and adjacent pages
+                          return page >= currentPage - 1 && page <= currentPage + 1
+                        }
+                        // On desktop, show more pages
+                        return page >= currentPage - 2 && page <= currentPage + 2
+                      })
+                      .map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                    {currentPage < totalPages - 1 && (
+                      <>
+                        {currentPage < totalPages - 2 && (
+                          <PaginationItem className="hidden sm:inline-block">
+                            <PaginationEllipsis />
+                          </PaginationItem>
+                        )}
                         <PaginationItem className="hidden sm:inline-block">
-                          <PaginationEllipsis />
+                          <PaginationLink onClick={() => setCurrentPage(totalPages)}>{totalPages}</PaginationLink>
                         </PaginationItem>
-                      )}
-                      <PaginationItem className="hidden sm:inline-block">
-                        <PaginationLink onClick={() => setCurrentPage(totalPages)}>{totalPages}</PaginationLink>
-                      </PaginationItem>
-                    </>
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={currentPage < totalPages ? () => setCurrentPage(currentPage + 1) : undefined}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+                      </>
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={currentPage < totalPages ? () => setCurrentPage(currentPage + 1) : undefined}
+                        className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             )}
           </Card>
         ) : (
@@ -704,11 +721,13 @@ export default function ProjectDetailPage() {
                   <Link key={task.id} href={`/projects/${projectId}/tasks/${task.id}`}>
                     <Card className="h-full shadow-sm hover:shadow-md border-border/60 hover:border-border transition-all duration-200 animate-fadeIn">
                       <div className="p-4">
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-medium line-clamp-1 truncate">{task.title}</h3>
+                        <div className="flex justify-between items-start mb-2 gap-2">
+                          <h3 className="font-medium truncate max-w-[65%]" title={task.title}>
+                            {task.title}
+                          </h3>
                           <Badge
                             variant="status"
-                            className={getStatusColor(task.status)}
+                            className={`${getStatusColor(task.status)} whitespace-nowrap flex-shrink-0`}
                             animation={task.status === "todo" || task.status === "in_progress" ? "pulse" : "fade"}
                           >
                             {getStatusLabel(task.status)}
@@ -718,12 +737,16 @@ export default function ProjectDetailPage() {
                           {task.description || "No description provided"}
                         </p>
                         <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge variant="type" className={getTypeColor(task.type)} animation="fade">
+                          <Badge
+                            variant="type"
+                            className={`${getTypeColor(task.type)} whitespace-nowrap`}
+                            animation="fade"
+                          >
                             {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
                           </Badge>
                           <Badge
                             variant="priority"
-                            className={getPriorityColor(task.priority)}
+                            className={`${getPriorityColor(task.priority)} whitespace-nowrap`}
                             animation={task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"}
                           >
                             {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
@@ -733,7 +756,7 @@ export default function ProjectDetailPage() {
                           <AssigneeGroup users={assignedUsers} maxVisible={2} size="sm" />
                           <div className="flex items-center gap-2">
                             {task.dueDate && (
-                              <div className="flex items-center text-xs text-muted-foreground truncate">
+                              <div className="flex items-center text-xs text-muted-foreground whitespace-nowrap">
                                 <Calendar className="h-3 w-3 mr-1 flex-shrink-0" />
                                 {formatDate(task.dueDate)}
                               </div>
@@ -741,7 +764,9 @@ export default function ProjectDetailPage() {
                             {task.percentDone !== undefined && (
                               <div className="flex items-center">
                                 <Clock className="h-3 w-3 text-muted-foreground mr-1 flex-shrink-0" />
-                                <span className="text-xs text-muted-foreground truncate">{task.percentDone}%</span>
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {task.percentDone}%
+                                </span>
                               </div>
                             )}
                           </div>
@@ -753,47 +778,52 @@ export default function ProjectDetailPage() {
               })}
             </div>
             {totalPages > 1 && (
-              <Pagination className="mt-6">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
-                      className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                  {currentPage > 3 && (
-                    <>
-                      <PaginationItem>
-                        <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
-                      </PaginationItem>
-                      <PaginationEllipsis />
-                    </>
-                  )}
-                  {Array.from({ length: totalPages }, (_, i) => i + 1)
-                    .filter((page) => page >= currentPage - 2 && page <= currentPage + 2)
-                    .map((page) => (
-                      <PaginationItem key={page}>
-                        <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
-                          {page}
-                        </PaginationLink>
-                      </PaginationItem>
-                    ))}
-                  {currentPage < totalPages - 2 && (
-                    <>
-                      <PaginationEllipsis />
-                      <PaginationItem>
-                        <PaginationLink onClick={() => setCurrentPage(totalPages)}>{totalPages}</PaginationLink>
-                      </PaginationItem>
-                    </>
-                  )}
-                  <PaginationItem>
-                    <PaginationNext
-                      onClick={currentPage < totalPages ? () => setCurrentPage(currentPage + 1) : undefined}
-                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-2">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startItem} to {endItem} of {totalItems} tasks
+                </div>
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        onClick={currentPage === 1 ? undefined : () => setCurrentPage(currentPage - 1)}
+                        className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                    {currentPage > 3 && (
+                      <>
+                        <PaginationItem>
+                          <PaginationLink onClick={() => setCurrentPage(1)}>1</PaginationLink>
+                        </PaginationItem>
+                        <PaginationEllipsis />
+                      </>
+                    )}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((page) => page >= currentPage - 2 && page <= currentPage + 2)
+                      .map((page) => (
+                        <PaginationItem key={page}>
+                          <PaginationLink isActive={page === currentPage} onClick={() => setCurrentPage(page)}>
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      ))}
+                    {currentPage < totalPages - 2 && (
+                      <>
+                        <PaginationEllipsis />
+                        <PaginationItem>
+                          <PaginationLink onClick={() => setCurrentPage(totalPages)}>{totalPages}</PaginationLink>
+                        </PaginationItem>
+                      </>
+                    )}
+                    <PaginationItem>
+                      <PaginationNext
+                        onClick={currentPage < totalPages ? () => setCurrentPage(currentPage + 1) : undefined}
+                        className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
             )}
           </>
         )}

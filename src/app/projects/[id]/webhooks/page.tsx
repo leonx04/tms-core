@@ -26,6 +26,7 @@ import {
     MessageSquare,
     RefreshCw,
     Bell,
+    Webhook
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -296,7 +297,7 @@ export default function ProjectWebhooksPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle className="flex items-center">
-                                    <GitBranch className="h-5 w-5 mr-2 text-primary" />
+                                    <Webhook className="h-5 w-5 mr-2 text-primary" />
                                     GitHub Webhook Events
                                 </CardTitle>
                                 <CardDescription>

@@ -14,7 +14,7 @@ const nextConfig = {
     parallelServerBuildTraces: true,
     parallelServerCompiles: true,
   },
-  // Cấu hình headers để xử lý CORS cho webhook
+  // Configure headers to handle CORS for webhooks
   async headers() {
     return [
       {

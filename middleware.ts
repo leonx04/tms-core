@@ -35,15 +35,15 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/static/") ||
-    pathname.startsWith("/api/webhooks/") || // Đảm bảo webhook luôn được cho phép
+    pathname.startsWith("/api/webhooks/") || // Ensure webhooks are always allowed
     pathname.includes(".") // Skip files like favicon.ico, etc.
   ) {
     return NextResponse.next()
   }
 
-  // Kiểm tra riêng cho các API routes khác
+  // Special check for other API routes
   if (pathname.startsWith("/api/") && !pathname.startsWith("/api/webhooks/")) {
-    // Cho phép các API routes khác nhưng vẫn kiểm tra JWT
+    // Allow other API routes but still check JWT
     const token = request.cookies.get("jwt")?.value
 
     if (!token) {

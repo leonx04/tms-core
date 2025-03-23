@@ -3,14 +3,16 @@
 import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { useCallback, useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
+import { Suspense, useCallback, useEffect, useState } from "react"
+import { useSearchParamsWithSuspense } from "@/hooks/use-search-params-with-suspense"
 
-export const AuthSessionManager = () => {
+// Create a component that uses useSearchParams with Suspense
+function AuthSessionContent() {
   const { user, loading, refreshToken } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchParams = useSearchParamsWithSuspense()
   const { toast } = useToast()
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
@@ -126,8 +128,18 @@ export const AuthSessionManager = () => {
     }
   }, [user, checkTokenExpiry, refreshToken])
 
-  // This component doesn't render anything visible, just the toaster
-  return <Toaster />
+  return null
+}
+
+export const AuthSessionManager = () => {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <AuthSessionContent />
+      </Suspense>
+      <Toaster />
+    </>
+  )
 }
 
 export default AuthSessionManager

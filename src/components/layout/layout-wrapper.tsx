@@ -3,7 +3,7 @@
 import Footer from "@/components/layout/footer"
 import Header from "@/components/layout/header"
 import { usePathname } from "next/navigation"
-import React from "react"
+import type React from "react"
 
 export default function LayoutWrapper({
     children,
@@ -12,15 +12,18 @@ export default function LayoutWrapper({
 }) {
     const pathname = usePathname()
 
-    const authRoutes = ['/login', '/register', '/forgot-password']
+    const authRoutes = ["/login", "/register", "/forgot-password"]
+    const specialRoutes = ["/not-found", "/404"]
 
     const isAuthRoute = authRoutes.includes(pathname)
+    const isSpecialRoute = specialRoutes.includes(pathname)
 
     return (
         <>
-            {!isAuthRoute && <Header />}
+            {!isAuthRoute && !isSpecialRoute && <Header />}
             <main>{children}</main>
-            {!isAuthRoute && <Footer />}
+            {!isAuthRoute && !isSpecialRoute && <Footer />}
         </>
     )
 }
+

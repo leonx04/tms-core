@@ -6,8 +6,13 @@ import { CommitLink } from "@/components/github/commit-preview"
 import { AssigneeGroup } from "@/components/ui/assignee-group"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useAuth } from "@/contexts/auth-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
@@ -24,6 +29,7 @@ import {
   TASK_STATUS,
 } from "@/lib/utils"
 import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
+import { TASK_PRIORITY, TASK_TYPE } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
 import {
   ArrowLeft,
@@ -35,6 +41,8 @@ import {
   Edit,
   GitCommit,
   MessageSquare,
+  Plus,
+  Save,
   User,
 } from "lucide-react"
 import Link from "next/link"
@@ -87,6 +95,20 @@ export default function TaskDetailPage() {
   const taskId = params.taskId as string
   const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
+
+  // Subtask creation state
+  const [showSubtaskDialog, setShowSubtaskDialog] = useState(false)
+  const [isCreatingSubtask, setIsCreatingSubtask] = useState(false)
+  const [subtaskTitle, setSubtaskTitle] = useState("")
+  const [subtaskDescription, setSubtaskDescription] = useState("")
+  const [subtaskType, setSubtaskType] = useState(TASK_TYPE.FEATURE)
+  const [subtaskPriority, setSubtaskPriority] = useState(TASK_PRIORITY.MEDIUM)
+  const [subtaskDueDate, setSubtaskDueDate] = useState<Date | undefined>(undefined)
+  const [subtaskEstimatedTime, setSubtaskEstimatedTime] = useState<number | undefined>(undefined)
+  const [subtaskAssignedTo, setSubtaskAssignedTo] = useState<string[]>([])
+  const [subtaskTags, setSubtaskTags] = useState<string[]>([])
+  const [subtaskTagInput, setSubtaskTagInput] = useState<string>("")
+  const [subtaskCommitId, setSubtaskCommitId] = useState<string>("")
 
   // Check if we're on a mobile device
   const isMobile = useMediaQuery("(max-width: 640px)")
@@ -547,6 +569,120 @@ export default function TaskDetailPage() {
     }
   }
 
+  const handleCreateSubtask = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!user || !taskId || !subtaskTitle.trim()) {
+      toast({
+        title: "Validation error",
+        description: "Subtask title is required",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsCreatingSubtask(true)
+
+    try {
+      const parsedCommitId = extractCommitId(subtaskCommitId)
+
+      // Create new subtask
+      const newTaskRef = push(ref(database, "tasks"))
+      const newTask = {
+        projectId,
+        title: subtaskTitle,
+        description: subtaskDescription || "",
+        type: subtaskType,
+        status: TASK_STATUS.TODO,
+        priority: subtaskPriority,
+        assignedTo: subtaskAssignedTo || [],
+        createdBy: user.uid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        dueDate: subtaskDueDate ? subtaskDueDate.toISOString() : null,
+        percentDone: 0,
+        estimatedTime: subtaskEstimatedTime !== undefined ? subtaskEstimatedTime : null,
+        parentTaskId: taskId,
+        tags: subtaskTags,
+        gitCommitId: parsedCommitId || null,
+      }
+
+      await set(newTaskRef, newTask)
+
+      // Create task history
+      const historyRef = push(ref(database, "taskHistory"))
+      const historyEntry = {
+        taskId: newTaskRef.key,
+        userId: user.uid,
+        timestamp: new Date().toISOString(),
+        changes: [{ field: "status", oldValue: null, newValue: TASK_STATUS.TODO }],
+        comment: "Subtask created",
+      }
+      await set(historyRef, historyEntry)
+
+      // Create notifications for assigned members
+      if (subtaskAssignedTo && subtaskAssignedTo.length > 0) {
+        for (const assignedUserId of subtaskAssignedTo) {
+          if (assignedUserId !== user.uid) {
+            const notificationRef = push(ref(database, "notifications"))
+            const notification = {
+              userId: assignedUserId,
+              eventType: "CREATE_TASK",
+              referenceId: newTaskRef.key,
+              message: `You have been assigned to subtask "${subtaskTitle}"`,
+              status: "unread",
+              createdAt: new Date().toISOString(),
+            }
+            await set(notificationRef, notification)
+          }
+        }
+      }
+
+      // Add to local state
+      const newSubtask = {
+        id: newTaskRef.key as string,
+        ...newTask,
+      }
+      setChildTasks([...childTasks, newSubtask])
+
+      // Update parent task progress
+      await updateParentTaskProgress(taskId, [...childTasks, newSubtask])
+
+      // Reset form
+      setSubtaskTitle("")
+      setSubtaskDescription("")
+      setSubtaskType(TASK_TYPE.FEATURE)
+      setSubtaskPriority(TASK_PRIORITY.MEDIUM)
+      setSubtaskDueDate(undefined)
+      setSubtaskEstimatedTime(undefined)
+      setSubtaskAssignedTo([])
+      setSubtaskTags([])
+      setSubtaskTagInput("")
+      setSubtaskCommitId("")
+
+      // Close dialog
+      setShowSubtaskDialog(false)
+
+      // Set active tab to subtasks
+      setActiveTab("subtasks")
+
+      toast({
+        title: "Subtask created",
+        description: "New subtask has been created successfully",
+        variant: "success",
+      })
+    } catch (error) {
+      console.error("Error creating subtask:", error)
+      toast({
+        title: "Error",
+        description: "Failed to create subtask. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsCreatingSubtask(false)
+    }
+  }
+
   const canUpdateStatus = () => {
     if (!user || !task || !projectData) return false
 
@@ -628,6 +764,12 @@ export default function TaskDetailPage() {
     return task.assignedTo.filter((id) => users[id]).map((id) => users[id])
   }
 
+  // Convert subtask assignees to array for AssigneeGroup component
+  const getSubtaskAssigneeUsers = () => {
+    if (!subtaskAssignedTo) return []
+    return subtaskAssignedTo.filter((id) => users[id]).map((id) => users[id])
+  }
+
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
@@ -683,6 +825,14 @@ export default function TaskDetailPage() {
               <h1 className="text-xl break-words font-bold md:text-2xl">{task.title}</h1>
 
               <div className="flex items-center self-start space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-lg shadow-sm"
+                  onClick={() => setShowSubtaskDialog(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Subtask
+                </Button>
                 <Link href={`/projects/${projectId}/tasks/${taskId}/edit`}>
                   <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
                     <Edit className="h-4 w-4 mr-2" /> Edit
@@ -745,17 +895,15 @@ export default function TaskDetailPage() {
               {/* Responsive TabsList with horizontal scrolling for small screens */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${
-                    isMobile ? "overflow-x-auto scrollbar-hide" : ""
-                  } bg-muted/50 p-1 rounded-lg`}
+                  className={`w-full flex ${isMobile ? "overflow-x-auto scrollbar-hide" : ""
+                    } bg-muted/50 p-1 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${
-                        isMobile ? "flex-shrink-0" : ""
-                      } text-sm whitespace-nowrap px-3 py-2`}
+                      className={`flex-1 min-w-[100px] ${isMobile ? "flex-shrink-0" : ""
+                        } text-sm whitespace-nowrap px-3 py-2`}
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1031,11 +1179,19 @@ export default function TaskDetailPage() {
                 )}
               </TabsContent>
 
-              {childTasks.length > 0 && (
-                <TabsContent value="subtasks" className="animate-in fade-in-50">
-                  <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-                    <div className="bg-muted/50 p-3 border-b border-border flex justify-between items-center">
-                      <h3 className="font-medium">Subtasks ({childTasks.length})</h3>
+              <TabsContent value="subtasks" className="animate-in fade-in-50">
+                <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
+                  <div className="bg-muted/50 p-3 border-b border-border flex justify-between items-center">
+                    <h3 className="font-medium">Subtasks ({childTasks.length})</h3>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 rounded-lg"
+                        onClick={() => setShowSubtaskDialog(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" /> Add Subtask
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -1046,93 +1202,284 @@ export default function TaskDetailPage() {
                         {showChildTasks ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                       </Button>
                     </div>
-
-                    {showChildTasks && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[500px]">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="text-left text-sm font-medium px-4 py-2">Title</th>
-                              <th className="text-left text-sm font-medium px-4 py-2">Status</th>
-                              <th className="text-left text-sm font-medium px-4 py-2">Assigned To</th>
-                              <th className="text-left text-sm font-medium px-4 py-2">Progress</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {childTasks.map((childTask) => {
-                              // Convert child task assignees to user objects for AssigneeGroup
-                              const childTaskUsers = childTask.assignedTo
-                                ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
-                                : []
-
-                              return (
-                                <tr
-                                  key={childTask.id}
-                                  className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors"
-                                >
-                                  <td className="px-4 py-2">
-                                    <Link
-                                      href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                      className="text-primary hover:underline"
-                                    >
-                                      {childTask.title}
-                                    </Link>
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <Badge
-                                      variant="status"
-                                      className={getStatusColor(childTask.status)}
-                                      animation={
-                                        childTask.status === TASK_STATUS.TODO ||
-                                        childTask.status === TASK_STATUS.IN_PROGRESS
-                                          ? "pulse"
-                                          : "fade"
-                                      }
-                                    >
-                                      {getStatusLabel(childTask.status)}
-                                    </Badge>
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
-                                      <div className="flex items-center">
-                                        <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
-
-                                        <span className="ml-2 text-sm text-muted-foreground hidden lg:inline-block truncate max-w-[150px]">
-                                          {childTask.assignedTo
-                                            .map((id) => users[id]?.displayName || "Unknown")
-                                            .join(", ")}
-                                        </span>
-                                      </div>
-                                    ) : (
-                                      <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    {childTask.percentDone !== undefined && (
-                                      <div className="flex items-center gap-2">
-                                        <div className="bg-muted h-2 rounded-full w-24 overflow-hidden">
-                                          <div
-                                            className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
-                                            style={{ width: `${childTask.percentDone}%` }}
-                                          ></div>
-                                        </div>
-                                        <span className="text-xs">{childTask.percentDone}%</span>
-                                      </div>
-                                    )}
-                                  </td>
-                                </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
                   </div>
-                </TabsContent>
-              )}
+
+                  {showChildTasks && (
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[500px]">
+                        <thead>
+                          <tr className="border-b border-border">
+                            <th className="text-left text-sm font-medium px-4 py-2">Title</th>
+                            <th className="text-left text-sm font-medium px-4 py-2">Status</th>
+                            <th className="text-left text-sm font-medium px-4 py-2">Assigned To</th>
+                            <th className="text-left text-sm font-medium px-4 py-2">Progress</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {childTasks.map((childTask) => {
+                            // Convert child task assignees to user objects for AssigneeGroup
+                            const childTaskUsers = childTask.assignedTo
+                              ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
+                              : []
+
+                            return (
+                              <tr
+                                key={childTask.id}
+                                className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors"
+                              >
+                                <td className="px-4 py-2">
+                                  <Link
+                                    href={`/projects/${projectId}/tasks/${childTask.id}`}
+                                    className="text-primary hover:underline"
+                                  >
+                                    {childTask.title}
+                                  </Link>
+                                </td>
+                                <td className="px-4 py-2">
+                                  <Badge
+                                    variant="status"
+                                    className={getStatusColor(childTask.status)}
+                                    animation={
+                                      childTask.status === TASK_STATUS.TODO ||
+                                        childTask.status === TASK_STATUS.IN_PROGRESS
+                                        ? "pulse"
+                                        : "fade"
+                                    }
+                                  >
+                                    {getStatusLabel(childTask.status)}
+                                  </Badge>
+                                </td>
+                                <td className="px-4 py-2">
+                                  {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
+                                    <div className="flex items-center">
+                                      <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
+
+                                      <span className="ml-2 text-sm text-muted-foreground hidden lg:inline-block truncate max-w-[150px]">
+                                        {childTask.assignedTo
+                                          .map((id) => users[id]?.displayName || "Unknown")
+                                          .join(", ")}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                                  )}
+                                </td>
+                                <td className="px-4 py-2">
+                                  {childTask.percentDone !== undefined && (
+                                    <div className="flex items-center gap-2">
+                                      <div className="bg-muted h-2 rounded-full w-24 overflow-hidden">
+                                        <div
+                                          className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
+                                          style={{ width: `${childTask.percentDone}%` }}
+                                        ></div>
+                                      </div>
+                                      <span className="text-xs">{childTask.percentDone}%</span>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
             </Tabs>
           </div>
         </div>
+
+        {/* Create Subtask Dialog */}
+        <Dialog open={showSubtaskDialog} onOpenChange={setShowSubtaskDialog}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Create Subtask</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCreateSubtask} className="space-y-6">
+              <div className="space-y-4">
+                <label htmlFor="subtaskTitle" className="block text-sm font-medium">
+                  Title <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  id="subtaskTitle"
+                  value={subtaskTitle}
+                  onChange={(e) => setSubtaskTitle(e.target.value)}
+                  required
+                  disabled={isCreatingSubtask}
+                  className="w-full"
+                  placeholder="Enter subtask title"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <label htmlFor="subtaskDescription" className="block text-sm font-medium">
+                  Description
+                </label>
+                <Textarea
+                  id="subtaskDescription"
+                  value={subtaskDescription}
+                  onChange={(e) => setSubtaskDescription(e.target.value)}
+                  rows={3}
+                  disabled={isCreatingSubtask}
+                  className="w-full"
+                  placeholder="Describe the subtask in detail..."
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-4">
+                  <label htmlFor="subtaskType" className="block text-sm font-medium">
+                    Type <span className="text-destructive">*</span>
+                  </label>
+                  <Select value={subtaskType} onValueChange={setSubtaskType} disabled={isCreatingSubtask}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TASK_TYPE.BUG}>Bug</SelectItem>
+                      <SelectItem value={TASK_TYPE.FEATURE}>Feature</SelectItem>
+                      <SelectItem value={TASK_TYPE.ENHANCEMENT}>Enhancement</SelectItem>
+                      <SelectItem value={TASK_TYPE.DOCUMENTATION}>Documentation</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-4">
+                  <label htmlFor="subtaskPriority" className="block text-sm font-medium">
+                    Priority <span className="text-destructive">*</span>
+                  </label>
+                  <Select value={subtaskPriority} onValueChange={setSubtaskPriority} disabled={isCreatingSubtask}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={TASK_PRIORITY.LOW}>Low</SelectItem>
+                      <SelectItem value={TASK_PRIORITY.MEDIUM}>Medium</SelectItem>
+                      <SelectItem value={TASK_PRIORITY.HIGH}>High</SelectItem>
+                      <SelectItem value={TASK_PRIORITY.CRITICAL}>Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-4">
+                  <label htmlFor="subtaskDueDate" className="block text-sm font-medium">
+                    Due Date
+                  </label>
+                  <DatePicker date={subtaskDueDate} setDate={setSubtaskDueDate} disabled={isCreatingSubtask} />
+                </div>
+
+                <div className="space-y-4">
+                  <label htmlFor="subtaskEstimatedTime" className="block text-sm font-medium">
+                    Estimated Time (hours)
+                  </label>
+                  <Input
+                    id="subtaskEstimatedTime"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={subtaskEstimatedTime || ""}
+                    onChange={(e) =>
+                      setSubtaskEstimatedTime(e.target.value ? Number.parseFloat(e.target.value) : undefined)
+                    }
+                    disabled={isCreatingSubtask}
+                    className="w-full"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="block text-sm font-medium">Assigned To</label>
+
+                {subtaskAssignedTo.length > 0 && (
+                  <div className="mb-2">
+                    <AssigneeGroup users={getSubtaskAssigneeUsers()} />
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {Object.entries(users).map(([userId, userData]: [string, any]) => (
+                    <div key={userId} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`subtask-member-${userId}`}
+                        checked={subtaskAssignedTo.includes(userId)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSubtaskAssignedTo([...subtaskAssignedTo, userId])
+                          } else {
+                            setSubtaskAssignedTo(subtaskAssignedTo.filter((id) => id !== userId))
+                          }
+                        }}
+                        disabled={isCreatingSubtask}
+                        className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                      />
+                      <label htmlFor={`subtask-member-${userId}`} className="text-sm truncate">
+                        {userData.displayName || userData.email}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label htmlFor="subtaskTagInput" className="block text-sm font-medium">
+                  Tags
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {subtaskTags.map((tag, index) => (
+                    <div key={index} className="flex items-center bg-muted px-2 py-1 rounded-full text-sm">
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => setSubtaskTags(subtaskTags.filter((t) => t !== tag))}
+                        className="ml-2 text-destructive"
+                        disabled={isCreatingSubtask}
+                        aria-label={`Remove tag ${tag}`}
+                      >
+                        &times;
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <Input
+                  id="subtaskTagInput"
+                  placeholder="Enter tag and press Enter"
+                  value={subtaskTagInput}
+                  onChange={(e) => setSubtaskTagInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && subtaskTagInput.trim() !== "") {
+                      e.preventDefault()
+                      if (!subtaskTags.includes(subtaskTagInput.trim())) {
+                        setSubtaskTags([...subtaskTags, subtaskTagInput.trim()])
+                      }
+                      setSubtaskTagInput("")
+                    }
+                  }}
+                  disabled={isCreatingSubtask}
+                  className="w-full mt-2"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-4 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowSubtaskDialog(false)}
+                  disabled={isCreatingSubtask}
+                  className="rounded-lg shadow-sm"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isCreatingSubtask} className="rounded-lg shadow-sm">
+                  <Save className="mr-2 h-4 w-4" />
+                  {isCreatingSubtask ? "Creating..." : "Create Subtask"}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   )

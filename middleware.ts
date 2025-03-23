@@ -26,9 +26,6 @@ export async function middleware(request: NextRequest) {
     "/terms",
     "/privacy",
     "/cookies",
-    // Add API routes that need to be accessible without auth
-    "/api/auth",
-    "/api/webhooks", // Thêm đường dẫn webhook vào danh sách công khai
   ]
 
   // Check if the route is public
@@ -38,10 +35,27 @@ export async function middleware(request: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/static/") ||
-    pathname.startsWith("/api/") ||
+    pathname.startsWith("/api/webhooks/") || // Đảm bảo webhook luôn được cho phép
     pathname.includes(".") // Skip files like favicon.ico, etc.
   ) {
     return NextResponse.next()
+  }
+
+  // Kiểm tra riêng cho các API routes khác
+  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/webhooks/")) {
+    // Cho phép các API routes khác nhưng vẫn kiểm tra JWT
+    const token = request.cookies.get("jwt")?.value
+
+    if (!token) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    try {
+      await jwtVerify(token, JWT_SECRET)
+      return NextResponse.next()
+    } catch (error) {
+      return NextResponse.json({ error: "Invalid token" }, { status: 401 })
+    }
   }
 
   // Get JWT from cookie only (not from Authorization header to avoid conflicts)

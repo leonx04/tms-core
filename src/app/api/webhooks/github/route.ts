@@ -41,62 +41,75 @@ async function findProjectIdByRepoUrl(
   try {
     // Chuẩn hóa URL repository từ payload
     const normalizedPayloadUrl = normalizeRepoUrl(repoUrl)
+    console.log(`Tìm project cho repository URL đã chuẩn hóa: ${normalizedPayloadUrl}`)
 
     // Tìm project với repository URL này
     const projectsRef = ref(database, "projects")
-    const projectsSnapshot = await get(projectsRef)
 
-    if (!projectsSnapshot.exists()) {
-      console.log("Không tìm thấy dự án nào trong cơ sở dữ liệu")
-      return { projectId: null, webhookSecret: null }
-    }
+    try {
+      const projectsSnapshot = await get(projectsRef)
 
-    const projects = projectsSnapshot.val()
-    let targetProjectId: string | null = null
-
-    // Tìm project với URL repository khớp
-    for (const [projectId, projectData] of Object.entries(projects)) {
-      const projectRepoUrl = (projectData as any).githubRepo || ""
-      const normalizedProjectUrl = normalizeRepoUrl(projectRepoUrl)
-
-      if (normalizedProjectUrl && normalizedProjectUrl === normalizedPayloadUrl) {
-        targetProjectId = projectId
-        break
+      if (!projectsSnapshot.exists()) {
+        console.log("Không tìm thấy dự án nào trong cơ sở dữ liệu")
+        return { projectId: null, webhookSecret: null }
       }
-    }
 
-    // Nếu không tìm thấy, thử tìm kiếm linh hoạt hơn
-    if (!targetProjectId) {
+      const projects = projectsSnapshot.val()
+      let targetProjectId: string | null = null
+
+      // Tìm project với URL repository khớp
       for (const [projectId, projectData] of Object.entries(projects)) {
         const projectRepoUrl = (projectData as any).githubRepo || ""
+        const normalizedProjectUrl = normalizeRepoUrl(projectRepoUrl)
 
-        // Kiểm tra nếu URL chứa tên repository
-        if (projectRepoUrl && normalizedPayloadUrl.includes(projectRepoUrl.split("/").pop() || "")) {
+        if (normalizedProjectUrl && normalizedProjectUrl === normalizedPayloadUrl) {
           targetProjectId = projectId
           break
         }
       }
-    }
 
-    // Lấy webhook secret nếu có
-    let webhookSecret = null
-    if (targetProjectId) {
-      const webhookRef = ref(database, "projectWebhook")
-      const webhookSnapshot = await get(webhookRef)
+      // Nếu không tìm thấy, thử tìm kiếm linh hoạt hơn
+      if (!targetProjectId) {
+        for (const [projectId, projectData] of Object.entries(projects)) {
+          const projectRepoUrl = (projectData as any).githubRepo || ""
+          const repoName = normalizedPayloadUrl.split("/").pop() || ""
 
-      if (webhookSnapshot.exists()) {
-        const webhooks = webhookSnapshot.val()
-
-        for (const webhook of Object.values(webhooks)) {
-          if ((webhook as any).projectId === targetProjectId) {
-            webhookSecret = (webhook as any).webhookSecret || null
+          // Kiểm tra nếu URL chứa tên repository
+          if (projectRepoUrl && projectRepoUrl.includes(repoName)) {
+            targetProjectId = projectId
             break
           }
         }
       }
-    }
 
-    return { projectId: targetProjectId, webhookSecret }
+      // Lấy webhook secret nếu có
+      let webhookSecret = null
+      if (targetProjectId) {
+        try {
+          // Sử dụng query với orderByChild để tận dụng index
+          const webhookRef = ref(database, "projectWebhook")
+          const webhookSnapshot = await get(webhookRef)
+
+          if (webhookSnapshot.exists()) {
+            const webhooks = webhookSnapshot.val()
+
+            for (const [webhookId, webhook] of Object.entries(webhooks)) {
+              if ((webhook as any).projectId === targetProjectId) {
+                webhookSecret = (webhook as any).webhookSecret || null
+                break
+              }
+            }
+          }
+        } catch (webhookError) {
+          console.error("Lỗi khi truy vấn webhook:", webhookError)
+        }
+      }
+
+      return { projectId: targetProjectId, webhookSecret }
+    } catch (projectError) {
+      console.error("Lỗi khi truy vấn projects:", projectError)
+      return { projectId: null, webhookSecret: null }
+    }
   } catch (error) {
     console.error("Lỗi khi tìm project ID:", error)
     return { projectId: null, webhookSecret: null }
@@ -169,23 +182,28 @@ export async function POST(request: NextRequest) {
     // Xử lý webhook dựa trên loại sự kiện
     const targetProjectId = projectId || "unassigned"
 
-    switch (githubEvent) {
-      case "push":
-        await handlePushEvent(targetProjectId, payload)
-        break
-      case "pull_request":
-        await handlePullRequestEvent(targetProjectId, payload)
-        break
-      case "issues":
-        await handleIssuesEvent(targetProjectId, payload)
-        break
-      case "ping":
-        // Xử lý sự kiện ping (được gửi khi webhook được cấu hình lần đầu)
-        await handlePingEvent(targetProjectId, payload)
-        break
-      default:
-        // Lưu các sự kiện khác để xử lý trong tương lai
-        await storeGenericEvent(targetProjectId, githubEvent, payload)
+    try {
+      switch (githubEvent) {
+        case "push":
+          await handlePushEvent(targetProjectId, payload)
+          break
+        case "pull_request":
+          await handlePullRequestEvent(targetProjectId, payload)
+          break
+        case "issues":
+          await handleIssuesEvent(targetProjectId, payload)
+          break
+        case "ping":
+          // Xử lý sự kiện ping (được gửi khi webhook được cấu hình lần đầu)
+          await handlePingEvent(targetProjectId, payload)
+          break
+        default:
+          // Lưu các sự kiện khác để xử lý trong tương lai
+          await storeGenericEvent(targetProjectId, githubEvent, payload)
+      }
+    } catch (eventError) {
+      console.error(`Lỗi khi xử lý sự kiện ${githubEvent}:`, eventError)
+      // Không ném lỗi, chỉ ghi log để tránh webhook thất bại
     }
 
     console.log("Xử lý webhook GitHub thành công")
@@ -198,6 +216,7 @@ export async function POST(request: NextRequest) {
         success: false,
         message: "Webhook đã nhận nhưng gặp lỗi trong quá trình xử lý",
         error: (error as Error).message,
+        stack: (error as Error).stack,
       },
       { status: 500 },
     )
@@ -209,87 +228,103 @@ async function handlePushEvent(projectId: string, payload: any) {
     const commits = payload.commits || []
     const repository = payload.repository || {}
     const sender = payload.sender || {}
-    const ref = payload.ref || ""
+    const refString = payload.ref || ""
 
     console.log(`Xử lý sự kiện push cho project ${projectId} với ${commits.length} commit`)
 
     // Lưu sự kiện push
-    const eventRef = push(ref(database, `projectEvents/${projectId}`))
-    await set(eventRef, {
-      type: "push",
-      timestamp: new Date().toISOString(),
-      repository: {
-        id: repository.id,
-        name: repository.name,
-        url: repository.html_url,
-      },
-      sender: {
-        id: sender.id,
-        login: sender.login,
-        avatar_url: sender.avatar_url,
-      },
-      ref: ref,
-      commits_count: commits.length,
-    })
+    try {
+      const eventRef = push(ref(database, `projectEvents/${projectId}`))
+      await set(eventRef, {
+        type: "push",
+        timestamp: new Date().toISOString(),
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          url: repository.html_url,
+        },
+        sender: {
+          id: sender.id,
+          login: sender.login,
+          avatar_url: sender.avatar_url,
+        },
+        ref: refString,
+        commits_count: commits.length,
+      })
+    } catch (eventError) {
+      console.error("Lỗi khi lưu sự kiện push:", eventError)
+    }
 
     // Lưu từng commit vào cơ sở dữ liệu
     for (const commit of commits) {
-      const commitRef = push(ref(database, `projectCommits/${projectId}`))
+      try {
+        const commitRef = push(ref(database, `projectCommits/${projectId}`))
 
-      await set(commitRef, {
-        id: commit.id,
-        message: commit.message,
-        timestamp: commit.timestamp,
-        url: commit.url,
-        author: {
-          name: commit.author.name,
-          email: commit.author.email,
-          username: commit.author.username,
-        },
-        added: commit.added || [],
-        removed: commit.removed || [],
-        modified: commit.modified || [],
-      })
+        await set(commitRef, {
+          id: commit.id,
+          message: commit.message,
+          timestamp: commit.timestamp,
+          url: commit.url,
+          author: {
+            name: commit.author.name,
+            email: commit.author.email,
+            username: commit.author.username,
+          },
+          added: commit.added || [],
+          removed: commit.removed || [],
+          modified: commit.modified || [],
+        })
+      } catch (commitError) {
+        console.error("Lỗi khi lưu commit:", commitError)
+      }
     }
 
     // Chỉ tạo thông báo nếu đây là một project thực
     if (projectId !== "unassigned") {
-      // Tạo thông báo cho các thành viên dự án
-      const projectRef = ref(database, `projects/${projectId}`)
-      const projectSnapshot = await get(projectRef)
+      try {
+        // Tạo thông báo cho các thành viên dự án
+        const projectRef = ref(database, `projects/${projectId}`)
+        const projectSnapshot = await get(projectRef)
 
-      if (projectSnapshot.exists()) {
-        const projectData = projectSnapshot.val()
-        const members = projectData.members || {}
+        if (projectSnapshot.exists()) {
+          const projectData = projectSnapshot.val()
+          const members = projectData.members || {}
 
-        // Lấy tên repository cho thông báo
-        const repoName = repository.name
-        const branch = ref.replace("refs/heads/", "")
-        const commitsCount = commits.length
+          // Lấy tên repository cho thông báo
+          const repoName = repository.name
+          const branch = refString.replace("refs/heads/", "")
+          const commitsCount = commits.length
 
-        // Tạo thông báo cho mỗi thành viên dự án
-        for (const [memberId, memberData] of Object.entries(members)) {
-          const notificationRef = push(ref(database, "notifications"))
+          // Tạo thông báo cho mỗi thành viên dự án
+          for (const memberId of Object.keys(members)) {
+            try {
+              const notificationRef = push(ref(database, "notifications"))
 
-          await set(notificationRef, {
-            userId: memberId,
-            eventType: "WEBHOOK_EVENT",
-            referenceId: projectId,
-            message: `${payload.pusher.name} đã push ${commitsCount} commit${commitsCount === 1 ? "" : "s"} vào ${repoName}/${branch}`,
-            status: "unread",
-            createdAt: new Date().toISOString(),
-            data: {
-              type: "push",
-              repository: repository.name,
-              branch: branch,
-              commits: commits.map((commit: any) => ({
-                id: commit.id,
-                message: commit.message,
-                url: commit.url,
-              })),
-            },
-          })
+              await set(notificationRef, {
+                userId: memberId,
+                eventType: "WEBHOOK_EVENT",
+                referenceId: projectId,
+                message: `${payload.pusher.name} đã push ${commitsCount} commit${commitsCount === 1 ? "" : "s"} vào ${repoName}/${branch}`,
+                status: "unread",
+                createdAt: new Date().toISOString(),
+                data: {
+                  type: "push",
+                  repository: repository.name,
+                  branch: branch,
+                  commits: commits.map((commit: any) => ({
+                    id: commit.id,
+                    message: commit.message,
+                    url: commit.url,
+                  })),
+                },
+              })
+            } catch (notificationError) {
+              console.error(`Lỗi khi tạo thông báo cho thành viên ${memberId}:`, notificationError)
+            }
+          }
         }
+      } catch (projectError) {
+        console.error("Lỗi khi truy vấn thông tin project:", projectError)
       }
     }
 
@@ -315,85 +350,101 @@ async function handlePullRequestEvent(projectId: string, payload: any) {
     console.log(`Xử lý sự kiện pull request ${action} cho project ${projectId}`)
 
     // Lưu sự kiện pull request
-    const eventRef = push(ref(database, `projectEvents/${projectId}`))
-    await set(eventRef, {
-      type: "pull_request",
-      action: action,
-      timestamp: new Date().toISOString(),
-      repository: {
-        id: repository.id,
-        name: repository.name,
-        url: repository.html_url,
-      },
-      sender: {
-        id: sender.id,
-        login: sender.login,
-        avatar_url: sender.avatar_url,
-      },
-      pull_request: {
-        id: pullRequest.number,
-        title: pullRequest.title,
-        url: pullRequest.html_url,
-      },
-    })
+    try {
+      const eventRef = push(ref(database, `projectEvents/${projectId}`))
+      await set(eventRef, {
+        type: "pull_request",
+        action: action,
+        timestamp: new Date().toISOString(),
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          url: repository.html_url,
+        },
+        sender: {
+          id: sender.id,
+          login: sender.login,
+          avatar_url: sender.avatar_url,
+        },
+        pull_request: {
+          id: pullRequest.number,
+          title: pullRequest.title,
+          url: pullRequest.html_url,
+        },
+      })
+    } catch (eventError) {
+      console.error("Lỗi khi lưu sự kiện pull request:", eventError)
+    }
 
     // Lưu pull request vào cơ sở dữ liệu
-    const prRef = ref(database, `projectPullRequests/${projectId}/${pullRequest.number}`)
+    try {
+      const prRef = ref(database, `projectPullRequests/${projectId}/${pullRequest.number}`)
 
-    await set(prRef, {
-      id: pullRequest.number,
-      title: pullRequest.title,
-      body: pullRequest.body,
-      state: pullRequest.state,
-      html_url: pullRequest.html_url,
-      created_at: pullRequest.created_at,
-      updated_at: pullRequest.updated_at,
-      user: {
-        login: pullRequest.user.login,
-        avatar_url: pullRequest.user.avatar_url,
-      },
-      base: {
-        ref: pullRequest.base.ref,
-      },
-      head: {
-        ref: pullRequest.head.ref,
-      },
-    })
+      await set(prRef, {
+        id: pullRequest.number,
+        title: pullRequest.title,
+        body: pullRequest.body,
+        state: pullRequest.state,
+        html_url: pullRequest.html_url,
+        created_at: pullRequest.created_at,
+        updated_at: pullRequest.updated_at,
+        user: {
+          login: pullRequest.user.login,
+          avatar_url: pullRequest.user.avatar_url,
+        },
+        base: {
+          ref: pullRequest.base.ref,
+        },
+        head: {
+          ref: pullRequest.head.ref,
+        },
+      })
+    } catch (prError) {
+      console.error("Lỗi khi lưu pull request:", prError)
+    }
 
     // Chỉ tạo thông báo nếu đây là một project thực
     if (projectId !== "unassigned") {
-      // Tạo thông báo cho các thành viên dự án
-      const projectRef = ref(database, `projects/${projectId}`)
-      const projectSnapshot = await get(projectRef)
+      try {
+        // Tạo thông báo cho các thành viên dự án
+        const projectRef = ref(database, `projects/${projectId}`)
+        const projectSnapshot = await get(projectRef)
 
-      if (projectSnapshot.exists()) {
-        const projectData = projectSnapshot.val()
-        const members = projectData.members || {}
+        if (projectSnapshot.exists()) {
+          const projectData = projectSnapshot.val()
+          const members = projectData.members || {}
 
-        // Lấy tên repository cho thông báo
-        const repoName = repository.name
+          // Lấy tên repository cho thông báo
+          const repoName = repository.name
 
-        // Tạo thông báo cho mỗi thành viên dự án
-        for (const [memberId, memberData] of Object.entries(members)) {
-          const notificationRef = push(ref(database, "notifications"))
+          // Tạo thông báo cho mỗi thành viên dự án
+          for (const memberId of Object.keys(members)) {
+            try {
+              const notificationRef = push(ref(database, "notifications"))
 
-          await set(notificationRef, {
-            userId: memberId,
-            eventType: "WEBHOOK_EVENT",
-            referenceId: projectId,
-            message: `${pullRequest.user.login} ${action} pull request #${pullRequest.number} trong ${repoName}: ${pullRequest.title}`,
-            status: "unread",
-            createdAt: new Date().toISOString(),
-            data: {
-              type: "pull_request",
-              action: action,
-              repository: repository.name,
-              number: pullRequest.number,
-              title: pullRequest.title,
-              url: pullRequest.html_url,
-            },
-          })
+              await set(notificationRef, {
+                userId: memberId,
+                eventType: "WEBHOOK_EVENT",
+                referenceId: projectId,
+                message: `${pullRequest.user.login} ${action} pull request #${pullRequest.number} trong ${repoName}: ${pullRequest.title}`,
+                status: "unread",
+                createdAt: new Date().toISOString(),
+                data: {
+                  type: "pull_request",
+                  action: action,
+                  repository: repository.name,
+                  number: pullRequest.number,
+                  title: pullRequest.title,
+                  url: pullRequest.html_url,
+                },
+              })
+            } catch (notificationError) {
+              console.error(`Lỗi khi tạo thông báo cho thành viên ${memberId}:`, notificationError)
+            }
+          }
         }
+      } catch (projectError) {
+        console.error("Lỗi khi truy vấn thông tin project:", projectError)
       }
     }
 
@@ -419,79 +470,95 @@ async function handleIssuesEvent(projectId: string, payload: any) {
     console.log(`Xử lý sự kiện issue ${action} cho project ${projectId}`)
 
     // Lưu sự kiện issue
-    const eventRef = push(ref(database, `projectEvents/${projectId}`))
-    await set(eventRef, {
-      type: "issue",
-      action: action,
-      timestamp: new Date().toISOString(),
-      repository: {
-        id: repository.id,
-        name: repository.name,
-        url: repository.html_url,
-      },
-      sender: {
-        id: sender.id,
-        login: sender.login,
-        avatar_url: sender.avatar_url,
-      },
-      issue: {
-        id: issue.number,
-        title: issue.title,
-        url: issue.html_url,
-      },
-    })
+    try {
+      const eventRef = push(ref(database, `projectEvents/${projectId}`))
+      await set(eventRef, {
+        type: "issue",
+        action: action,
+        timestamp: new Date().toISOString(),
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          url: repository.html_url,
+        },
+        sender: {
+          id: sender.id,
+          login: sender.login,
+          avatar_url: sender.avatar_url,
+        },
+        issue: {
+          id: issue.number,
+          title: issue.title,
+          url: issue.html_url,
+        },
+      })
+    } catch (eventError) {
+      console.error("Lỗi khi lưu sự kiện issue:", eventError)
+    }
 
     // Lưu issue vào cơ sở dữ liệu
-    const issueRef = ref(database, `projectIssues/${projectId}/${issue.number}`)
+    try {
+      const issueRef = ref(database, `projectIssues/${projectId}/${issue.number}`)
 
-    await set(issueRef, {
-      id: issue.number,
-      title: issue.title,
-      body: issue.body,
-      state: issue.state,
-      html_url: issue.html_url,
-      created_at: issue.created_at,
-      updated_at: issue.updated_at,
-      user: {
-        login: issue.user.login,
-        avatar_url: issue.user.avatar_url,
-      },
-    })
+      await set(issueRef, {
+        id: issue.number,
+        title: issue.title,
+        body: issue.body,
+        state: issue.state,
+        html_url: issue.html_url,
+        created_at: issue.created_at,
+        updated_at: issue.updated_at,
+        user: {
+          login: issue.user.login,
+          avatar_url: issue.user.avatar_url,
+        },
+      })
+    } catch (issueError) {
+      console.error("Lỗi khi lưu issue:", issueError)
+    }
 
     // Chỉ tạo thông báo nếu đây là một project thực
     if (projectId !== "unassigned") {
-      // Tạo thông báo cho các thành viên dự án
-      const projectRef = ref(database, `projects/${projectId}`)
-      const projectSnapshot = await get(projectRef)
+      try {
+        // Tạo thông báo cho các thành viên dự án
+        const projectRef = ref(database, `projects/${projectId}`)
+        const projectSnapshot = await get(projectRef)
 
-      if (projectSnapshot.exists()) {
-        const projectData = projectSnapshot.val()
-        const members = projectData.members || {}
+        if (projectSnapshot.exists()) {
+          const projectData = projectSnapshot.val()
+          const members = projectData.members || {}
 
-        // Lấy tên repository cho thông báo
-        const repoName = repository.name
+          // Lấy tên repository cho thông báo
+          const repoName = repository.name
 
-        // Tạo thông báo cho mỗi thành viên dự án
-        for (const [memberId, memberData] of Object.entries(members)) {
-          const notificationRef = push(ref(database, "notifications"))
+          // Tạo thông báo cho mỗi thành viên dự án
+          for (const memberId of Object.keys(members)) {
+            try {
+              const notificationRef = push(ref(database, "notifications"))
 
-          await set(notificationRef, {
-            userId: memberId,
-            eventType: "WEBHOOK_EVENT",
-            referenceId: projectId,
-            message: `${issue.user.login} ${action} issue #${issue.number} trong ${repoName}: ${issue.title}`,
-            status: "unread",
-            createdAt: new Date().toISOString(),
-            data: {
-              type: "issue",
-              action: action,
-              repository: repository.name,
-              number: issue.number,
-              title: issue.title,
-              url: issue.html_url,
-            },
-          })
+              await set(notificationRef, {
+                userId: memberId,
+                eventType: "WEBHOOK_EVENT",
+                referenceId: projectId,
+                message: `${issue.user.login} ${action} issue #${issue.number} trong ${repoName}: ${issue.title}`,
+                status: "unread",
+                createdAt: new Date().toISOString(),
+                data: {
+                  type: "issue",
+                  action: action,
+                  repository: repository.name,
+                  number: issue.number,
+                  title: issue.title,
+                  url: issue.html_url,
+                },
+              })
+            } catch (notificationError) {
+              console.error(`Lỗi khi tạo thông báo cho thành viên ${memberId}:`, notificationError)
+            }
+          }
         }
+      } catch (projectError) {
+        console.error("Lỗi khi truy vấn thông tin project:", projectError)
       }
     }
 
@@ -511,59 +578,71 @@ async function handlePingEvent(projectId: string, payload: any) {
     console.log(`Xử lý sự kiện ping cho project ${projectId}`)
 
     // Lưu sự kiện ping
-    const eventRef = push(ref(database, `projectEvents/${projectId}`))
-    await set(eventRef, {
-      type: "ping",
-      timestamp: new Date().toISOString(),
-      repository: {
-        id: repository.id,
-        name: repository.name,
-        url: repository.html_url,
-      },
-      sender: {
-        id: sender.id,
-        login: sender.login,
-        avatar_url: sender.avatar_url,
-      },
-      hook: {
-        id: hook.id,
-        type: hook.type,
-        events: hook.events,
-      },
-      zen: payload.zen,
-    })
+    try {
+      const eventRef = push(ref(database, `projectEvents/${projectId}`))
+      await set(eventRef, {
+        type: "ping",
+        timestamp: new Date().toISOString(),
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          url: repository.html_url,
+        },
+        sender: {
+          id: sender.id,
+          login: sender.login,
+          avatar_url: sender.avatar_url,
+        },
+        hook: {
+          id: hook.id,
+          type: hook.type,
+          events: hook.events,
+        },
+        zen: payload.zen,
+      })
+    } catch (eventError) {
+      console.error("Lỗi khi lưu sự kiện ping:", eventError)
+    }
 
     // Chỉ tạo thông báo nếu đây là một project thực
     if (projectId !== "unassigned") {
-      // Tạo thông báo cho các thành viên dự án
-      const projectRef = ref(database, `projects/${projectId}`)
-      const projectSnapshot = await get(projectRef)
+      try {
+        // Tạo thông báo cho các thành viên dự án
+        const projectRef = ref(database, `projects/${projectId}`)
+        const projectSnapshot = await get(projectRef)
 
-      if (projectSnapshot.exists()) {
-        const projectData = projectSnapshot.val()
-        const members = projectData.members || {}
+        if (projectSnapshot.exists()) {
+          const projectData = projectSnapshot.val()
+          const members = projectData.members || {}
 
-        // Lấy tên repository cho thông báo
-        const repoName = repository.name
+          // Lấy tên repository cho thông báo
+          const repoName = repository.name
 
-        // Tạo thông báo cho mỗi thành viên dự án
-        for (const [memberId, memberData] of Object.entries(members)) {
-          const notificationRef = push(ref(database, "notifications"))
+          // Tạo thông báo cho mỗi thành viên dự án
+          for (const memberId of Object.keys(members)) {
+            try {
+              const notificationRef = push(ref(database, "notifications"))
 
-          await set(notificationRef, {
-            userId: memberId,
-            eventType: "WEBHOOK_EVENT",
-            referenceId: projectId,
-            message: `Webhook GitHub cho ${repoName} đã được cấu hình thành công`,
-            status: "unread",
-            createdAt: new Date().toISOString(),
-            data: {
-              type: "ping",
-              repository: repository.name,
-              zen: payload.zen,
-            },
-          })
+              await set(notificationRef, {
+                userId: memberId,
+                eventType: "WEBHOOK_EVENT",
+                referenceId: projectId,
+                message: `Webhook GitHub cho ${repoName} đã được cấu hình thành công`,
+                status: "unread",
+                createdAt: new Date().toISOString(),
+                data: {
+                  type: "ping",
+                  repository: repository.name,
+                  zen: payload.zen,
+                },
+              })
+            } catch (notificationError) {
+              console.error(`Lỗi khi tạo thông báo cho thành viên ${memberId}:`, notificationError)
+            }
+          }
         }
+      } catch (projectError) {
+        console.error("Lỗi khi truy vấn thông tin project:", projectError)
       }
     }
 
@@ -582,22 +661,26 @@ async function storeGenericEvent(projectId: string, eventType: string, payload: 
     console.log(`Lưu sự kiện ${eventType} cho project ${projectId}`)
 
     // Lưu sự kiện chung
-    const eventRef = push(ref(database, `projectEvents/${projectId}`))
-    await set(eventRef, {
-      type: eventType,
-      timestamp: new Date().toISOString(),
-      repository: {
-        id: repository.id,
-        name: repository.name,
-        url: repository.html_url,
-      },
-      sender: {
-        id: sender.id,
-        login: sender.login,
-        avatar_url: sender.avatar_url,
-      },
-      payload: JSON.stringify(payload),
-    })
+    try {
+      const eventRef = push(ref(database, `projectEvents/${projectId}`))
+      await set(eventRef, {
+        type: eventType,
+        timestamp: new Date().toISOString(),
+        repository: {
+          id: repository.id,
+          name: repository.name,
+          url: repository.html_url,
+        },
+        sender: {
+          id: sender.id,
+          login: sender.login,
+          avatar_url: sender.avatar_url,
+        },
+        payload: JSON.stringify(payload),
+      })
+    } catch (eventError) {
+      console.error(`Lỗi khi lưu sự kiện ${eventType}:`, eventError)
+    }
 
     console.log(`Lưu sự kiện ${eventType} thành công cho project ${projectId}`)
   } catch (error) {

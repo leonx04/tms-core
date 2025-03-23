@@ -37,6 +37,7 @@ import {
     Search,
     Settings,
     Users,
+    Webhook
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -248,6 +249,13 @@ export default function ProjectDetailPage() {
               <Link href={`/projects/${projectId}/settings`}>
                 <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
                   <Settings className="h-4 w-4 mr-2" /> Settings
+                </Button>
+              </Link>
+            )}
+            {userRoles.includes("admin") && (
+              <Link href={`/projects/${projectId}/webhooks`}>
+                <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
+                  <Webhook className="h-4 w-4 mr-2" /> Webhook Log
                 </Button>
               </Link>
             )}

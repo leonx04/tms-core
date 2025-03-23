@@ -2,30 +2,32 @@
 
 import type React from "react"
 
+import { GitHubWebhookGuide } from "@/components/integration/github-webhook-guide"
+import { CloudinaryIntegrationGuide } from "@/components/integration/cloudinary-integration-guide"
 import { PageHeader } from "@/components/layout/page-header"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
+import { database } from "@/config/firebase"
 import type { CloudinaryConfig, Project, WebhookConfig } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, remove, set, update } from "firebase/database"
 import {
-    AlertCircle,
-    AlertTriangle,
-    ArrowLeft,
-    CheckCircle,
-    Cloud,
-    Eye,
-    EyeOff,
-    GitBranch,
-    Key,
-    Lock,
-    Save,
-    Settings,
-    Trash2,
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle,
+  Cloud,
+  Eye,
+  EyeOff,
+  GitBranch,
+  Key,
+  Lock,
+  Save,
+  Settings,
+  Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -40,6 +42,7 @@ export default function ProjectSettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showIntegrationGuide, setShowIntegrationGuide] = useState(false)
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
@@ -303,6 +306,7 @@ export default function ProjectSettingsPage() {
       }
 
       setSuccess("Webhook configuration updated successfully")
+      setShowIntegrationGuide(true)
     } catch (error) {
       console.error("Error updating webhook config:", error)
       setError("An error occurred while updating webhook configuration")
@@ -620,8 +624,7 @@ export default function ProjectSettingsPage() {
                       type="text"
                       value={folderName}
                       onChange={(e) => setFolderName(e.target.value)}
-                      className="w-full p-3 rounded-lg border border-input
- bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                      className="w-full p-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                       disabled={isSaving}
                       required
                       placeholder="project-folder"
@@ -648,6 +651,10 @@ export default function ProjectSettingsPage() {
                 </form>
               </CardContent>
             </Card>
+
+            {cloudinaryConfig && (
+              <CloudinaryIntegrationGuide webhookUrl={`${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/cloudinary`} />
+            )}
           </TabsContent>
 
           <TabsContent value="webhook" className="space-y-6 animate-in fade-in-50">
@@ -755,6 +762,14 @@ export default function ProjectSettingsPage() {
                 </form>
               </CardContent>
             </Card>
+
+            {(webhookConfig || showIntegrationGuide) && (
+              <GitHubWebhookGuide
+                webhookUrl={`${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/github`}
+                webhookSecret={webhookSecret}
+                repoUrl={githubRepo}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </main>

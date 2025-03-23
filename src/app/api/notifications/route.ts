@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ notifications: notificationsList })
   } catch (error) {
     console.error("Error fetching notifications:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error1" }, { status: 500 })
   }
 }
 
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error creating notification:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error2" }, { status: 500 })
   }
 }
 
@@ -170,7 +170,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error updating notification:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error3" }, { status: 500 })
   }
 }
 
@@ -214,7 +214,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error deleting notification:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error4" }, { status: 500 })
   }
 }
 

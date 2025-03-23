@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(uploadSignature)
   } catch (error) {
     console.error("Error generating upload signature:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error6" }, { status: 500 })
   }
 }
 

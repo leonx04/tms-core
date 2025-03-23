@@ -902,20 +902,18 @@ export default function TaskDetailPage() {
             )}
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-              {/* Responsive TabsList with improved horizontal scrolling for all screen sizes */}
+              {/* Improved TabsList with better scrolling behavior */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${
-                    isMobile ? "overflow-x-auto scrollbar-hide" : ""
-                  } bg-muted/50 p-1 rounded-lg`}
+                  className={`w-full flex ${isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
+                    } bg-muted/50 p-3 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${
-                        isMobile ? "flex-shrink-0" : ""
-                      } text-sm whitespace-nowrap px-3 py-2`}
+                      className={`flex-1 min-w-[100px] ${isMobile ? "flex-shrink-0 mx-0.1" : ""
+                        } text-sm whitespace-nowrap px-3 py-1.5`}
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1254,7 +1252,7 @@ export default function TaskDetailPage() {
                                     className={getStatusColor(childTask.status)}
                                     animation={
                                       childTask.status === TASK_STATUS.TODO ||
-                                      childTask.status === TASK_STATUS.IN_PROGRESS
+                                        childTask.status === TASK_STATUS.IN_PROGRESS
                                         ? "pulse"
                                         : "fade"
                                     }

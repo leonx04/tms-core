@@ -43,6 +43,7 @@
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vercel/analytics": "^1.5.0",
+    "animejs": "^3.2.2",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "latest",
@@ -78,6 +79,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@types/animejs": "^3.1.13",
     "@types/crypto-js": "^4.2.2",
     "@types/node": "^22",
     "@types/nodemailer": "^6.4.17",

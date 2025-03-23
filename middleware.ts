@@ -26,18 +26,26 @@ export async function middleware(request: NextRequest) {
     "/terms",
     "/privacy",
     "/cookies",
+    // Add API routes that need to be accessible without auth
+    "/api/auth",
   ]
 
   // Check if the route is public
-  const isPublicRoute = publicRoutes.some(route =>
-    pathname === route || pathname.startsWith(`${route}/`)
-  )
+  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+
+  // Skip middleware for static assets and API routes
+  if (
+    pathname.startsWith("/_next/") ||
+    pathname.startsWith("/static/") ||
+    pathname.startsWith("/api/") ||
+    pathname.includes(".") // Skip files like favicon.ico, etc.
+  ) {
+    return NextResponse.next()
+  }
 
   // Get JWT from Authorization header or cookie
   const authHeader = request.headers.get("authorization")
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.substring(7)
-    : request.cookies.get("jwt")?.value
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : request.cookies.get("jwt")?.value
 
   let isValidToken = false
 
@@ -87,3 +95,4 @@ export const config = {
     "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
   ],
 }
+

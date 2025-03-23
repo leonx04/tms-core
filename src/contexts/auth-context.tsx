@@ -46,6 +46,7 @@ type AuthContextType = {
   encryptRoute: (route: string) => string
   decryptRoute: (encryptedRoute: string) => string
   obscureUserId: (userId: string, visibleChars?: number) => string
+  refreshToken: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -72,6 +73,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return token
     } catch (error) {
       console.error("Error getting token:", error)
+      return null
+    }
+  }
+
+  // Function to refresh the token
+  const refreshToken = async () => {
+    if (!auth.currentUser) return null
+
+    try {
+      return await updateAuthToken(auth.currentUser)
+    } catch (error) {
+      console.error("Error refreshing token:", error)
       return null
     }
   }
@@ -155,12 +168,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         title: "Welcome back!",
         description: "You've successfully signed in.",
       })
-
-      // Check for redirect URL from sessionStorage
-      const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
-      if (redirectUrl) {
-        // Redirect will be handled by AuthSessionManager
-      }
 
       return
     } catch (error: any) {
@@ -613,6 +620,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         encryptRoute,
         decryptRoute,
         obscureUserId,
+        refreshToken,
       }}
     >
       {children}

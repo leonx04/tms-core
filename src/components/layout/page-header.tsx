@@ -1,5 +1,5 @@
+import { cn } from "@/utils/utils"
 import type React from "react"
-import { cn } from "@/lib/utils"
 
 interface PageHeaderProps {
   title: string

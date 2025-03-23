@@ -1,7 +1,7 @@
 "use client"
 
+import { auth } from "@/config/firebase"
 import { useToast } from "@/hooks/use-toast"
-import { auth } from "@/lib/firebase/firebase"
 import type { UserData } from "@/types"
 import { onAuthStateChanged } from "firebase/auth"
 import { useRouter } from "next/navigation"
@@ -9,21 +9,21 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 
 // Import services
-import { updateAuthToken, clearAuthTokens } from "@/services/jwt-service"
 import {
+  signOut as authSignOut,
   signInWithEmail,
   signUpWithEmail,
-  signOut as authSignOut,
   updateUserProfile,
 } from "@/services/email-auth-service"
+import { clearAuthTokens, updateAuthToken } from "@/services/jwt-service"
+import { decryptRoute, encryptRoute, obscureUserId } from "@/services/route-security-service"
 import {
-  signInWithGoogle,
-  signInWithGithub,
-  linkWithGoogleAccount,
   linkWithGithubAccount,
+  linkWithGoogleAccount,
+  signInWithGithub,
+  signInWithGoogle,
 } from "@/services/social-auth-service"
-import { fetchUserData, createUserData, updateUserData, updateLastActive } from "@/services/user-data-service"
-import { encryptRoute, decryptRoute, obscureUserId } from "@/services/route-security-service"
+import { createUserData, fetchUserData, updateLastActive, updateUserData } from "@/services/user-data-service"
 
 type AuthContextType = {
   user: any | null

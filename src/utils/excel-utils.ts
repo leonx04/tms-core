@@ -1,5 +1,5 @@
-import { database } from "@/lib/firebase/firebase"
-import { mockDatabase } from "@/lib/mock-database"
+import { database } from "@/config/firebase"
+import { mockDatabase } from "@/config/mock-database"
 import type { Task } from "@/types"
 import { get, push, ref, set } from "firebase/database"
 import * as XLSX from "xlsx"

@@ -1,4 +1,4 @@
-import { database } from "@/lib/firebase/firebase"
+import { database } from "@/config/firebase"
 import { get, ref, set, update } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"

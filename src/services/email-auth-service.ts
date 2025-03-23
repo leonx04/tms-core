@@ -1,21 +1,21 @@
 /**
  * Email Authentication Service - Handles email/password authentication
  */
-import { auth, database } from "@/lib/firebase/firebase"
+import { auth, database } from "@/config/firebase"
+import type { UserData } from "@/types"
 import {
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
   EmailAuthProvider,
+  fetchSignInMethodsForEmail,
+  signOut as firebaseSignOut,
   reauthenticateWithCredential,
+  signInWithEmailAndPassword,
   updateEmail,
   updatePassword,
   updateProfile,
-  fetchSignInMethodsForEmail,
-  signOut as firebaseSignOut,
 } from "firebase/auth"
 import { ref, set } from "firebase/database"
-import { updateAuthToken, clearAuthTokens } from "./jwt-service"
-import type { UserData } from "@/types"
+import { clearAuthTokens, updateAuthToken } from "./jwt-service"
 
 // Sign in with email and password
 export const signInWithEmail = async (email: string, password: string) => {

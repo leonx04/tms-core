@@ -8,24 +8,24 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase/firebase"
 import type { CloudinaryConfig, Project, WebhookConfig } from "@/types"
 import { equalTo, get, orderByChild, push, query, ref, remove, set, update } from "firebase/database"
 import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle,
-  Cloud,
-  Eye,
-  EyeOff,
-  GitBranch,
-  Key,
-  Lock,
-  Save,
-  Settings,
-  Trash2,
+    AlertCircle,
+    AlertTriangle,
+    ArrowLeft,
+    CheckCircle,
+    Cloud,
+    Eye,
+    EyeOff,
+    GitBranch,
+    Key,
+    Lock,
+    Save,
+    Settings,
+    Trash2,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"

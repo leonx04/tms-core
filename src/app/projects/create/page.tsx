@@ -1,8 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
+import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase/firebase"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { get, push, ref, set } from "firebase/database"
 import { ArrowLeft, GitBranch, Save } from "lucide-react"

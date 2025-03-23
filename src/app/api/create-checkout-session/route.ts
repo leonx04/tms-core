@@ -1,5 +1,5 @@
-import { database } from "@/lib/firebase/firebase"
-import { auth } from "@/lib/firebase/firebase-admin"
+import { database } from "@/config/firebase"
+import { auth } from "@/config/firebase-admin"
 import { get, ref } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
 import Stripe from "stripe"

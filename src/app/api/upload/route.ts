@@ -1,5 +1,5 @@
-import { getUploadSignature } from "@/lib/cloudinary"
-import { database } from "@/lib/firebase/firebase"
+import { getUploadSignature } from "@/config/cloudinary"
+import { database } from "@/config/firebase"
 import { getAuth } from "firebase-admin/auth"
 import { get, ref } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"

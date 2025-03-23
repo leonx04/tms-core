@@ -1,17 +1,17 @@
 /**
  * Social Authentication Service - Handles social login (Google, GitHub)
  */
-import { auth, database } from "@/lib/firebase/firebase"
-import {
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  signInWithPopup,
-  linkWithPopup,
-  fetchSignInMethodsForEmail,
-} from "firebase/auth"
-import { ref, set, get } from "firebase/database"
-import { updateAuthToken } from "./jwt-service"
+import { auth, database } from "@/config/firebase"
 import type { UserData } from "@/types"
+import {
+    fetchSignInMethodsForEmail,
+    GithubAuthProvider,
+    GoogleAuthProvider,
+    linkWithPopup,
+    signInWithPopup,
+} from "firebase/auth"
+import { get, ref, set } from "firebase/database"
+import { updateAuthToken } from "./jwt-service"
 
 // Handle social sign-in (common logic for both Google and GitHub)
 export const handleSocialSignIn = async (provider: GoogleAuthProvider | GithubAuthProvider, providerName: string) => {

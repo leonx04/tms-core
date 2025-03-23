@@ -1,7 +1,7 @@
 "use client"
 import { loadStripe } from "@stripe/stripe-js"
 import { onValue, ref, update } from "firebase/database"
-import { ArrowLeft, Check, CheckCircle, AlertCircle, Sparkles, Calendar, History, Receipt } from "lucide-react"
+import { AlertCircle, ArrowLeft, Calendar, Check, CheckCircle, History, Receipt, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -13,9 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
 
+import { database } from "@/config/firebase"
+import { secureRoutes } from "@/config/secure-routes"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase/firebase"
-import { secureRoutes } from "@/lib/secure-routes"
 import { type SubscriptionPlan, PACKAGE_LIMITS } from "@/types"
 
 // Initialize Stripe

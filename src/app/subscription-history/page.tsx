@@ -12,8 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 
+import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase/firebase"
 
 type PaymentRecord = {
     packageId: string

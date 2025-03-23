@@ -1,9 +1,9 @@
 /**
  * User Data Service - Handles user data operations
  */
-import { database } from "@/lib/firebase/firebase"
-import { ref, update, get, set } from "firebase/database"
+import { database } from "@/config/firebase"
 import type { UserData } from "@/types"
+import { get, ref, set, update } from "firebase/database"
 
 // Fetch user data from database
 export const fetchUserData = async (userId: string): Promise<UserData | null> => {

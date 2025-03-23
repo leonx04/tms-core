@@ -1,7 +1,7 @@
 /**
  * Route Security Service - Handles route encryption/decryption and user ID obfuscation
  */
-import { secureRoutes } from "@/lib/secure-routes"
+import { secureRoutes } from "@/config/secure-routes"
 
 // Encrypt route
 export const encryptRoute = (route: string): string => {

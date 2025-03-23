@@ -10,30 +10,30 @@ import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAuth } from "@/contexts/auth-context"
-import { formatDate } from "@/lib/utils"
+import { formatDate } from "@/utils/utils"
 import {
-  AlertCircle,
-  ArrowLeft,
-  Calendar,
-  CheckCircle,
-  Clock,
-  CreditCard,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  GitBranch,
-  GithubIcon,
-  ChromeIcon as GoogleIcon,
-  History,
-  Loader2,
-  Moon,
-  Receipt,
-  Save,
-  ShieldCheck,
-  Sparkles,
-  Sun,
-  User,
-  Users,
+    AlertCircle,
+    ArrowLeft,
+    Calendar,
+    CheckCircle,
+    Clock,
+    CreditCard,
+    ExternalLink,
+    Eye,
+    EyeOff,
+    GitBranch,
+    GithubIcon,
+    ChromeIcon as GoogleIcon,
+    History,
+    Loader2,
+    Moon,
+    Receipt,
+    Save,
+    ShieldCheck,
+    Sparkles,
+    Sun,
+    User,
+    Users,
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"

@@ -1,4 +1,4 @@
-import { database } from "@/lib/firebase/firebase"
+import { database } from "@/config/firebase"
 import crypto from "crypto"
 import { get, push, ref, set } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"

@@ -1,5 +1,5 @@
-import { emailTemplates, sendEmail } from "@/lib/email"
-import { database } from "@/lib/firebase/firebase"
+import { emailTemplates, sendEmail } from "@/config/email"
+import { database } from "@/config/firebase"
 import { getAuth } from "firebase-admin/auth"
 import { equalTo, get, orderByChild, query, ref, remove, set, update } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"

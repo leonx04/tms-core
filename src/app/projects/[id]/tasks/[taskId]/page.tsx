@@ -14,36 +14,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { database } from "@/config/firebase"
+import { formatTextWithLinks } from "@/config/format-text-with-links"
 import { useAuth } from "@/contexts/auth-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { useToast } from "@/hooks/use-toast"
-import { database } from "@/lib/firebase/firebase"
-import { formatTextWithLinks } from "@/lib/format-text-with-links"
-import {
-  formatDate,
-  formatDateTime,
-  getPriorityColor,
-  getStatusColor,
-  getStatusLabel,
-  getTypeColor,
-  TASK_STATUS,
-} from "@/lib/utils"
 import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
 import { TASK_PRIORITY, TASK_TYPE } from "@/types"
+import {
+    formatDate,
+    formatDateTime,
+    getPriorityColor,
+    getStatusColor,
+    getStatusLabel,
+    getTypeColor,
+    TASK_STATUS,
+} from "@/utils/utils"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
 import {
-  ArrowLeft,
-  Calendar,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Clock,
-  Edit,
-  GitCommit,
-  MessageSquare,
-  Plus,
-  Save,
-  User,
+    ArrowLeft,
+    Calendar,
+    ChevronDown,
+    ChevronRight,
+    ChevronUp,
+    Clock,
+    Edit,
+    GitCommit,
+    MessageSquare,
+    Plus,
+    Save,
+    User,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"

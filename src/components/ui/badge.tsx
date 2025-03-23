@@ -1,7 +1,7 @@
-import type * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { cva, type VariantProps } from "class-variance-authority";
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/utils";
 
 const badgeVariants = cva(
   "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -47,4 +47,4 @@ function Badge({ className, variant, animation, withDot, dotColor, ...props }: B
   )
 }
 
-export { Badge, badgeVariants }
+export { Badge, badgeVariants };

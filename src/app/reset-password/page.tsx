@@ -3,7 +3,7 @@
 import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { auth } from "@/lib/firebase/firebase"
+import { auth } from "@/config/firebase"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { confirmPasswordReset, verifyPasswordResetCode } from "firebase/auth"
 import { AlertCircle, ArrowLeft, CheckCircle, Eye, EyeOff } from "lucide-react"

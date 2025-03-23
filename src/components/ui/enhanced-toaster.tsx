@@ -1,11 +1,11 @@
 "use client"
 
-import { useToast } from "@/hooks/use-toast"
 import { Toast, ToastClose, ToastDescription, ToastProvider, ToastTitle, ToastViewport } from "@/components/ui/toast"
-import { CheckCircle, AlertCircle, Info, XCircle } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { useEffect, useRef, useState } from "react"
 import { ToastProgress } from "@/components/ui/toast-progress"
+import { useToast } from "@/hooks/use-toast"
+import { cn } from "@/utils/utils"
+import { AlertCircle, CheckCircle, Info, XCircle } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 
 export function EnhancedToaster() {
     const { toasts, dismiss } = useToast()

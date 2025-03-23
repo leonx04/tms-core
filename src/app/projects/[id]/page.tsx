@@ -9,34 +9,34 @@ import { Card } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationLink,
+    PaginationNext,
+    PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { database } from "@/lib/firebase/firebase"
-import { formatDate, getPriorityColor, getStatusColor, getStatusLabel, getTypeColor } from "@/lib/utils"
 import type { Project, Task, User } from "@/types"
+import { formatDate, getPriorityColor, getStatusColor, getStatusLabel, getTypeColor } from "@/utils/utils"
 import { equalTo, get, orderByChild, query, ref } from "firebase/database"
 import {
-  Calendar,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  Filter,
-  Grid,
-  Layers,
-  List,
-  Plus,
-  Search,
-  Settings,
-  Users,
+    Calendar,
+    ChevronDown,
+    ChevronRight,
+    Clock,
+    Filter,
+    Grid,
+    Layers,
+    List,
+    Plus,
+    Search,
+    Settings,
+    Users,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"

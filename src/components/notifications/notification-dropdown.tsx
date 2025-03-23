@@ -2,8 +2,8 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
-import { database } from "@/lib/firebase/firebase"
 import { formatDistanceToNow } from "date-fns"
 import { onValue, ref, remove, update } from "firebase/database"
 import { Bell, Check, CheckCheck, Trash2 } from "lucide-react"

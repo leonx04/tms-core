@@ -25,6 +25,7 @@ import {
     Info,
     MessageSquare,
     RefreshCw,
+    Bell,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -89,6 +90,18 @@ export default function ProjectWebhooksPage() {
 
     const fetchGithubEvents = async (projectId: string) => {
         try {
+            // Fetch all events first
+            const eventsRef = ref(database, `projectEvents/${projectId}`)
+            const eventsSnapshot = await get(eventsRef)
+
+            let events = []
+            if (eventsSnapshot.exists()) {
+                events = Object.entries(eventsSnapshot.val()).map(([id, data]: [string, any]) => ({
+                    id,
+                    ...data,
+                }))
+            }
+
             // Fetch commits
             const commitsRef = ref(database, `projectCommits/${projectId}`)
             const commitsSnapshot = await get(commitsRef)
@@ -129,7 +142,7 @@ export default function ProjectWebhooksPage() {
             }
 
             // Combine all events and sort by timestamp (newest first)
-            const allEvents = [...commits, ...pullRequests, ...issues].sort((a, b) => {
+            const allEvents = [...events, ...commits, ...pullRequests, ...issues].sort((a, b) => {
                 const dateA = new Date(a.timestamp || a.updated_at || a.created_at)
                 const dateB = new Date(b.timestamp || b.updated_at || b.created_at)
                 return dateB.getTime() - dateA.getTime()
@@ -192,6 +205,10 @@ export default function ProjectWebhooksPage() {
                 return <GitPullRequest className="h-5 w-5 text-purple-500" />
             case "issue":
                 return <MessageSquare className="h-5 w-5 text-green-500" />
+            case "push":
+                return <GitBranch className="h-5 w-5 text-blue-500" />
+            case "ping":
+                return <Bell className="h-5 w-5 text-yellow-500" />
             default:
                 return <GitBranch className="h-5 w-5 text-gray-500" />
         }
@@ -328,15 +345,22 @@ export default function ProjectWebhooksPage() {
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <Badge
                                                                 variant="outline"
-                                                                className={`capitalize ${event.type === "commit"
+                                                                className={`capitalize ${event.type === "commit" || event.type === "push"
                                                                         ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/30"
                                                                         : event.type === "pull_request"
                                                                             ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-800/30"
-                                                                            : "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800/30"
+                                                                            : event.type === "ping"
+                                                                                ? "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800/30"
+                                                                                : "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800/30"
                                                                     }`}
                                                             >
                                                                 {event.type.replace("_", " ")}
                                                             </Badge>
+                                                            {event.action && (
+                                                                <Badge variant="outline" className="capitalize">
+                                                                    {event.action}
+                                                                </Badge>
+                                                            )}
                                                             {event.state && (
                                                                 <Badge
                                                                     variant="outline"
@@ -359,6 +383,38 @@ export default function ProjectWebhooksPage() {
                                                                     <span className="font-mono">{event.id.substring(0, 7)}</span>
                                                                     <span className="mx-2">•</span>
                                                                     <span>{event.author?.name || "Unknown author"}</span>
+                                                                    <span className="mx-2">•</span>
+                                                                    <Calendar className="h-3.5 w-3.5 mr-1" />
+                                                                    <span>{formatDate(event.timestamp)}</span>
+                                                                </div>
+                                                            </>
+                                                        ) : event.type === "ping" ? (
+                                                            <>
+                                                                <h3 className="font-medium text-foreground break-words">
+                                                                    Webhook successfully configured
+                                                                </h3>
+                                                                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                                                    <span>{event.repository?.name || "Unknown repository"}</span>
+                                                                    <span className="mx-2">•</span>
+                                                                    <span>{event.sender?.login || "Unknown user"}</span>
+                                                                    <span className="mx-2">•</span>
+                                                                    <Calendar className="h-3.5 w-3.5 mr-1" />
+                                                                    <span>{formatDate(event.timestamp)}</span>
+                                                                </div>
+                                                                {event.zen && (
+                                                                    <p className="text-sm text-muted-foreground mt-2 italic">"{event.zen}"</p>
+                                                                )}
+                                                            </>
+                                                        ) : event.type === "push" ? (
+                                                            <>
+                                                                <h3 className="font-medium text-foreground break-words">
+                                                                    {event.commits_count} commit{event.commits_count !== 1 ? "s" : ""} to{" "}
+                                                                    {event.ref.replace("refs/heads/", "")}
+                                                                </h3>
+                                                                <div className="flex items-center text-sm text-muted-foreground mt-1">
+                                                                    <span>{event.repository?.name || "Unknown repository"}</span>
+                                                                    <span className="mx-2">•</span>
+                                                                    <span>{event.sender?.login || "Unknown user"}</span>
                                                                     <span className="mx-2">•</span>
                                                                     <Calendar className="h-3.5 w-3.5 mr-1" />
                                                                     <span>{formatDate(event.timestamp)}</span>

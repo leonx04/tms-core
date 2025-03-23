@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
     "/cookies",
     // Add API routes that need to be accessible without auth
     "/api/auth",
+    "/api/webhooks", // Thêm đường dẫn webhook vào danh sách công khai
   ]
 
   // Check if the route is public

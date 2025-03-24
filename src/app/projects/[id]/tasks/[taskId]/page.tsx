@@ -22,32 +22,38 @@ import { useToast } from "@/hooks/use-toast"
 import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
 import { TASK_PRIORITY, TASK_TYPE } from "@/types"
 import {
-    formatDate,
-    formatDateTime,
-    getPriorityColor,
-    getStatusColor,
-    getStatusLabel,
-    getTypeColor,
-    TASK_STATUS,
+  formatDate,
+  formatDateTime,
+  getPriorityColor,
+  getStatusColor,
+  getStatusLabel,
+  getTypeColor,
+  TASK_STATUS,
 } from "@/utils/utils"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
 import {
-    ArrowLeft,
-    Calendar,
-    ChevronDown,
-    ChevronRight,
-    ChevronUp,
-    Clock,
-    Edit,
-    GitCommit,
-    MessageSquare,
-    Plus,
-    Save,
-    User,
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Edit,
+  GitCommit,
+  MessageSquare,
+  Plus,
+  Save,
+  User,
+  ImageIcon,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
+import { MediaUploader } from "@/components/cloudinary/media-uploader"
+import { TaskMediaSection } from "@/components/task/task-media-section"
+import { CommentMediaUploader } from "@/components/comment/comment-media-uploader"
+import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service"
+import Image from "next/image"
 
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
@@ -88,6 +94,10 @@ export default function TaskDetailPage() {
   const [showChildTasks, setShowChildTasks] = useState(true)
   const [projectData, setProjectData] = useState<any>(null)
   const [activeTab, setActiveTab] = useState("details")
+  const [cloudinaryConfigExists, setCloudinaryConfigExists] = useState(false)
+  const [selectedMedia, setSelectedMedia] = useState<any | null>(null)
+  const [showMediaPreview, setShowMediaPreview] = useState(false)
+  const [commentMediaUrl, setCommentMediaUrl] = useState<string | null>(null)
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
@@ -109,6 +119,7 @@ export default function TaskDetailPage() {
   const [subtaskTags, setSubtaskTags] = useState<string[]>([])
   const [subtaskTagInput, setSubtaskTagInput] = useState<string>("")
   const [subtaskCommitId, setSubtaskCommitId] = useState<string>("")
+  const [subtaskMedia, setSubtaskMedia] = useState<any[]>([])
 
   // Check if we're on a mobile device
   const isMobile = useMediaQuery("(max-width: 640px)")
@@ -247,6 +258,10 @@ export default function TaskDetailPage() {
           router.push("/projects")
           return
         }
+
+        // Check if Cloudinary is configured for this project
+        const cloudinaryConfig = await getCloudinaryConfigByProjectId(projectId)
+        setCloudinaryConfigExists(!!cloudinaryConfig)
 
         // Fetch all users involved in this task
         const userIds = new Set<string>()
@@ -413,6 +428,7 @@ export default function TaskDetailPage() {
         userId: user.uid,
         content: commentText.trim(),
         createdAt: new Date().toISOString(),
+        mediaUrl: commentMediaUrl,
       }
 
       await set(newCommentRef, newComment)
@@ -457,6 +473,7 @@ export default function TaskDetailPage() {
       })
 
       setCommentText("")
+      setCommentMediaUrl(null)
       toast({
         title: "Comment added",
         description: "Your comment has been added successfully",
@@ -606,6 +623,7 @@ export default function TaskDetailPage() {
         parentTaskId: taskId,
         tags: subtaskTags,
         gitCommitId: parsedCommitId || null,
+        mediaAttachments: subtaskMedia,
       }
 
       await set(newTaskRef, newTask)
@@ -660,6 +678,7 @@ export default function TaskDetailPage() {
       setSubtaskTags([])
       setSubtaskTagInput("")
       setSubtaskCommitId("")
+      setSubtaskMedia([])
 
       // Close dialog
       setShowSubtaskDialog(false)
@@ -771,6 +790,31 @@ export default function TaskDetailPage() {
     return subtaskAssignedTo.filter((id) => users[id]).map((id) => users[id])
   }
 
+  const handleSubtaskMediaUpload = (result: any) => {
+    setSubtaskMedia([...subtaskMedia, result])
+  }
+
+  const handleCommentMediaUpload = (result: any) => {
+    setCommentMediaUrl(result.url)
+  }
+
+  const isImage = (item: any) => {
+    return (
+      item?.resourceType === "image" ||
+      (item?.format && ["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(item.format.toLowerCase()))
+    )
+  }
+
+  const isVideo = (item: any) => {
+    return (
+      item?.resourceType === "video" || (item?.format && ["mp4", "webm", "ogv"].includes(item.format.toLowerCase()))
+    )
+  }
+
+  const isPdf = (item: any) => {
+    return item?.format && item.format.toLowerCase() === "pdf"
+  }
+
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
@@ -808,6 +852,10 @@ export default function TaskDetailPage() {
 
   if (childTasks.length > 0) {
     tabItems.push({ id: "subtasks", label: `Subtasks (${childTasks.length})` })
+  }
+
+  if (cloudinaryConfigExists) {
+    tabItems.push({ id: "media", label: "Media" })
   }
 
   return (
@@ -1066,6 +1114,38 @@ export default function TaskDetailPage() {
                     </div>
                   </div>
                 )}
+
+                {task.mediaAttachments && task.mediaAttachments.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-medium mb-3">Media Attachments</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {task.mediaAttachments.map((media, index) => (
+                        <div
+                          key={index}
+                          className="border rounded-md overflow-hidden cursor-pointer"
+                          onClick={() => {
+                            setSelectedMedia(media)
+                            setShowMediaPreview(true)
+                          }}
+                        >
+                          <div className="aspect-square relative bg-muted">
+                            {isImage(media) ? (
+                              <img
+                                src={media.url || "/placeholder.svg"}
+                                alt="Media attachment"
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center h-full">
+                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </TabsContent>
 
               <TabsContent value="comments" className="animate-in fade-in-50">
@@ -1079,7 +1159,34 @@ export default function TaskDetailPage() {
                         className="bg-background border border-input p-3 rounded-lg w-full focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-y transition-colors"
                         disabled={isSubmittingComment}
                       />
-                      <div className="flex justify-end mt-2">
+
+                      {commentMediaUrl && (
+                        <div className="mt-2 p-2 border rounded-md inline-flex items-center gap-2">
+                          <img
+                            src={commentMediaUrl || "/placeholder.svg"}
+                            alt="Attached media"
+                            className="h-10 w-10 object-cover rounded"
+                          />
+                          <button
+                            type="button"
+                            className="text-xs text-destructive hover:underline"
+                            onClick={() => setCommentMediaUrl(null)}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex justify-between mt-2">
+                        <div>
+                          {cloudinaryConfigExists && (
+                            <CommentMediaUploader
+                              projectId={projectId}
+                              taskId={taskId}
+                              onUploadComplete={handleCommentMediaUpload}
+                            />
+                          )}
+                        </div>
                         <Button
                           type="submit"
                           disabled={isSubmittingComment || !commentText.trim()}
@@ -1126,6 +1233,18 @@ export default function TaskDetailPage() {
                                 __html: formatTextWithLinks(comment.content, projectData?.githubRepo),
                               }}
                             />
+
+                            {comment.mediaUrl && (
+                              <div className="mt-3">
+                                <a href={comment.mediaUrl} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={comment.mediaUrl || "/placeholder.svg"}
+                                    alt="Comment attachment"
+                                    className="max-h-48 rounded-md border border-border"
+                                  />
+                                </a>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1310,6 +1429,10 @@ export default function TaskDetailPage() {
                   )}
                 </div>
               </TabsContent>
+
+              <TabsContent value="media" className="animate-in fade-in-50">
+                <TaskMediaSection projectId={projectId} taskId={taskId} />
+              </TabsContent>
             </Tabs>
           </div>
         </div>
@@ -1486,6 +1609,51 @@ export default function TaskDetailPage() {
                 />
               </div>
 
+              {cloudinaryConfigExists && (
+                <div className="space-y-4">
+                  <label className="block text-sm font-medium">Media Attachments</label>
+                  <MediaUploader
+                    projectId={projectId}
+                    onUploadComplete={handleSubtaskMediaUpload}
+                    multiple
+                    maxFileSize={10 * 1024 * 1024} // 10MB
+                    allowedFileTypes={["jpg", "jpeg", "png", "gif", "webp", "pdf", "mp4", "webm"]}
+                  />
+
+                  {subtaskMedia.length > 0 && (
+                    <div className="mt-2">
+                      <h4 className="text-sm font-medium mb-2">Uploaded Media ({subtaskMedia.length})</h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {subtaskMedia.map((media, index) => (
+                          <div key={index} className="border rounded-md p-2 flex flex-col">
+                            <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
+                              {media.resourceType === "image" ? (
+                                <img
+                                  src={media.url || "/placeholder.svg"}
+                                  alt="Uploaded media"
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : (
+                                <div className="flex items-center justify-center h-full">
+                                  <span className="text-xs text-muted-foreground">{media.resourceType}</span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setSubtaskMedia(subtaskMedia.filter((_, i) => i !== index))}
+                              className="text-xs text-destructive mt-1 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-end space-x-4 pt-4">
                 <Button
                   type="button"
@@ -1502,6 +1670,77 @@ export default function TaskDetailPage() {
                 </Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Media Preview Dialog */}
+        <Dialog open={showMediaPreview} onOpenChange={setShowMediaPreview}>
+          <DialogContent className="max-w-3xl">
+            <DialogHeader>
+              <DialogTitle>Media Preview</DialogTitle>
+            </DialogHeader>
+            {selectedMedia && (
+              <div className="mt-4">
+                {isImage(selectedMedia) ? (
+                  <div className="relative w-full max-h-[70vh] flex items-center justify-center">
+                    <Image
+                      src={selectedMedia.url || "/placeholder.svg"}
+                      alt={selectedMedia.publicId || "Image"}
+                      width={800}
+                      height={600}
+                      className="max-h-[70vh] object-contain"
+                    />
+                  </div>
+                ) : isVideo(selectedMedia) ? (
+                  <div className="w-full">
+                    <video src={selectedMedia.url} controls className="w-full max-h-[70vh]" />
+                  </div>
+                ) : isPdf(selectedMedia) ? (
+                  <div className="w-full h-[70vh]">
+                    <iframe src={selectedMedia.url} className="w-full h-full" title="PDF Viewer" />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center p-8">
+                    <ImageIcon className="h-16 w-16 mb-4 text-muted-foreground" />
+                    <p className="text-center">
+                      This file type cannot be previewed.
+                      <a
+                        href={selectedMedia.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline ml-1"
+                      >
+                        Open in new tab
+                      </a>
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 flex justify-between items-center">
+                  <div>
+                    <p className="text-sm font-medium truncate">{selectedMedia.publicId}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedMedia.resourceType}/{selectedMedia.format}
+                      {selectedMedia.width &&
+                        selectedMedia.height &&
+                        ` • ${selectedMedia.width}×${selectedMedia.height}`}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={selectedMedia.url} target="_blank" rel="noopener noreferrer">
+                        Open
+                      </a>
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={selectedMedia.url} download>
+                        Download
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </main>

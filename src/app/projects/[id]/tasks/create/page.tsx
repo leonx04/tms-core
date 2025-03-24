@@ -21,6 +21,9 @@ import { ArrowLeft, GitCommit, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { MediaUploader } from "@/components/cloudinary/media-uploader"
+import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 // Extract commit ID from input string
 const extractCommitId = (input: string): string => {
@@ -45,6 +48,8 @@ export default function CreateTaskPage() {
   const [project, setProject] = useState<Project | null>(null)
   const [availableMembers, setAvailableMembers] = useState<Record<string, any>>({})
   const [projectTasks, setProjectTasks] = useState<{ id: string; title: string; assignedTo?: string[] }[]>([])
+  const [cloudinaryConfigExists, setCloudinaryConfigExists] = useState(false)
+  const [uploadedMedia, setUploadedMedia] = useState<any[]>([])
   const { user } = useAuth()
   const params = useParams()
   const router = useRouter()
@@ -140,6 +145,10 @@ export default function CreateTaskPage() {
           }))
           setProjectTasks(tasksList)
         }
+
+        // Check if Cloudinary is configured for this project
+        const cloudinaryConfig = await getCloudinaryConfigByProjectId(projectId)
+        setCloudinaryConfigExists(!!cloudinaryConfig)
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({
@@ -193,6 +202,14 @@ export default function CreateTaskPage() {
         parentTaskId: parentTaskId || null,
         tags,
         gitCommitId: parsedCommitId || null,
+        mediaAttachments: uploadedMedia.map((media) => ({
+          publicId: media.publicId,
+          url: media.url,
+          resourceType: media.resourceType,
+          format: media.format,
+          width: media.width,
+          height: media.height,
+        })),
       }
 
       await set(newTaskRef, newTask)
@@ -255,6 +272,10 @@ export default function CreateTaskPage() {
   const getAssigneeUsers = () => {
     if (!assignedTo) return []
     return assignedTo.filter((id) => availableMembers[id]).map((id) => availableMembers[id])
+  }
+
+  const handleUploadComplete = (result: any) => {
+    setUploadedMedia([...uploadedMedia, result])
   }
 
   if (loading) {
@@ -552,6 +573,57 @@ export default function CreateTaskPage() {
                   className="w-full mt-2"
                 />
               </div>
+
+              {cloudinaryConfigExists && (
+                <div className="space-y-4 md:col-span-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Media Attachments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <MediaUploader
+                        projectId={projectId}
+                        onUploadComplete={handleUploadComplete}
+                        multiple
+                        maxFileSize={10 * 1024 * 1024} // 10MB
+                        allowedFileTypes={["jpg", "jpeg", "png", "gif", "webp", "pdf", "mp4", "webm"]}
+                      />
+
+                      {uploadedMedia.length > 0 && (
+                        <div className="mt-4">
+                          <h4 className="text-sm font-medium mb-2">Uploaded Media ({uploadedMedia.length})</h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                            {uploadedMedia.map((media, index) => (
+                              <div key={index} className="border rounded-md p-2 flex flex-col">
+                                <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
+                                  {media.resourceType === "image" ? (
+                                    <img
+                                      src={media.url || "/placeholder.svg"}
+                                      alt="Uploaded media"
+                                      className="object-cover w-full h-full"
+                                    />
+                                  ) : (
+                                    <div className="flex items-center justify-center h-full">
+                                      <span className="text-xs text-muted-foreground">{media.resourceType}</span>
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setUploadedMedia(uploadedMedia.filter((_, i) => i !== index))}
+                                  className="text-xs text-destructive mt-1 hover:underline"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-4 pt-4 border-t border-border">
@@ -562,7 +634,7 @@ export default function CreateTaskPage() {
               </Link>
               <Button type="submit" disabled={isSaving} className="rounded-lg shadow-sm">
                 <Save className="mr-2 h-4 w-4" />
-                {isSaving ? "Create Task" : "Creating..."}
+                {isSaving ? "Creating..." : "Create Task"}
               </Button>
             </div>
           </form>

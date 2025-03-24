@@ -38,6 +38,18 @@ export type Project = {
   >
 }
 
+// Media attachment type for Cloudinary uploads
+export type MediaAttachment = {
+  publicId: string
+  url: string
+  resourceType: string
+  format: string
+  width?: number
+  height?: number
+  duration?: number
+  bytes?: number
+}
+
 // Task related types
 export type Task = {
   id: string
@@ -57,6 +69,7 @@ export type Task = {
   parentTaskId?: string | null
   gitCommitId?: string | null
   tags?: string[]
+  mediaAttachments?: MediaAttachment[] // Added for Cloudinary media attachments
 }
 
 // Comment related types
@@ -67,6 +80,8 @@ export type Comment = {
   content: string
   createdAt: string
   updatedAt?: string
+  mediaAttachments?: any[];
+  mediaUrl?: string | null
   attachments?: {
     id: string
     url: string
@@ -75,6 +90,15 @@ export type Comment = {
     size: number
   }[]
 }
+// export interface Comment {
+//   id: string
+//   taskId: string
+//   userId: string
+//   content: string
+//   createdAt: string
+//   updatedAt?: string
+//   mediaUrl?: string
+// }
 
 // Task history related types
 export type TaskHistory = {
@@ -102,6 +126,8 @@ export type CloudinaryConfig = {
   updatedAt: string
   createdBy: string
   updatedBy: string
+  webhookEnabled?: boolean
+  webhookUrl?: string
 }
 
 // Webhook configuration type
@@ -110,6 +136,7 @@ export type WebhookConfig = {
   projectId: string
   webhookUrl: string
   webhookType: string
+  webhookSecret?: string
   createdAt: string
   updatedAt: string
   createdBy: string
@@ -126,6 +153,13 @@ export type Notification = {
   status: string
   createdAt: string
   readAt?: string
+  data?: {
+    type?: string
+    event?: string
+    resourceType?: string
+    publicId?: string
+    url?: string
+  }
 }
 
 // User type
@@ -175,6 +209,18 @@ export type ImportHistory = {
   errors: string[]
 }
 
+// Cloudinary upload result type
+export type CloudinaryUploadResult = {
+  url: string
+  publicId: string
+  resourceType: string
+  format: string
+  width?: number
+  height?: number
+  duration?: number
+  bytes?: number
+}
+
 // Constants
 export const TASK_STATUS = {
   TODO: "todo",
@@ -218,5 +264,6 @@ export const NOTIFICATION_TYPES = {
   REMOVE_MEMBER: "REMOVE_MEMBER",
   UPDATE_ROLE: "UPDATE_ROLE",
   WEBHOOK_EVENT: "WEBHOOK_EVENT",
+  CLOUDINARY_EVENT: "CLOUDINARY_EVENT",
 }
 

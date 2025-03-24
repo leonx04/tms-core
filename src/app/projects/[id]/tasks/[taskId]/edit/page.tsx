@@ -7,13 +7,13 @@ import { AssigneeGroup } from "@/components/ui/assignee-group"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
 import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -31,6 +31,10 @@ import { ArrowLeft, GitCommit, Save } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useMemo, useState } from "react"
+import { MediaUploader } from "@/components/cloudinary/media-uploader"
+import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 // Extract commit ID from input string
 const extractCommitId = (input: string): string => {
@@ -111,6 +115,10 @@ export default function EditTaskPage() {
   const projectId = params.id as string
   const taskId = params.taskId as string
   const { toast } = useToast()
+  const [cloudinaryConfigExists, setCloudinaryConfigExists] = useState(false)
+  const [uploadedMedia, setUploadedMedia] = useState<any[]>([])
+  const [existingMedia, setExistingMedia] = useState<any[]>([])
+  const [mediaToRemove, setMediaToRemove] = useState<string[]>([])
 
   // Form state
   const [title, setTitle] = useState("")
@@ -131,6 +139,7 @@ export default function EditTaskPage() {
   const [parentTaskSearch, setParentTaskSearch] = useState("")
   const [projectTasks, setProjectTasks] = useState<{ id: string; title: string; assignedTo?: string[] }[]>([])
   const [showParentTaskPopover, setShowParentTaskPopover] = useState(false)
+  const [activeMediaTab, setActiveMediaTab] = useState("gallery")
 
   useEffect(() => {
     const fetchData = async () => {
@@ -183,6 +192,11 @@ export default function EditTaskPage() {
         setTags(taskData.tags ?? [])
         setCommitId(taskData.gitCommitId || "")
         setParentTaskId(taskData.parentTaskId || null)
+
+        // Set existing media if available
+        if (taskData.mediaAttachments && Array.isArray(taskData.mediaAttachments)) {
+          setExistingMedia(taskData.mediaAttachments)
+        }
 
         // Fetch project details
         const projectRef = ref(database, `projects/${projectId}`)
@@ -246,13 +260,19 @@ export default function EditTaskPage() {
 
         if (tasksSnapshot.exists()) {
           const tasksData = tasksSnapshot.val()
-          const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
-            id,
-            title: data.title,
-            assignedTo: data.assignedTo || [],
-          }))
+          const tasksList = Object.entries(tasksData)
+            .filter(([id]) => id !== taskId) // Exclude current task
+            .map(([id, data]: [string, any]) => ({
+              id,
+              title: data.title,
+              assignedTo: data.assignedTo || [],
+            }))
           setProjectTasks(tasksList)
         }
+
+        // Check if Cloudinary is configured for this project
+        const cloudinaryConfig = await getCloudinaryConfigByProjectId(projectId)
+        setCloudinaryConfigExists(!!cloudinaryConfig)
       } catch (error) {
         console.error("Error fetching data:", error)
         toast({
@@ -309,6 +329,12 @@ export default function EditTaskPage() {
     try {
       const parsedCommitId = extractCommitId(commitId)
 
+      // Prepare media attachments
+      const mediaAttachments = [
+        ...existingMedia.filter((media) => !mediaToRemove.includes(media.publicId)),
+        ...uploadedMedia,
+      ]
+
       const updates: Partial<Task> = {
         title,
         description,
@@ -323,6 +349,7 @@ export default function EditTaskPage() {
         updatedAt: new Date().toISOString(),
         parentTaskId: parentTaskId || null,
         gitCommitId: parsedCommitId || null,
+        mediaAttachments,
       }
 
       // Track changes for history
@@ -385,6 +412,12 @@ export default function EditTaskPage() {
         changes.push({ field: "gitCommitId", oldValue: originalCommitId, newValue: parsedCommitId })
       }
 
+      // Check for media changes
+      const originalMedia = originalTask.mediaAttachments || []
+      if (isDifferent(originalMedia, mediaAttachments)) {
+        changes.push({ field: "mediaAttachments", oldValue: originalMedia, newValue: mediaAttachments })
+      }
+
       // Only update if there are actual changes
       if (changes.length > 0) {
         const taskRef = ref(database, `tasks/${taskId}`)
@@ -429,6 +462,22 @@ export default function EditTaskPage() {
   const getAssigneeUsers = () => {
     if (!assignedTo) return []
     return assignedTo.filter((id) => availableMembers[id]).map((id) => availableMembers[id])
+  }
+
+  const handleUploadComplete = (result: any) => {
+    setUploadedMedia([...uploadedMedia, result])
+  }
+
+  const handleRemoveExistingMedia = (publicId: string) => {
+    setMediaToRemove([...mediaToRemove, publicId])
+  }
+
+  const handleRestoreMedia = (publicId: string) => {
+    setMediaToRemove(mediaToRemove.filter((id) => id !== publicId))
+  }
+
+  const handleRemoveUploadedMedia = (index: number) => {
+    setUploadedMedia(uploadedMedia.filter((_, i) => i !== index))
   }
 
   if (loading) {
@@ -742,6 +791,119 @@ export default function EditTaskPage() {
                   className="w-full mt-2"
                 />
               </div>
+
+              {cloudinaryConfigExists && (
+                <div className="md:col-span-2 space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Media Attachments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Tabs value={activeMediaTab} onValueChange={setActiveMediaTab}>
+                        <TabsList className="grid w-full grid-cols-2 mb-4">
+                          <TabsTrigger value="gallery">Current Media</TabsTrigger>
+                          <TabsTrigger value="upload">Upload New</TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="gallery">
+                          {existingMedia.length === 0 ? (
+                            <div className="text-center py-6 border border-dashed border-border rounded-lg">
+                              <p className="text-muted-foreground">No media attachments yet</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                              {existingMedia.map((media, index) => (
+                                <div
+                                  key={index}
+                                  className={`border rounded-md p-2 flex flex-col ${
+                                    mediaToRemove.includes(media.publicId) ? "opacity-50" : ""
+                                  }`}
+                                >
+                                  <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
+                                    {media.resourceType === "image" ? (
+                                      <img
+                                        src={media.url || "/placeholder.svg"}
+                                        alt="Media attachment"
+                                        className="object-cover w-full h-full"
+                                      />
+                                    ) : (
+                                      <div className="flex items-center justify-center h-full">
+                                        <span className="text-xs text-muted-foreground">{media.resourceType}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {mediaToRemove.includes(media.publicId) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRestoreMedia(media.publicId)}
+                                      className="text-xs text-primary mt-1 hover:underline"
+                                    >
+                                      Restore
+                                    </button>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveExistingMedia(media.publicId)}
+                                      className="text-xs text-destructive mt-1 hover:underline"
+                                    >
+                                      Remove
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </TabsContent>
+
+                        <TabsContent value="upload">
+                          <MediaUploader
+                            projectId={projectId}
+                            taskId={taskId}
+                            onUploadComplete={handleUploadComplete}
+                            multiple
+                            maxFileSize={10 * 1024 * 1024} // 10MB
+                            allowedFileTypes={["jpg", "jpeg", "png", "gif", "webp", "pdf", "mp4", "webm"]}
+                          />
+
+                          {uploadedMedia.length > 0 && (
+                            <div className="mt-4">
+                              <h4 className="text-sm font-medium mb-2">
+                                Newly Uploaded Media ({uploadedMedia.length})
+                              </h4>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                {uploadedMedia.map((media, index) => (
+                                  <div key={index} className="border rounded-md p-2 flex flex-col">
+                                    <div className="aspect-square relative bg-muted rounded-md overflow-hidden">
+                                      {media.resourceType === "image" ? (
+                                        <img
+                                          src={media.url || "/placeholder.svg"}
+                                          alt="Uploaded media"
+                                          className="object-cover w-full h-full"
+                                        />
+                                      ) : (
+                                        <div className="flex items-center justify-center h-full">
+                                          <span className="text-xs text-muted-foreground">{media.resourceType}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveUploadedMedia(index)}
+                                      className="text-xs text-destructive mt-1 hover:underline"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end space-x-4 pt-4 border-t border-border">

@@ -1,6 +1,6 @@
 import { getUploadSignature } from "@/config/cloudinary"
 import { database } from "@/config/firebase"
-import { getAuth } from "firebase-admin/auth"
+import { auth as adminAuth } from "@/config/firebase-admin" // Import from our firebase-admin config
 import { get, ref } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
 import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service"
@@ -13,8 +13,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Check if adminAuth is available
+    if (!adminAuth) {
+      console.error("Firebase Admin Auth is not initialized")
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+    }
+
     const token = authHeader.split(" ")[1]
-    const decodedToken = await getAuth().verifyIdToken(token)
+    const decodedToken = await adminAuth.verifyIdToken(token) // Use our imported adminAuth
     const userId = decodedToken.uid
 
     // Get project ID and other parameters from request

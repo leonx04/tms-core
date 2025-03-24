@@ -51,7 +51,7 @@ async function fetchFileContent(repo: string, path: string, ref: string) {
         }
 
         const data = await response.json()
-        return atob(data.content) // Decode base64 content
+        return data.content // Return base64 content for proper decoding later
     } catch (error) {
         console.error("Error fetching file content:", error)
         return null

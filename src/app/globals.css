@@ -4,6 +4,7 @@
 
 /* --- Base Styles & Variables --- */
 @layer base {
+
   /* Light Mode Variables */
   :root {
     --background: 0 0% 100%;
@@ -69,6 +70,17 @@
     --role-dev: 210 100% 50%;
     --role-tester: 142 76% 45%;
     --role-document-writer: 35 100% 50%;
+
+    /* GitHub Light Theme Colors */
+    --github-bg: 0 0% 100%;
+    --github-fg: 215 14% 15%;
+    --github-border: 210 18% 87%;
+    --github-muted: 210 29% 97%;
+    --github-accent: 212 92% 45%;
+    --github-success: 137 55% 36%;
+    --github-warning: 40 100% 50%;
+    --github-danger: 357 100% 55%;
+    --github-purple: 261 80% 48%;
   }
 
   /* Dark Mode Variables - High Contrast Black & White Theme */
@@ -135,6 +147,17 @@
     --role-dev: 210 100% 65%;
     --role-tester: 142 76% 55%;
     --role-document-writer: 35 100% 65%;
+
+    /* GitHub Dark Theme Colors */
+    --github-bg: 215 14% 5%;
+    --github-fg: 210 18% 87%;
+    --github-border: 215 14% 19%;
+    --github-muted: 215 14% 10%;
+    --github-accent: 212 92% 53%;
+    --github-success: 137 55% 40%;
+    --github-warning: 40 100% 56%;
+    --github-danger: 357 100% 65%;
+    --github-purple: 261 80% 58%;
   }
 
   /* Reset & Base Rules */
@@ -163,10 +186,58 @@
   .dark .text-shadow {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari and Opera */
+  }
+
+  /* GitHub-style scrollbars */
+  .github-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .github-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .github-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(149, 157, 165, 0.3);
+    border-radius: 6px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  .github-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(149, 157, 165, 0.5);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  .dark .github-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(110, 118, 129, 0.4);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+
+  .dark .github-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(110, 118, 129, 0.7);
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
 }
 
 /* --- Components & Custom Styles --- */
 @layer components {
+
   /* --- Form Elements --- */
   input,
   select,
@@ -817,23 +888,19 @@
 
   /* Shimmer effect for badges */
   .badge-shimmer {
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.2) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0) 100%);
     background-size: 200% 100%;
     animation: badge-shimmer 2s infinite;
   }
 
   .dark .badge-shimmer {
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.1) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0) 100%);
     background-size: 200% 100%;
   }
 
@@ -1125,5 +1192,223 @@
     background: hsl(var(--muted));
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   }
-}
 
+  /* GitHub-style diff colors */
+  .diff-addition {
+    background-color: #e6ffec;
+    color: #24292f;
+  }
+
+  .dark .diff-addition {
+    background-color: #0d1b12;
+    color: #adbac7;
+  }
+
+  .diff-deletion {
+    background-color: #ffebe9;
+    color: #24292f;
+  }
+
+  .dark .diff-deletion {
+    background-color: #1c0c0b;
+    color: #adbac7;
+  }
+
+  .diff-info {
+    background-color: #f1f8ff;
+    color: #0550ae;
+  }
+
+  .dark .diff-info {
+    background-color: #0c2d6b;
+    color: #6cb6ff;
+  }
+
+  /* GitHub-style syntax highlighting */
+  .syntax-keyword {
+    color: #cf222e;
+  }
+
+  .dark .syntax-keyword {
+    color: #ff7b72;
+  }
+
+  .syntax-string {
+    color: #0a3069;
+  }
+
+  .dark .syntax-string {
+    color: #a5d6ff;
+  }
+
+  .syntax-comment {
+    color: #6e7781;
+  }
+
+  .dark .syntax-comment {
+    color: #8b949e;
+  }
+
+  .syntax-variable {
+    color: #953800;
+  }
+
+  .dark .syntax-variable {
+    color: #ffa657;
+  }
+
+  .syntax-function {
+    color: #8250df;
+  }
+
+  .dark .syntax-function {
+    color: #d2a8ff;
+  }
+
+  /* Dialog improvements */
+  .dialog-github {
+    border: 1px solid #d0d7de;
+    box-shadow: 0 8px 24px rgba(140, 149, 159, 0.2);
+    border-radius: 6px;
+  }
+
+  .dark .dialog-github {
+    border: 1px solid #30363d;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  /* GitHub-style buttons */
+  .btn-github {
+    background-color: #f6f8fa;
+    border: 1px solid rgba(27, 31, 36, 0.15);
+    color: #24292f;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+
+  .btn-github:hover {
+    background-color: #f3f4f6;
+    border-color: rgba(27, 31, 36, 0.15);
+  }
+
+  .dark .btn-github {
+    background-color: #21262d;
+    border: 1px solid rgba(240, 246, 252, 0.1);
+    color: #c9d1d9;
+  }
+
+  .dark .btn-github:hover {
+    background-color: #30363d;
+    border-color: rgba(240, 246, 252, 0.1);
+  }
+
+  .btn-github-primary {
+    background-color: #2da44e;
+    border: 1px solid rgba(27, 31, 36, 0.15);
+    color: #ffffff;
+  }
+
+  .btn-github-primary:hover {
+    background-color: #2c974b;
+  }
+
+  .dark .btn-github-primary {
+    background-color: #238636;
+    border: 1px solid rgba(240, 246, 252, 0.1);
+  }
+
+  .dark .btn-github-primary:hover {
+    background-color: #2ea043;
+  }
+
+  /* GitHub-style badges */
+  .badge-github {
+    display: inline-flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 18px;
+    border-radius: 2em;
+    padding: 0 7px;
+  }
+
+  .badge-github-added {
+    background-color: #dafbe1;
+    color: #1a7f37;
+    border: 1px solid rgba(74, 194, 107, 0.4);
+  }
+
+  .dark .badge-github-added {
+    background-color: rgba(46, 160, 67, 0.15);
+    color: #56d364;
+    border: 1px solid rgba(46, 160, 67, 0.4);
+  }
+
+  .badge-github-deleted {
+    background-color: #ffebe9;
+    color: #cf222e;
+    border: 1px solid rgba(248, 81, 73, 0.4);
+  }
+
+  .dark .badge-github-deleted {
+    background-color: rgba(248, 81, 73, 0.15);
+    color: #f85149;
+    border: 1px solid rgba(248, 81, 73, 0.4);
+  }
+
+  .badge-github-modified {
+    background-color: #ddf4ff;
+    color: #0969da;
+    border: 1px solid rgba(84, 174, 255, 0.4);
+  }
+
+  .dark .badge-github-modified {
+    background-color: rgba(56, 139, 253, 0.15);
+    color: #79c0ff;
+    border: 1px solid rgba(56, 139, 253, 0.4);
+  }
+
+  /* Fix for dialog content overflow */
+  .dialog-content-fix {
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dialog-content-fix-body {
+    flex: 1;
+    overflow: auto;
+    padding-right: 0.5rem;
+    /* Add padding to account for scrollbar */
+  }
+
+  /* Fix for tooltip positioning */
+  .tooltip-fix {
+    z-index: 100;
+    max-width: 300px;
+  }
+
+  /* Fix for badge overflow */
+  .badge-fix {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Fix for button positioning in small screens */
+  @media (max-width: 640px) {
+    .button-group-fix {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .button-group-fix>* {
+      flex: 1;
+      min-width: 120px;
+    }
+  }
+
+
+}

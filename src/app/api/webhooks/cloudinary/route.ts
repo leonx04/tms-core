@@ -1,5 +1,5 @@
+import { verifyCloudinarySignature } from "@/config/cloudinary"
 import { database } from "@/config/firebase"
-import crypto from "crypto"
 import { get, push, ref, set } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
 
@@ -23,20 +23,17 @@ export async function POST(request: NextRequest) {
       const cloudinaryConfigs = cloudinarySnapshot.val()
       let isValidSignature = false
       let projectId = null
+      let projectConfig = null
 
       // Check signature against all project configurations
       for (const [configId, config] of Object.entries(cloudinaryConfigs)) {
         const { apiSecret, projectId: pid } = config as any
 
         if (apiSecret) {
-          const expectedSignature = crypto
-            .createHash("sha1")
-            .update(JSON.stringify(payload) + apiSecret)
-            .digest("hex")
-
-          if (signature === expectedSignature) {
+          if (verifyCloudinarySignature(payload, signature, apiSecret)) {
             isValidSignature = true
             projectId = pid
+            projectConfig = config
             break
           }
         }
@@ -48,7 +45,7 @@ export async function POST(request: NextRequest) {
 
       // Process the webhook for the identified project
       if (projectId) {
-        await processCloudinaryWebhook(projectId, payload)
+        await processCloudinaryWebhook(projectId, payload, projectConfig)
       }
     } else {
       // If no signature, try to identify the project from the payload
@@ -65,16 +62,18 @@ export async function POST(request: NextRequest) {
         if (cloudinarySnapshot.exists()) {
           const cloudinaryConfigs = cloudinarySnapshot.val()
           let projectId = null
+          let projectConfig = null
 
           for (const [configId, config] of Object.entries(cloudinaryConfigs)) {
             if ((config as any).folderName === folderName) {
               projectId = (config as any).projectId
+              projectConfig = config
               break
             }
           }
 
           if (projectId) {
-            await processCloudinaryWebhook(projectId, payload)
+            await processCloudinaryWebhook(projectId, payload, projectConfig)
           }
         }
       }
@@ -83,11 +82,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error processing Cloudinary webhook:", error)
-    return NextResponse.json({ error: "Internal server error7" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 
-async function processCloudinaryWebhook(projectId: string, payload: any) {
+async function processCloudinaryWebhook(projectId: string, payload: any, projectConfig: any) {
   try {
     // Store the Cloudinary event in the database
     const eventRef = push(ref(database, `projectCloudinaryEvents/${projectId}`))
@@ -133,6 +132,32 @@ async function processCloudinaryWebhook(projectId: string, payload: any) {
             },
           })
         }
+      }
+    }
+
+    // Update project uploads if this is a new upload
+    if (payload.notification_type === "upload" && payload.metadata) {
+      // Check if the upload has task or comment metadata
+      const { taskId, commentId, userId } = payload.metadata
+
+      if ((taskId || commentId) && userId) {
+        // Store the upload in the project uploads
+        const uploadRef = push(ref(database, `projectCloudinaryUploads/${projectId}`))
+
+        await set(uploadRef, {
+          projectId,
+          userId,
+          publicId: payload.public_id,
+          url: payload.secure_url || payload.url,
+          resourceType: payload.resource_type,
+          format: payload.format,
+          width: payload.width,
+          height: payload.height,
+          bytes: payload.bytes,
+          taskId,
+          commentId,
+          createdAt: new Date().toISOString(),
+        })
       }
     }
   } catch (error) {

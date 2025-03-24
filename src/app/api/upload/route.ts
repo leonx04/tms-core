@@ -3,6 +3,7 @@ import { database } from "@/config/firebase"
 import { getAuth } from "firebase-admin/auth"
 import { get, ref } from "firebase/database"
 import { type NextRequest, NextResponse } from "next/server"
+import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service"
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,8 +17,8 @@ export async function POST(request: NextRequest) {
     const decodedToken = await getAuth().verifyIdToken(token)
     const userId = decodedToken.uid
 
-    // Get project ID from request
-    const { projectId, ...uploadParams } = await request.json()
+    // Get project ID and other parameters from request
+    const { projectId, taskId, commentId, ...uploadParams } = await request.json()
 
     if (!projectId) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 })
@@ -38,34 +39,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Cloudinary config for this project
-    const cloudinaryRef = ref(database, `projectCloudinary`)
-    const cloudinarySnapshot = await get(cloudinaryRef)
-
-    if (!cloudinarySnapshot.exists()) {
-      return NextResponse.json({ error: "Cloudinary configuration not found" }, { status: 404 })
-    }
-
-    const cloudinaryConfigs = cloudinarySnapshot.val()
-    let projectCloudinaryConfig: {
-      cloudName: string
-      apiKey: string
-      apiSecret: string
-      folderName: string
-      projectId: string
-    } | undefined
-
-    // Find the config for this project
-    Object.values(cloudinaryConfigs).forEach((config: any) => {
-      if (config.projectId === projectId) {
-        projectCloudinaryConfig = config
-      }
-    })
+    const projectCloudinaryConfig = await getCloudinaryConfigByProjectId(projectId)
 
     if (!projectCloudinaryConfig) {
       return NextResponse.json({ error: "Cloudinary configuration not found for this project" }, { status: 404 })
     }
 
-    // Generate upload signature
+    // Add metadata to the upload params
+    const metadata = {
+      userId,
+      projectId,
+      ...(taskId ? { taskId } : {}),
+      ...(commentId ? { commentId } : {}),
+    }
+
+    // Generate upload signature with metadata
     const uploadSignature = getUploadSignature(
       {
         cloudName: projectCloudinaryConfig.cloudName,
@@ -73,13 +61,19 @@ export async function POST(request: NextRequest) {
         apiSecret: projectCloudinaryConfig.apiSecret,
         folderName: projectCloudinaryConfig.folderName,
       },
-      uploadParams,
+      {
+        ...uploadParams,
+        context: `userId=${userId}|projectId=${projectId}${taskId ? `|taskId=${taskId}` : ""}${commentId ? `|commentId=${commentId}` : ""}`,
+      },
     )
 
-    return NextResponse.json(uploadSignature)
+    return NextResponse.json({
+      ...uploadSignature,
+      metadata,
+    })
   } catch (error) {
     console.error("Error generating upload signature:", error)
-    return NextResponse.json({ error: "Internal server error6" }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 

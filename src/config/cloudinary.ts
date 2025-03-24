@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary"
+import crypto from "crypto"
 
 export type CloudinaryConfig = {
   cloudName: string
@@ -36,7 +37,6 @@ export const getUploadSignature = (config: CloudinaryConfig, params: Record<stri
       .join("&") + config.apiSecret
 
   // Generate SHA-1 hash
-  const crypto = require("crypto")
   const signature = crypto.createHash("sha1").update(signatureString).digest("hex")
 
   return {
@@ -48,5 +48,14 @@ export const getUploadSignature = (config: CloudinaryConfig, params: Record<stri
   }
 }
 
-export default cloudinary
+// Verify Cloudinary webhook signature
+export const verifyCloudinarySignature = (payload: any, signature: string, apiSecret: string): boolean => {
+  const expectedSignature = crypto
+    .createHash("sha1")
+    .update(JSON.stringify(payload) + apiSecret)
+    .digest("hex")
 
+  return signature === expectedSignature
+}
+
+export default cloudinary

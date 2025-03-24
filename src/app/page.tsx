@@ -578,7 +578,7 @@ export default function Home() {
                   variant="outline"
                   size="lg"
                   className="w-full sm:w-auto rounded-full mt-3 sm:mt-0"
-                  onClick={() => scrollToSection("features")}
+                  onClick={() => scrollToSection("how-it-works")}
                 >
                   See How It Works
                 </Button>

@@ -2,8 +2,8 @@
 
 import type React from "react"
 
-import { GitHubWebhookGuide } from "@/components/integration/github-webhook-guide"
-import { CloudinaryIntegrationGuide } from "@/components/integration/cloudinary-integration-guide"
+import { GitHubWebhookGuide } from "@/components/github/github-webhook-guide"
+import { CloudinaryIntegrationGuide } from "@/components/cloudinary/cloudinary-integration-guide"
 import { PageHeader } from "@/components/layout/page-header"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"

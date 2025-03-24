@@ -26,6 +26,7 @@ export const updateAuthToken = async (user: any): Promise<string | null> => {
 export const clearAuthTokens = (): void => {
   localStorage.removeItem("jwt")
   localStorage.removeItem("jwt_expiry")
+  localStorage.removeItem("auth_session_valid")
   document.cookie = "jwt=; path=/; max-age=0; SameSite=Strict; Secure"
 }
 
@@ -36,5 +37,15 @@ export const checkTokenExpiry = (): boolean => {
   if (!expiryTime) return true
   // Check if token is expired
   return Date.now() > Number.parseInt(expiryTime)
+}
+
+// Set a flag indicating the auth session is valid
+export const setAuthSessionValid = (): void => {
+  localStorage.setItem("auth_session_valid", "true")
+}
+
+// Check if the auth session is marked as valid
+export const isAuthSessionValid = (): boolean => {
+  return localStorage.getItem("auth_session_valid") === "true"
 }
 

@@ -6,10 +6,12 @@ import { useToast } from "@/hooks/use-toast"
 import { usePathname, useRouter } from "next/navigation"
 import { Suspense, useCallback, useEffect, useState } from "react"
 import { useSearchParamsWithSuspense } from "@/hooks/use-search-params-with-suspense"
+// Add import for the new functions
+import { clearAuthTokens, isAuthSessionValid } from "@/services/jwt-service"
 
 // Create a component that uses useSearchParams with Suspense
 function AuthSessionContent() {
-  const { user, loading, refreshToken } = useAuth()
+  const { user, loading, refreshToken, signOut } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParamsWithSuspense()
@@ -73,6 +75,7 @@ function AuthSessionContent() {
   }, [pathname, searchParams, user, loading, router])
 
   // Main authentication state handler - simplified to avoid conflicts with middleware
+  // Update the useEffect for main authentication state handler
   useEffect(() => {
     const handleAuthState = async () => {
       if (loading) return
@@ -80,9 +83,19 @@ function AuthSessionContent() {
       setIsCheckingAuth(true)
 
       try {
-        // If token is expired, refresh it if we have a user
+        // Check for expired token on page load/return to site
         if (user && checkTokenExpiry()) {
-          await refreshToken()
+          // Try to refresh the token
+          const newToken = await refreshToken()
+
+          // If refresh failed, force logout and redirect to login
+          if (!newToken || !isAuthSessionValid()) {
+            console.log("Token expired and refresh failed, logging out")
+            clearAuthTokens()
+            await signOut()
+            router.push("/login")
+            return
+          }
         }
 
         // Client-side handling for auth pages when user is logged in
@@ -113,20 +126,57 @@ function AuthSessionContent() {
     }
 
     handleAuthState()
-  }, [user, loading, pathname, router, checkTokenExpiry, refreshToken, isPublicRoute])
+  }, [user, loading, pathname, router, checkTokenExpiry, refreshToken, isPublicRoute, signOut])
 
   // Set up interval to check token expiry regularly - but less frequently
+  // Update the interval effect to also check auth session validity
   useEffect(() => {
-    const tokenCheckInterval = setInterval(() => {
-      if (checkTokenExpiry() && user) {
-        refreshToken()
+    // Check token validity immediately when component mounts or when returning to the site
+    const checkTokenValidity = async () => {
+      if (user) {
+        if (checkTokenExpiry() || !isAuthSessionValid()) {
+          const newToken = await refreshToken()
+          if (!newToken) {
+            // Token refresh failed, force logout
+            clearAuthTokens()
+            await signOut()
+            router.push("/login")
+          }
+        }
       }
-    }, 300000) // Check every 5 minutes instead of every minute
+    }
+
+    // Run the check immediately
+    checkTokenValidity()
+
+    const tokenCheckInterval = setInterval(() => {
+      if ((checkTokenExpiry() || !isAuthSessionValid()) && user) {
+        refreshToken().then((token) => {
+          if (!token) {
+            // Token refresh failed, force logout
+            clearAuthTokens()
+            signOut().then(() => {
+              router.push("/login")
+            })
+          }
+        })
+      }
+    }, 300000) // Check every 5 minutes
+
+    // Add a visibility change listener to check token when user returns to the tab/window
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        checkTokenValidity()
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
 
     return () => {
       clearInterval(tokenCheckInterval)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
     }
-  }, [user, checkTokenExpiry, refreshToken])
+  }, [user, checkTokenExpiry, refreshToken, router, signOut])
 
   return null
 }

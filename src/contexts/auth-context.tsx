@@ -72,9 +72,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!auth.currentUser) return null
 
     try {
-      return await updateAuthToken(auth.currentUser)
+      const token = await updateAuthToken(auth.currentUser)
+      if (token) {
+        // Mark the session as valid since we successfully refreshed the token
+        setAuthSessionValid()
+        return token
+      }
+      return null
     } catch (error) {
       console.error("Error refreshing token:", error)
+      // Clear tokens on refresh failure
+      clearAuthTokens()
       return null
     }
   }
@@ -85,7 +93,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (user) {
         // Update auth token
-        await updateAuthToken(user)
+        const token = await updateAuthToken(user)
+
+        // Mark the session as valid if we got a token
+        if (token) {
+          setAuthSessionValid()
+        }
 
         // Fetch user data from database
         const userDataResult = await fetchUserData(user.uid)
@@ -441,6 +454,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Link GitHub account error:", error)
       throw error
     }
+  }
+
+  const setAuthSessionValid = () => {
+    // This function can be implemented to set a cookie or local storage flag
+    // indicating that the user's session is valid.
+    // For example:
+    // localStorage.setItem('authSessionValid', 'true');
   }
 
   return (

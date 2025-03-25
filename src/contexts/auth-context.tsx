@@ -15,7 +15,7 @@ import {
   signUpWithEmail,
   updateUserProfile,
 } from "@/services/email-auth-service"
-import { clearAuthTokens, updateAuthToken } from "@/services/jwt-service"
+import { clearAuthTokens, updateAuthToken, setAuthSessionValid, validateSessionOnReturn } from "@/services/jwt-service"
 import { decryptRoute, encryptRoute, obscureUserId } from "@/services/route-security-service"
 import {
   linkWithGithubAccount,
@@ -92,6 +92,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(user)
 
       if (user) {
+        // Check session validity when returning to the website
+        if (!validateSessionOnReturn()) {
+          // Try to refresh the token
+          const token = await updateAuthToken(user)
+          if (!token) {
+            // If refresh fails, set user to null and clear tokens
+            setUser(null)
+            clearAuthTokens()
+            setLoading(false)
+            return
+          }
+        }
+
         // Update auth token
         const token = await updateAuthToken(user)
 
@@ -270,6 +283,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await authSignOut()
 
       if (result.success) {
+        // Ensure all tokens and session data are cleared
+        clearAuthTokens()
+
         toast({
           title: "Signed out",
           description: "You've been successfully signed out.",
@@ -454,13 +470,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Link GitHub account error:", error)
       throw error
     }
-  }
-
-  const setAuthSessionValid = () => {
-    // This function can be implemented to set a cookie or local storage flag
-    // indicating that the user's session is valid.
-    // For example:
-    // localStorage.setItem('authSessionValid', 'true');
   }
 
   return (

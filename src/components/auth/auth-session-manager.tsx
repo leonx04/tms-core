@@ -6,10 +6,15 @@ import { useToast } from "@/hooks/use-toast"
 import { usePathname, useRouter } from "next/navigation"
 import { Suspense, useCallback, useEffect, useState } from "react"
 import { useSearchParamsWithSuspense } from "@/hooks/use-search-params-with-suspense"
-// Add import for the new functions
-import { clearAuthTokens, isAuthSessionValid } from "@/services/jwt-service"
+// Thêm import cho các hàm mới
+import {
+  clearAuthTokens,
+  isAuthSessionValid,
+  updateLastActivity,
+  validateSessionOnReturn,
+} from "@/services/jwt-service"
 
-// Create a component that uses useSearchParams with Suspense
+// Tạo một component sử dụng useSearchParams với Suspense
 function AuthSessionContent() {
   const { user, loading, refreshToken, signOut } = useAuth()
   const router = useRouter()
@@ -18,7 +23,7 @@ function AuthSessionContent() {
   const { toast } = useToast()
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
 
-  // Public routes that don't require authentication
+  // Các tuyến công khai không yêu cầu xác thực
   const publicRoutes = [
     "/",
     "/login",
@@ -26,7 +31,7 @@ function AuthSessionContent() {
     "/reset-password",
     "/upgrade",
     "/forgot-password",
-    // Footer pages
+    // Trang footer
     "/roadmap",
     "/changelog",
     "/about",
@@ -38,7 +43,7 @@ function AuthSessionContent() {
     "/cookies",
   ]
 
-  // Check if the route is public
+  // Kiểm tra xem tuyến có phải là công khai không
   const isPublicRoute = useCallback(
     (path: string) => {
       return publicRoutes.some((route) => path === route || path.startsWith(`${route}/`))
@@ -46,27 +51,18 @@ function AuthSessionContent() {
     [publicRoutes],
   )
 
-  // Check if the JWT token is expired
-  const checkTokenExpiry = useCallback(() => {
-    const expiryTime = localStorage.getItem("jwt_expiry")
-    // If no expiry, consider it expired
-    if (!expiryTime) return true
-    // Check if token is expired
-    return Date.now() > Number.parseInt(expiryTime)
-  }, [])
-
-  // Get callbackUrl from URL if present
+  // Lấy callbackUrl từ tham số URL nếu có
   useEffect(() => {
     if (pathname === "/login") {
       const callbackUrl = searchParams.get("callbackUrl")
       const isMiddlewareRedirect = searchParams.get("mw") === "1"
 
       if (callbackUrl) {
-        // Store the callback URL to redirect after successful login
+        // Lưu URL callback để chuyển hướng sau khi đăng nhập thành công
         const decodedUrl = decodeURIComponent(callbackUrl)
         sessionStorage.setItem("redirectAfterAuth", decodedUrl)
 
-        // If this is a middleware redirect and we have a valid user, redirect immediately
+        // Nếu đây là chuyển hướng middleware và chúng ta có người dùng hợp lệ, chuyển hướng ngay lập tức
         if (isMiddlewareRedirect && user && !loading) {
           router.push(decodedUrl)
         }
@@ -74,8 +70,31 @@ function AuthSessionContent() {
     }
   }, [pathname, searchParams, user, loading, router])
 
-  // Main authentication state handler - simplified to avoid conflicts with middleware
-  // Update the useEffect for main authentication state handler
+  // Xử lý sự kiện hoạt động người dùng để cập nhật thời gian hoạt động cuối cùng
+  useEffect(() => {
+    const updateActivityTime = () => {
+      if (user) {
+        updateLastActivity()
+      }
+    }
+
+    // Thêm trình nghe sự kiện cho các hoạt động người dùng
+    window.addEventListener("mousemove", updateActivityTime)
+    window.addEventListener("keydown", updateActivityTime)
+    window.addEventListener("click", updateActivityTime)
+    window.addEventListener("scroll", updateActivityTime)
+    window.addEventListener("touchstart", updateActivityTime)
+
+    return () => {
+      // Dọn dẹp trình nghe sự kiện
+      window.removeEventListener("mousemove", updateActivityTime)
+      window.removeEventListener("keydown", updateActivityTime)
+      window.removeEventListener("click", updateActivityTime)
+      window.removeEventListener("scroll", updateActivityTime)
+      window.removeEventListener("touchstart", updateActivityTime)
+    }
+  }, [user])
+
   useEffect(() => {
     const handleAuthState = async () => {
       if (loading) return
@@ -83,14 +102,10 @@ function AuthSessionContent() {
       setIsCheckingAuth(true)
 
       try {
-        // Check for expired token on page load/return to site
-        if (user && checkTokenExpiry()) {
-          // Try to refresh the token
+        if (user && !validateSessionOnReturn()) {
           const newToken = await refreshToken()
 
-          // If refresh failed, force logout and redirect to login
           if (!newToken || !isAuthSessionValid()) {
-            console.log("Token expired and refresh failed, logging out")
             clearAuthTokens()
             await signOut()
             router.push("/login")
@@ -98,7 +113,6 @@ function AuthSessionContent() {
           }
         }
 
-        // Client-side handling for auth pages when user is logged in
         if (user && (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password")) {
           const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
           if (redirectUrl) {
@@ -110,7 +124,6 @@ function AuthSessionContent() {
           return
         }
 
-        // Handle redirect after login
         if (user && pathname === "/login") {
           const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
           if (redirectUrl) {
@@ -126,18 +139,14 @@ function AuthSessionContent() {
     }
 
     handleAuthState()
-  }, [user, loading, pathname, router, checkTokenExpiry, refreshToken, isPublicRoute, signOut])
+  }, [user, loading, pathname, router, refreshToken, isPublicRoute, signOut])
 
-  // Set up interval to check token expiry regularly - but less frequently
-  // Update the interval effect to also check auth session validity
   useEffect(() => {
-    // Check token validity immediately when component mounts or when returning to the site
     const checkTokenValidity = async () => {
       if (user) {
-        if (checkTokenExpiry() || !isAuthSessionValid()) {
+        if (!validateSessionOnReturn()) {
           const newToken = await refreshToken()
           if (!newToken) {
-            // Token refresh failed, force logout
             clearAuthTokens()
             await signOut()
             router.push("/login")
@@ -146,14 +155,12 @@ function AuthSessionContent() {
       }
     }
 
-    // Run the check immediately
     checkTokenValidity()
 
     const tokenCheckInterval = setInterval(() => {
-      if ((checkTokenExpiry() || !isAuthSessionValid()) && user) {
+      if (user && !isAuthSessionValid()) {
         refreshToken().then((token) => {
           if (!token) {
-            // Token refresh failed, force logout
             clearAuthTokens()
             signOut().then(() => {
               router.push("/login")
@@ -161,22 +168,28 @@ function AuthSessionContent() {
           }
         })
       }
-    }, 300000) // Check every 5 minutes
-
-    // Add a visibility change listener to check token when user returns to the tab/window
+    }, 300000) 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         checkTokenValidity()
       }
     }
 
+    const handleBeforeUnload = () => {
+      if (user) {
+        updateLastActivity()
+      }
+    }
+
     document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("beforeunload", handleBeforeUnload)
 
     return () => {
       clearInterval(tokenCheckInterval)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("beforeunload", handleBeforeUnload)
     }
-  }, [user, checkTokenExpiry, refreshToken, router, signOut])
+  }, [user, refreshToken, router, signOut])
 
   return null
 }

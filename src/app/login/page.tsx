@@ -7,13 +7,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Github, LogIn, Mail } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/contexts/auth-context"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle } from "lucide-react"
 
 // Create a client component that uses useSearchParams
 function LoginForm() {
@@ -21,6 +21,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
+  const [rememberMe, setRememberMe] = useState(false)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -266,6 +267,8 @@ function LoginForm() {
                       id="remember"
                       type="checkbox"
                       className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
                     />
                     <label htmlFor="remember" className="ml-2 block text-sm text-muted-foreground">
                       Remember me
@@ -311,3 +314,4 @@ export default function LoginPage() {
     </Suspense>
   )
 }
+

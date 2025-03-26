@@ -1,151 +1,181 @@
 /**
- * JWT Service - Quản lý tất cả các hoạt động liên quan đến token JWT
+ * JWT Service - Manages all JWT token related operations
  */
 
-// Cập nhật token trong localStorage và cookie
+const AUTH_TOKEN_KEY = "auth_token"
+const AUTH_TOKEN_EXPIRY_KEY = "auth_token_expiry"
+const AUTH_SESSION_VALID_KEY = "auth_session_valid"
+const AUTH_LAST_ACTIVITY_KEY = "auth_last_activity"
+const AUTH_SESSION_START_KEY = "auth_session_start"
+
+// Update token in localStorage and cookie
 export const updateAuthToken = async (user: any): Promise<string | null> => {
   try {
-    const token = await user.getIdToken(true) // Buộc làm mới token
+    const token = await user.getIdToken(true) // Force token refresh
 
-    // Lưu token vào localStorage
-    localStorage.setItem("auth_token", token)
+    // Check if token is valid before saving
+    if (!token) {
+      console.error("Token is invalid or empty")
+      return null
+    }
 
-    // Thiết lập thời gian hết hạn (1 giờ thay vì 30 phút để giảm số lần làm mới)
+    // Save token to localStorage
+    localStorage.setItem(AUTH_TOKEN_KEY, token)
+
+    // Set expiry time (1 hour instead of 30 minutes to reduce refresh frequency)
     const expiryTime = Date.now() + 60 * 60 * 1000
-    localStorage.setItem("auth_token_expiry", expiryTime.toString())
+    localStorage.setItem(AUTH_TOKEN_EXPIRY_KEY, expiryTime.toString())
 
-    // Thiết lập thời gian hoạt động cuối cùng
-    localStorage.setItem("auth_last_activity", Date.now().toString())
+    // Set last activity time
+    localStorage.setItem(AUTH_LAST_ACTIVITY_KEY, Date.now().toString())
 
-    // Đánh dấu phiên đăng nhập là hợp lệ
+    // Mark login session as valid
     setAuthSessionValid()
 
-    // Thiết lập token trong cookie cho middleware
+    // Set token in cookie for middleware with SameSite and Secure
     document.cookie = `jwt=${token}; path=/; max-age=${60 * 60}; SameSite=Strict; Secure`
 
     return token
   } catch (error) {
-    console.error("Lỗi khi lấy token:", error)
+    console.error("Error getting token:", error)
     return null
   }
 }
 
-// Xóa tất cả các token xác thực
+// Clear all authentication tokens
 export const clearAuthTokens = (): void => {
-  localStorage.removeItem("auth_token")
-  localStorage.removeItem("auth_token_expiry")
-  localStorage.removeItem("auth_session_valid")
-  localStorage.removeItem("auth_last_activity")
-  localStorage.removeItem("auth_session_start")
-
-  // Xóa cookie JWT
-  document.cookie = "jwt=; path=/; max-age=0; SameSite=Strict; Secure"
-
-  // Phát sự kiện để đồng bộ hóa giữa các tab
   try {
+    localStorage.removeItem(AUTH_TOKEN_KEY)
+    localStorage.removeItem(AUTH_TOKEN_EXPIRY_KEY)
+    localStorage.removeItem(AUTH_SESSION_VALID_KEY)
+    localStorage.removeItem(AUTH_LAST_ACTIVITY_KEY)
+    localStorage.removeItem(AUTH_SESSION_START_KEY)
+
+    // Clear JWT cookie
+    document.cookie = "jwt=; path=/; max-age=0; SameSite=Strict; Secure"
+
+    // Dispatch event to sync between tabs
     window.dispatchEvent(new Event("auth_logout"))
   } catch (error) {
-    console.error("Lỗi khi phát sự kiện logout:", error)
+    console.error("Error clearing tokens:", error)
   }
 }
 
-// Kiểm tra xem token JWT có hết hạn không
+// Check if JWT token has expired
 export const checkTokenExpiry = (): boolean => {
-  const expiryTime = localStorage.getItem("auth_token_expiry")
-  // Nếu không có thời gian hết hạn, coi như đã hết hạn
-  if (!expiryTime) return true
-  // Kiểm tra xem token có hết hạn không
-  return Date.now() > Number.parseInt(expiryTime)
+  try {
+    const expiryTime = localStorage.getItem(AUTH_TOKEN_EXPIRY_KEY)
+    // If no expiry time, consider expired
+    if (!expiryTime) return true
+    // Check if token has expired
+    return Date.now() > Number.parseInt(expiryTime)
+  } catch (error) {
+    console.error("Error checking token expiry:", error)
+    return true // Consider expired if error
+  }
 }
 
-// Thiết lập cờ chỉ ra rằng phiên xác thực là hợp lệ
+// Set flag indicating authentication session is valid
 export const setAuthSessionValid = (): void => {
-  localStorage.setItem("auth_session_valid", "true")
-
-  // Thiết lập thời gian bắt đầu phiên nếu chưa được thiết lập
-  if (!localStorage.getItem("auth_session_start")) {
-    localStorage.setItem("auth_session_start", Date.now().toString())
-  }
-
-  // Cập nhật thời gian hoạt động cuối cùng
-  updateLastActivity()
-
-  // Phát sự kiện để đồng bộ hóa giữa các tab
   try {
+    localStorage.setItem(AUTH_SESSION_VALID_KEY, "true")
+
+    // Set session start time if not already set
+    if (!localStorage.getItem(AUTH_SESSION_START_KEY)) {
+      localStorage.setItem(AUTH_SESSION_START_KEY, Date.now().toString())
+    }
+
+    // Update last activity time
+    updateLastActivity()
+
+    // Dispatch event to sync between tabs
     window.dispatchEvent(new Event("auth_session_update"))
   } catch (error) {
-    console.error("Lỗi khi phát sự kiện cập nhật phiên:", error)
+    console.error("Error setting valid session:", error)
   }
 }
 
-// Cập nhật thời gian hoạt động cuối cùng
+// Update last activity time
 export const updateLastActivity = (): void => {
-  localStorage.setItem("auth_last_activity", Date.now().toString())
+  try {
+    localStorage.setItem(AUTH_LAST_ACTIVITY_KEY, Date.now().toString())
+  } catch (error) {
+    console.error("Error updating last activity time:", error)
+  }
 }
 
-// Kiểm tra xem phiên xác thực có được đánh dấu là hợp lệ không
+// Check if authentication session is marked as valid
 export const isAuthSessionValid = (): boolean => {
-  // Kiểm tra cờ phiên hợp lệ
-  const isValid = localStorage.getItem("auth_session_valid") === "true"
+  try {
+    // Check valid session flag
+    const isValid = localStorage.getItem(AUTH_SESSION_VALID_KEY) === "true"
 
-  if (!isValid) return false
+    if (!isValid) return false
 
-  // Kiểm tra thời gian không hoạt động
-  const lastActivity = localStorage.getItem("auth_last_activity")
-  if (lastActivity) {
-    const inactiveTime = Date.now() - Number.parseInt(lastActivity)
-    // Đăng xuất sau 8 giờ không hoạt động
-    const maxInactiveTime = 8 * 60 * 60 * 1000
-    if (inactiveTime > maxInactiveTime) {
-      clearAuthTokens()
-      return false
+    // Check inactivity time
+    const lastActivity = localStorage.getItem(AUTH_LAST_ACTIVITY_KEY)
+    if (lastActivity) {
+      const inactiveTime = Date.now() - Number.parseInt(lastActivity)
+      // Logout after 8 hours of inactivity
+      const maxInactiveTime = 8 * 60 * 60 * 1000
+      if (inactiveTime > maxInactiveTime) {
+        clearAuthTokens()
+        return false
+      }
     }
-  }
 
-  // Kiểm tra tổng thời gian phiên
-  const sessionStart = localStorage.getItem("auth_session_start")
-  if (sessionStart) {
-    const sessionDuration = Date.now() - Number.parseInt(sessionStart)
-    // Buộc đăng xuất sau 7 ngày kể từ khi bắt đầu phiên
-    const maxSessionDuration = 7 * 24 * 60 * 60 * 1000
-    if (sessionDuration > maxSessionDuration) {
-      clearAuthTokens()
-      return false
+    // Check total session time
+    const sessionStart = localStorage.getItem(AUTH_SESSION_START_KEY)
+    if (sessionStart) {
+      const sessionDuration = Date.now() - Number.parseInt(sessionStart)
+      // Force logout after 7 days from session start
+      const maxSessionDuration = 7 * 24 * 60 * 60 * 1000
+      if (sessionDuration > maxSessionDuration) {
+        clearAuthTokens()
+        return false
+      }
     }
-  }
 
-  return true
+    return true
+  } catch (error) {
+    console.error("Error checking valid session:", error)
+    return false // Consider invalid if error
+  }
 }
 
-// Kiểm tra và làm mới phiên khi quay lại trang web
+// Check and refresh session when returning to website
 export const validateSessionOnReturn = (): boolean => {
-  // Kiểm tra xem token có tồn tại không
-  const token = localStorage.getItem("auth_token")
-  if (!token) return false
+  try {
+    // Check if token exists
+    const token = localStorage.getItem(AUTH_TOKEN_KEY)
+    if (!token) return false
 
-  // Kiểm tra tính hợp lệ của phiên
-  if (!isAuthSessionValid()) {
-    clearAuthTokens()
+    // Check session validity
+    if (!isAuthSessionValid()) {
+      clearAuthTokens()
+      return false
+    }
+
+    // Check token expiry
+    if (checkTokenExpiry()) {
+      // Token has expired, but we'll let the refresh process handle it
+      return false
+    }
+
+    // Update activity time
+    updateLastActivity()
+    return true
+  } catch (error) {
+    console.error("Error validating session:", error)
     return false
   }
-
-  // Kiểm tra thời gian hết hạn của token
-  if (checkTokenExpiry()) {
-    // Token đã hết hạn, nhưng chúng ta sẽ để quá trình làm mới xử lý nó
-    // trong auth-context hoặc auth-session-manager
-    return false
-  }
-
-  // Cập nhật thời gian hoạt động
-  updateLastActivity()
-  return true
 }
 
-// Đồng bộ hóa trạng thái đăng nhập giữa các tab
+// Sync login state between tabs
 export const setupAuthSyncBetweenTabs = (onLogout: () => void, onSessionUpdate: () => void): (() => void) => {
   const handleStorageChange = (event: StorageEvent) => {
-    if (event.key === "auth_token" && event.newValue === null) {
-      // Token đã bị xóa trong tab khác
+    if (event.key === AUTH_TOKEN_KEY && event.newValue === null) {
+      // Token was removed in another tab
       onLogout()
     }
   }
@@ -158,14 +188,14 @@ export const setupAuthSyncBetweenTabs = (onLogout: () => void, onSessionUpdate: 
     onSessionUpdate()
   }
 
-  // Lắng nghe sự kiện storage
+  // Listen for storage events
   window.addEventListener("storage", handleStorageChange)
 
-  // Lắng nghe sự kiện tùy chỉnh
+  // Listen for custom events
   window.addEventListener("auth_logout", handleLogoutEvent)
   window.addEventListener("auth_session_update", handleSessionUpdateEvent)
 
-  // Trả về hàm dọn dẹp
+  // Return cleanup function
   return () => {
     window.removeEventListener("storage", handleStorageChange)
     window.removeEventListener("auth_logout", handleLogoutEvent)
@@ -173,8 +203,13 @@ export const setupAuthSyncBetweenTabs = (onLogout: () => void, onSessionUpdate: 
   }
 }
 
-// Lấy token hiện tại từ localStorage
+// Get current token from localStorage
 export const getCurrentToken = (): string | null => {
-  return localStorage.getItem("auth_token")
+  try {
+    return localStorage.getItem(AUTH_TOKEN_KEY)
+  } catch (error) {
+    console.error("Error getting current token:", error)
+    return null
+  }
 }
 

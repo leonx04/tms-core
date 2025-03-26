@@ -4,21 +4,26 @@ import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { usePathname, useRouter } from "next/navigation"
-import { Suspense, useCallback, useEffect, useState } from "react"
+import { Suspense, useCallback, useEffect, useState, useRef } from "react"
 import { useSearchParamsWithSuspense } from "@/hooks/use-search-params-with-suspense"
-// Import các hàm từ jwt-service
+// Import functions from jwt-service
 import { clearAuthTokens, updateLastActivity } from "@/services/jwt-service"
 
-// Component sử dụng useSearchParams với Suspense
+// Component using useSearchParams with Suspense
 function AuthSessionContent() {
   const { user, loading, refreshToken, signOut, checkAuthState } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParamsWithSuspense()
   const { toast } = useToast()
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(false)
 
-  // Các tuyến công khai không yêu cầu xác thực
+  // Track auth check state to avoid repeated checks
+  const authCheckInProgress = useRef(false)
+  const redirectInProgress = useRef(false)
+  const didInitialCheck = useRef(false)
+
+  // Public routes that don't require authentication
   const publicRoutes = [
     "/",
     "/login",
@@ -26,7 +31,7 @@ function AuthSessionContent() {
     "/reset-password",
     "/forgot-password",
     "/upgrade",
-    // Trang footer
+    // Footer pages
     "/roadmap",
     "/changelog",
     "/about",
@@ -38,7 +43,7 @@ function AuthSessionContent() {
     "/cookies",
   ]
 
-  // Kiểm tra xem tuyến có phải là công khai không
+  // Check if route is public
   const isPublicRoute = useCallback(
     (path: string) => {
       return publicRoutes.some((route) => path === route || path.startsWith(`${route}/`))
@@ -46,26 +51,80 @@ function AuthSessionContent() {
     [publicRoutes],
   )
 
-  // Lấy callbackUrl từ tham số URL nếu có
+  // Get callbackUrl from URL parameters if present
   useEffect(() => {
-    if (pathname === "/login") {
+    if (pathname === "/login" && !redirectInProgress.current) {
       const callbackUrl = searchParams.get("callbackUrl")
       const isMiddlewareRedirect = searchParams.get("mw") === "1"
 
       if (callbackUrl) {
-        // Lưu URL callback để chuyển hướng sau khi đăng nhập thành công
+        // Save callback URL to redirect after successful login
         const decodedUrl = decodeURIComponent(callbackUrl)
         sessionStorage.setItem("redirectAfterAuth", decodedUrl)
 
-        // Nếu đây là chuyển hướng middleware và chúng ta có người dùng hợp lệ, chuyển hướng ngay lập tức
+        // If this is a middleware redirect and we have a valid user, redirect immediately
         if (isMiddlewareRedirect && user && !loading) {
+          redirectInProgress.current = true
           router.push(decodedUrl)
         }
       }
     }
   }, [pathname, searchParams, user, loading, router])
 
-  // Xử lý sự kiện hoạt động người dùng để cập nhật thời gian hoạt động cuối cùng
+  // Handle authentication state when page loads
+  useEffect(() => {
+    const handleAuthState = async () => {
+      // Skip if loading, auth check in progress, or already redirected
+      if (loading || authCheckInProgress.current || redirectInProgress.current) {
+        return
+      }
+
+      // Avoid checking auth multiple times
+      if (user && didInitialCheck.current) {
+        return
+      }
+
+      authCheckInProgress.current = true
+      setIsCheckingAuth(true)
+
+      try {
+        if (user) {
+          const isValid = await checkAuthState()
+          didInitialCheck.current = true
+
+          if (!isValid) {
+            // If session is invalid, log out
+            clearAuthTokens()
+            await signOut()
+            router.push("/login")
+            return
+          }
+
+          // Valid session - redirect if needed
+          if (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password") {
+            redirectInProgress.current = true
+            const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
+
+            if (redirectUrl) {
+              sessionStorage.removeItem("redirectAfterAuth")
+              router.push(redirectUrl)
+            } else {
+              router.push("/projects")
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error in auth check:", error)
+      } finally {
+        authCheckInProgress.current = false
+        setIsCheckingAuth(false)
+      }
+    }
+
+    handleAuthState()
+  }, [user, loading, pathname, router, checkAuthState, signOut])
+
+  // Handle user activity events to update last activity time
   useEffect(() => {
     const updateActivityTime = () => {
       if (user) {
@@ -73,7 +132,7 @@ function AuthSessionContent() {
       }
     }
 
-    // Thêm trình nghe sự kiện cho các hoạt động người dùng
+    // Add event listeners for user activities
     window.addEventListener("mousemove", updateActivityTime)
     window.addEventListener("keydown", updateActivityTime)
     window.addEventListener("click", updateActivityTime)
@@ -81,7 +140,7 @@ function AuthSessionContent() {
     window.addEventListener("touchstart", updateActivityTime)
 
     return () => {
-      // Dọn dẹp trình nghe sự kiện
+      // Clean up event listeners
       window.removeEventListener("mousemove", updateActivityTime)
       window.removeEventListener("keydown", updateActivityTime)
       window.removeEventListener("click", updateActivityTime)
@@ -90,86 +149,41 @@ function AuthSessionContent() {
     }
   }, [user])
 
-  // Xử lý trạng thái xác thực khi trang được tải
+  // Periodically check token validity
   useEffect(() => {
-    const handleAuthState = async () => {
-      if (loading) return
-
-      setIsCheckingAuth(true)
-
-      try {
-        // Kiểm tra phiên khi quay lại trang web
-        if (user) {
+    // Check token when page loads
+    const checkTokenValidity = async () => {
+      if (user && !authCheckInProgress.current) {
+        authCheckInProgress.current = true
+        try {
           const isValid = await checkAuthState()
-
           if (!isValid) {
-            // Nếu phiên không hợp lệ, đăng xuất
             clearAuthTokens()
             await signOut()
             router.push("/login")
-            return
           }
-        }
-
-        // Chuyển hướng nếu đã đăng nhập và đang ở trang đăng nhập/đăng ký
-        if (user && (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password")) {
-          const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
-          if (redirectUrl) {
-            sessionStorage.removeItem("redirectAfterAuth")
-            router.push(redirectUrl)
-          } else {
-            router.push("/projects")
-          }
-        }
-      } finally {
-        setIsCheckingAuth(false)
-      }
-    }
-
-    handleAuthState()
-  }, [user, loading, pathname, router, checkAuthState, signOut])
-
-  // Kiểm tra định kỳ tính hợp lệ của token
-  useEffect(() => {
-    // Kiểm tra token khi trang được tải
-    const checkTokenValidity = async () => {
-      if (user) {
-        const isValid = await checkAuthState()
-        if (!isValid) {
-          clearAuthTokens()
-          await signOut()
-          router.push("/login")
+        } catch (error) {
+          console.error("Error checking token validity:", error)
+        } finally {
+          authCheckInProgress.current = false
         }
       }
     }
 
-    checkTokenValidity()
+    // Perform initial check after 3 seconds to avoid conflicts with page load
+    const initialCheck = setTimeout(checkTokenValidity, 3000)
 
-    // Kiểm tra token mỗi 5 phút
-    const tokenCheckInterval = setInterval(
-      () => {
-        if (user) {
-          checkAuthState().then((isValid) => {
-            if (!isValid) {
-              clearAuthTokens()
-              signOut().then(() => {
-                router.push("/login")
-              })
-            }
-          })
-        }
-      },
-      5 * 60 * 1000,
-    ) // 5 phút
+    // Check token every 5 minutes
+    const tokenCheckInterval = setInterval(checkTokenValidity, 5 * 60 * 1000) // 5 minutes
 
-    // Kiểm tra token khi tab trở nên hiển thị
+    // Check token when tab becomes visible
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && user) {
         checkTokenValidity()
       }
     }
 
-    // Cập nhật thời gian hoạt động cuối cùng trước khi đóng trang
+    // Update last activity time before closing page
     const handleBeforeUnload = () => {
       if (user) {
         updateLastActivity()
@@ -180,6 +194,7 @@ function AuthSessionContent() {
     window.addEventListener("beforeunload", handleBeforeUnload)
 
     return () => {
+      clearTimeout(initialCheck)
       clearInterval(tokenCheckInterval)
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("beforeunload", handleBeforeUnload)

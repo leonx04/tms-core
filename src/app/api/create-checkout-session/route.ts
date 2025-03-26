@@ -21,6 +21,9 @@ export async function POST(request: NextRequest) {
     let decodedToken
 
     try {
+      if (!auth) {
+        return NextResponse.json({ error: "Authentication service unavailable" }, { status: 500 })
+      }
       decodedToken = await auth.verifyIdToken(token)
     } catch (error) {
       console.error("Token verification error:", error)

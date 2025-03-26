@@ -1,7 +1,6 @@
 "use client"
 
-import { Suspense } from "react"
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -22,6 +21,11 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [socialLoading, setSocialLoading] = useState<string | null>(null)
   const [rememberMe, setRememberMe] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+
+  // Track submissions to avoid duplicates
+  const isSubmitting = useRef(false)
+  const redirectTimeout = useRef<NodeJS.Timeout | null>(null)
 
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -43,8 +47,32 @@ function LoginForm() {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      router.push(callbackUrl || "/projects")
+    // Avoid repeated redirects
+    if (user && !isRedirecting) {
+      setIsRedirecting(true)
+
+      // Clear previous timeout if exists
+      if (redirectTimeout.current) {
+        clearTimeout(redirectTimeout.current)
+      }
+
+      // Set short timeout to ensure user data is loaded
+      redirectTimeout.current = setTimeout(() => {
+        const savedCallbackUrl = sessionStorage.getItem("redirectAfterAuth")
+        if (savedCallbackUrl) {
+          sessionStorage.removeItem("redirectAfterAuth")
+          router.push(savedCallbackUrl)
+        } else {
+          router.push(callbackUrl || "/projects")
+        }
+      }, 500)
+    }
+
+    // Cleanup on unmount
+    return () => {
+      if (redirectTimeout.current) {
+        clearTimeout(redirectTimeout.current)
+      }
     }
   }, [user, router, callbackUrl])
 
@@ -68,43 +96,69 @@ function LoginForm() {
   })
 
   const onSubmit = async (data: LoginFormValues) => {
+    // Avoid multiple submissions
+    if (isSubmitting.current) return
+    isSubmitting.current = true
+
     setError(null)
     setIsLoading(true)
 
     try {
       await signIn(data.email, data.password)
-      // Redirect will be handled by the useEffect above when user state updates
+      // Redirect will be handled by useEffect when user state is updated
     } catch (error: any) {
       console.error("Login error:", error)
-      // We don't need to set error here as the toast is shown in the auth context
+      // No need to set error here as toast is already displayed in auth context
     } finally {
       setIsLoading(false)
+      // Allow resubmission after a short delay
+      setTimeout(() => {
+        isSubmitting.current = false
+      }, 1000)
     }
   }
 
   const handleGoogleSignIn = async () => {
+    // Avoid multiple submissions
+    if (isSubmitting.current) return
+    isSubmitting.current = true
+
     setError(null)
     setSocialLoading("google")
+
     try {
       await signInWithGoogle()
-      // Redirect will be handled by the useEffect above when user state updates
+      // Redirect will be handled by useEffect when user state is updated
     } catch (error: any) {
-      // Error is handled in the auth context
+      // Error is handled in auth context
     } finally {
       setSocialLoading(null)
+      // Allow resubmission after a short delay
+      setTimeout(() => {
+        isSubmitting.current = false
+      }, 1000)
     }
   }
 
   const handleGithubSignIn = async () => {
+    // Avoid multiple submissions
+    if (isSubmitting.current) return
+    isSubmitting.current = true
+
     setError(null)
     setSocialLoading("github")
+
     try {
       await signInWithGithub()
-      // Redirect will be handled by the useEffect above when user state updates
+      // Redirect will be handled by useEffect when user state is updated
     } catch (error: any) {
-      // Error is handled in the auth context
+      // Error is handled in auth context
     } finally {
       setSocialLoading(null)
+      // Allow resubmission after a short delay
+      setTimeout(() => {
+        isSubmitting.current = false
+      }, 1000)
     }
   }
 

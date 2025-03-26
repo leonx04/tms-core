@@ -2,13 +2,13 @@ import { jwtVerify } from "jose"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
 
-// Khóa bí mật cho xác minh JWT - nên khớp với cấu hình Firebase của bạn
+// Secret key for JWT verification - should match your Firebase config
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key")
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Các tuyến công khai không yêu cầu xác thực
+  // Public routes that don't require authentication
   const publicRoutes = [
     "/",
     "/login",
@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
     "/reset-password",
     "/forgot-password",
     "/upgrade",
-    // Trang footer
+    // Footer pages
     "/roadmap",
     "/changelog",
     "/about",
@@ -28,22 +28,22 @@ export async function middleware(request: NextRequest) {
     "/cookies",
   ]
 
-  // Kiểm tra xem tuyến có phải là công khai không
+  // Check if route is public
   const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 
-  // Bỏ qua middleware cho tài sản tĩnh, tuyến API và tệp
+  // Skip middleware for static assets, API routes, and files
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/static/") ||
-    pathname.startsWith("/api/webhooks/") || // Đảm bảo webhooks luôn được cho phép
-    pathname.includes(".") // Bỏ qua các tệp như favicon.ico, v.v.
+    pathname.startsWith("/api/webhooks/") || // Ensure webhooks are always allowed
+    pathname.includes(".") // Skip files like favicon.ico, etc.
   ) {
     return NextResponse.next()
   }
 
-  // Kiểm tra đặc biệt cho các tuyến API khác
+  // Special check for other API routes
   if (pathname.startsWith("/api/") && !pathname.startsWith("/api/webhooks/")) {
-    // Cho phép các tuyến API khác nhưng vẫn kiểm tra JWT
+    // Allow other API routes but still check JWT
     const token = request.cookies.get("jwt")?.value
 
     if (!token) {
@@ -51,40 +51,47 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
+      // Add specific try-catch for JWT
       await jwtVerify(token, JWT_SECRET)
       return NextResponse.next()
     } catch (error) {
+      console.error("JWT verification failed:", error)
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
   }
 
-  // Lấy JWT từ cookie (không từ header Authorization để tránh xung đột)
+  // Get JWT from cookie
   const token = request.cookies.get("jwt")?.value
 
   let isValidToken = false
 
   if (token) {
     try {
-      // Xác minh token
-      await jwtVerify(token, JWT_SECRET)
+      // Verify token with short timeout to avoid hanging
+      const verifyPromise = jwtVerify(token, JWT_SECRET)
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("JWT verification timeout")), 2000),
+      )
+
+      await Promise.race([verifyPromise, timeoutPromise])
       isValidToken = true
     } catch (error) {
-      // Token không hợp lệ, chúng ta sẽ xử lý bên dưới
-      console.error("Xác minh token thất bại:", error)
+      // Invalid token, we'll handle below
+      console.error("Token verification failed:", error)
     }
   }
 
-  // Nếu tuyến không phải là công khai và không có token hợp lệ, chuyển hướng đến đăng nhập
+  // If route is not public and no valid token, redirect to login
   if (!isPublicRoute && !isValidToken) {
     const url = new URL("/login", request.url)
-    // Sử dụng tham số đặc biệt để chỉ ra đây là chuyển hướng middleware
+    // Use special parameter to indicate this is a middleware redirect
     url.searchParams.set("callbackUrl", encodeURIComponent(pathname))
-    url.searchParams.set("mw", "1") // Thêm cờ để chỉ ra chuyển hướng middleware
+    url.searchParams.set("mw", "1") // Add flag to indicate middleware redirect
 
     return NextResponse.redirect(url)
   }
 
-  // Nếu người dùng đã xác thực và đang cố truy cập đăng nhập/đăng ký, chuyển hướng đến projects
+  // If user is authenticated and trying to access login/register, redirect to projects
   if (isValidToken && (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password")) {
     return NextResponse.redirect(new URL("/projects", request.url))
   }
@@ -95,12 +102,12 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Khớp tất cả các đường dẫn yêu cầu ngoại trừ những đường dẫn bắt đầu bằng:
-     * - api (tuyến API)
-     * - _next/static (tệp tĩnh)
-     * - _next/image (tệp tối ưu hóa hình ảnh)
-     * - favicon.ico (tệp favicon)
-     * - public (tệp công khai)
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (optimized images)
+     * - favicon.ico (favicon file)
+     * - public (public files)
      */
     "/((?!api|_next/static|_next/image|favicon.ico|public).*)",
   ],

@@ -6,7 +6,7 @@ import type { UserData } from "@/types"
 import { onAuthStateChanged } from "firebase/auth"
 import { useRouter } from "next/navigation"
 import type React from "react"
-import { createContext, useContext, useEffect, useState, useCallback } from "react"
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react"
 
 // Import services
 import {
@@ -61,13 +61,13 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 /**
- * AuthProvider là một React context provider quản lý xác thực người dùng và cung cấp
- * các hàm và trạng thái liên quan đến xác thực cho các component con.
+ * AuthProvider is a React context provider that manages user authentication and provides
+ * authentication-related functions and state to child components.
  *
- * @param {object} props - Props được truyền vào component AuthProvider.
- * @param {React.ReactNode} props.children - Các component con sẽ được bao bọc bởi AuthProvider.
+ * @param {object} props - Props passed to the AuthProvider component.
+ * @param {React.ReactNode} props.children - Child components to be wrapped by AuthProvider.
  *
- * @returns {React.ReactElement} - Component AuthProvider với các children được cung cấp.
+ * @returns {React.ReactElement} - AuthProvider component with the provided children.
  */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any | null>(null)
@@ -76,33 +76,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { toast } = useToast()
   const router = useRouter()
 
-  // Hàm để làm mới token
+  // Use refs to track user data loading/authentication process
+  const userDataFetchInProgress = useRef(false)
+  const authInitialized = useRef(false)
+
+  // Function to refresh token
   const refreshToken = async () => {
     if (!auth.currentUser) return null
 
     try {
       const token = await updateAuthToken(auth.currentUser)
       if (token) {
-        // Đánh dấu phiên là hợp lệ vì chúng ta đã làm mới token thành công
+        // Mark session as valid since we successfully refreshed the token
         setAuthSessionValid()
         return token
       }
       return null
     } catch (error) {
-      console.error("Lỗi khi làm mới token:", error)
-      // Xóa token khi làm mới thất bại
+      console.error("Error refreshing token:", error)
+      // Clear tokens when refresh fails
       clearAuthTokens()
       return null
     }
   }
 
-  // Hàm kiểm tra trạng thái xác thực
+  // Function to check authentication state
   const checkAuthState = useCallback(async (): Promise<boolean> => {
     if (!auth.currentUser) return false
 
-    // Kiểm tra tính hợp lệ của phiên
+    // Check session validity
     if (!isAuthSessionValid()) {
-      // Thử làm mới token
+      // Try to refresh token
       const token = await refreshToken()
       if (!token) {
         clearAuthTokens()
@@ -110,10 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Kiểm tra xem token hiện tại có tồn tại không
+    // Check if current token exists
     const currentToken = getCurrentToken()
     if (!currentToken) {
-      // Thử lấy token mới
+      // Try to get a new token
       const token = await refreshToken()
       if (!token) {
         clearAuthTokens()
@@ -124,82 +128,136 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true
   }, [])
 
-  // Xử lý đăng xuất từ tab khác
+  // Handle logout from other tab
   const handleLogoutFromOtherTab = useCallback(() => {
     setUser(null)
     setUserData(null)
     router.push("/login")
   }, [router])
 
-  // Xử lý cập nhật phiên từ tab khác
+  // Handle session update from other tab
   const handleSessionUpdateFromOtherTab = useCallback(() => {
-    // Chỉ cần kiểm tra trạng thái xác thực nếu cần
+    // Only check auth state if needed
     if (user) {
       checkAuthState().catch(console.error)
     }
   }, [user, checkAuthState])
 
+  // Set up sync between tabs
   useEffect(() => {
-    // Thiết lập đồng bộ hóa giữa các tab
     const cleanup = setupAuthSyncBetweenTabs(handleLogoutFromOtherTab, handleSessionUpdateFromOtherTab)
-
     return cleanup
   }, [handleLogoutFromOtherTab, handleSessionUpdateFromOtherTab])
 
+  // Initialize and manage authentication state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user)
+    // Avoid multiple initializations
+    if (authInitialized.current) return
 
-      if (user) {
-        // Kiểm tra tính hợp lệ của phiên khi quay lại trang web
-        if (!validateSessionOnReturn()) {
-          // Thử làm mới token
-          const token = await updateAuthToken(user)
-          if (!token) {
-            // Nếu làm mới thất bại, đặt user thành null và xóa token
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      // Mark auth as initialized
+      authInitialized.current = true
+
+      try {
+        if (authUser) {
+          // Check session validity when returning to the website
+          if (!validateSessionOnReturn()) {
+            try {
+              // Try to refresh token
+              const token = await updateAuthToken(authUser)
+              if (!token) {
+                // If refresh fails, set user to null and clear tokens
+                setUser(null)
+                clearAuthTokens()
+                setLoading(false)
+                return
+              }
+            } catch (tokenError) {
+              console.error("Token refresh error:", tokenError)
+              setUser(null)
+              clearAuthTokens()
+              setLoading(false)
+              return
+            }
+          }
+
+          // Update authentication token
+          try {
+            const token = await updateAuthToken(authUser)
+            // Mark session as valid if we have a token
+            if (token) {
+              setAuthSessionValid()
+            } else {
+              setUser(null)
+              clearAuthTokens()
+              setLoading(false)
+              return
+            }
+          } catch (tokenError) {
+            console.error("Token update error:", tokenError)
             setUser(null)
             clearAuthTokens()
             setLoading(false)
             return
           }
-        }
 
-        // Cập nhật token xác thực
-        const token = await updateAuthToken(user)
+          // Update user state
+          setUser(authUser)
 
-        // Đánh dấu phiên là hợp lệ nếu chúng ta có token
-        if (token) {
-          setAuthSessionValid()
-        }
+          // Avoid fetching user data multiple times
+          if (!userDataFetchInProgress.current) {
+            userDataFetchInProgress.current = true
 
-        // Lấy dữ liệu người dùng từ cơ sở dữ liệu
-        const userDataResult = await fetchUserData(user.uid)
+            try {
+              // Fetch user data from database
+              const userDataResult = await fetchUserData(authUser.uid)
 
-        if (userDataResult) {
-          setUserData(userDataResult)
-          // Cập nhật lastActive trong một hoạt động riêng biệt để không chặn luồng chính
-          updateLastActive(user.uid).catch(console.error)
-        } else {
-          // Tạo dữ liệu người dùng mới nếu nó không tồn tại
-          const newUserData: UserData = {
-            id: user.uid,
-            email: user.email || "",
-            displayName: user.displayName || "",
-            photoURL: user.photoURL || "",
-            packageId: "basic",
-            packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-            lastActive: new Date().toISOString(),
-            preferences: { emailNotifications: true, inAppNotifications: true },
+              if (userDataResult) {
+                setUserData(userDataResult)
+                // Update lastActive in a separate operation
+                updateLastActive(authUser.uid).catch((error) => {
+                  console.error("Failed to update last active:", error)
+                })
+              } else {
+                // Create new user data if it doesn't exist
+                const newUserData: UserData = {
+                  id: authUser.uid,
+                  email: authUser.email || "",
+                  displayName: authUser.displayName || "",
+                  photoURL: authUser.photoURL || "",
+                  packageId: "basic",
+                  packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                  lastActive: new Date().toISOString(),
+                  preferences: { emailNotifications: true, inAppNotifications: true },
+                }
+
+                try {
+                  await createUserData(authUser.uid, newUserData)
+                  setUserData(newUserData)
+                } catch (createError) {
+                  console.error("Failed to create user data:", createError)
+                }
+              }
+            } catch (fetchError) {
+              console.error("Error fetching user data:", fetchError)
+            } finally {
+              userDataFetchInProgress.current = false
+            }
           }
-          await createUserData(user.uid, newUserData)
-          setUserData(newUserData)
+        } else {
+          // User not logged in or has logged out
+          setUser(null)
+          setUserData(null)
+          clearAuthTokens()
         }
-      } else {
+      } catch (error) {
+        console.error("Auth state change error:", error)
+        setUser(null)
         setUserData(null)
         clearAuthTokens()
+      } finally {
+        setLoading(false)
       }
-
-      setLoading(false)
     })
 
     return () => {
@@ -207,61 +265,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  // Đăng nhập bằng email và mật khẩu
+  // Sign in with email and password
   const handleSignIn = async (email: string, password: string): Promise<void> => {
     try {
       const result = await signInWithEmail(email, password)
 
       if (result.success) {
         toast({
-          title: "Chào mừng trở lại!",
-          description: "Bạn đã đăng nhập thành công.",
+          title: "Welcome back!",
+          description: "You have successfully logged in.",
         })
 
-        // Kiểm tra chuyển hướng sau khi xác thực
-        const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
-        if (redirectUrl) {
-          sessionStorage.removeItem("redirectAfterAuth")
-          router.push(redirectUrl)
-        } else {
-          router.push("/projects")
-        }
+        // No need to redirect immediately - let onAuthStateChanged handle it
+        // to ensure user data is fully loaded
       } else {
         toast({
-          title: "Đăng nhập thất bại",
+          title: "Login failed",
           description: result.error,
           variant: "destructive",
         })
         throw new Error(result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi đăng nhập:", error)
+      console.error("Login error:", error)
       throw error
     }
   }
 
-  // Đăng nhập bằng Google
+  // Sign in with Google
   const handleSignInWithGoogle = async () => {
     try {
       const result = await signInWithGoogle()
 
       if (result.success) {
         toast({
-          title: "Chào mừng!",
-          description: "Bạn đã đăng nhập thành công bằng Google.",
+          title: "Welcome!",
+          description: "You have successfully logged in with Google.",
         })
 
-        // Kiểm tra chuyển hướng sau khi xác thực
-        const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
-        if (redirectUrl) {
-          sessionStorage.removeItem("redirectAfterAuth")
-          router.push(redirectUrl)
-        } else {
-          router.push("/projects")
-        }
+        // Successful Google login, onAuthStateChanged will handle redirection
       } else {
         toast({
-          title: "Đăng nhập Google thất bại",
+          title: "Google login failed",
           description: result.error,
           variant: "destructive",
           duration: 8000,
@@ -269,33 +314,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi đăng nhập Google:", error)
+      console.error("Google login error:", error)
       throw error
     }
   }
 
-  // Đăng nhập bằng GitHub
+  // Sign in with GitHub
   const handleSignInWithGithub = async () => {
     try {
       const result = await signInWithGithub()
 
       if (result.success) {
         toast({
-          title: "Chào mừng!",
-          description: "Bạn đã đăng nhập thành công bằng GitHub.",
+          title: "Welcome!",
+          description: "You have successfully logged in with GitHub.",
         })
 
-        // Kiểm tra chuyển hướng sau khi xác thực
-        const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
-        if (redirectUrl) {
-          sessionStorage.removeItem("redirectAfterAuth")
-          router.push(redirectUrl)
-        } else {
-          router.push("/projects")
-        }
+        // Successful GitHub login, onAuthStateChanged will handle redirection
       } else {
         toast({
-          title: "Đăng nhập GitHub thất bại",
+          title: "GitHub login failed",
           description: result.error,
           variant: "destructive",
           duration: 8000,
@@ -303,27 +341,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi đăng nhập GitHub:", error)
+      console.error("GitHub login error:", error)
       throw error
     }
   }
 
-  // Đăng ký bằng email và mật khẩu
+  // Sign up with email and password
   const handleSignUp = async (email: string, password: string, displayName: string) => {
     try {
       const result = await signUpWithEmail(email, password, displayName)
 
       if (result.success) {
         toast({
-          title: "Tài khoản đã được tạo",
-          description: "Tài khoản của bạn đã được tạo thành công.",
+          title: "Account created",
+          description: "Your account has been successfully created.",
         })
 
-        // Điều hướng đến trang projects
-        router.push("/projects")
+        // Successful registration, onAuthStateChanged will handle redirection
       } else {
         toast({
-          title: "Đăng ký thất bại",
+          title: "Registration failed",
           description: result.error,
           variant: "destructive",
           duration: 6000,
@@ -331,47 +368,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi đăng ký:", error)
+      console.error("Registration error:", error)
       throw error
     }
   }
 
-  // Đăng xuất
+  // Sign out
   const handleSignOut = async () => {
     try {
       const result = await authSignOut()
 
       if (result.success) {
-        // Đảm bảo tất cả token và dữ liệu phiên được xóa
+        // Ensure all tokens and session data are cleared
         clearAuthTokens()
 
+        // Clear user state before redirecting
+        setUser(null)
+        setUserData(null)
+
         toast({
-          title: "Đã đăng xuất",
-          description: "Bạn đã đăng xuất thành công.",
+          title: "Logged out",
+          description: "You have successfully logged out.",
         })
 
-        // Sử dụng router thay vì window.location
+        // Use router instead of window.location
         router.push("/login")
       } else {
         toast({
-          title: "Đăng xuất thất bại",
+          title: "Logout failed",
           description: result.error,
           variant: "destructive",
         })
         throw new Error(result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi đăng xuất:", error)
+      console.error("Logout error:", error)
       throw error
     }
   }
 
-  // Cập nhật dữ liệu người dùng
+  // Update user data
   const handleUpdateUserData = async (data: Partial<UserData>) => {
     if (!user) {
       toast({
-        title: "Cập nhật thất bại",
-        description: "Bạn phải đăng nhập để cập nhật hồ sơ của mình.",
+        title: "Update failed",
+        description: "You must be logged in to update your profile.",
         variant: "destructive",
       })
       return
@@ -384,27 +425,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUserData((prev) => (prev ? { ...prev, ...data } : null))
 
         toast({
-          title: "Hồ sơ đã được cập nhật",
-          description: "Hồ sơ của bạn đã được cập nhật thành công.",
+          title: "Profile updated",
+          description: "Your profile has been successfully updated.",
         })
       } else {
         toast({
-          title: "Cập nhật thất bại",
-          description: "Không thể cập nhật hồ sơ của bạn. Vui lòng thử lại.",
+          title: "Update failed",
+          description: "Could not update your profile. Please try again.",
           variant: "destructive",
         })
       }
     } catch (error) {
-      console.error("Lỗi cập nhật dữ liệu người dùng:", error)
+      console.error("Error updating user data:", error)
       toast({
-        title: "Cập nhật thất bại",
-        description: "Không thể cập nhật hồ sơ của bạn. Vui lòng thử lại.",
+        title: "Update failed",
+        description: "Could not update your profile. Please try again.",
         variant: "destructive",
       })
     }
   }
 
-  // Cập nhật hồ sơ người dùng
+  // Update user profile
   const handleUpdateUserProfile = async (data: {
     displayName?: string
     email?: string
@@ -413,8 +454,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }) => {
     if (!user || !user.email) {
       toast({
-        title: "Cập nhật thất bại",
-        description: "Bạn phải đăng nhập để cập nhật hồ sơ của mình.",
+        title: "Update failed",
+        description: "You must be logged in to update your profile.",
         variant: "destructive",
       })
       return
@@ -425,30 +466,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await updateUserProfile(user, data)
 
       if (result.success) {
-        // Cập nhật tên hiển thị nếu được yêu cầu
+        // Update display name if requested
         if (data.displayName && data.displayName !== user.displayName) {
           updates.displayName = data.displayName
         }
 
-        // Cập nhật email nếu được yêu cầu
+        // Update email if requested
         if (data.email && data.email !== user.email) {
           updates.email = data.email
         }
 
-        // Cập nhật dữ liệu người dùng trong cơ sở dữ liệu nếu có thay đổi
+        // Update user data in database if there are changes
         if (Object.keys(updates).length > 0) {
           await handleUpdateUserData(updates)
         }
 
         if (data.password) {
           toast({
-            title: "Mật khẩu đã được cập nhật",
-            description: "Mật khẩu của bạn đã được cập nhật thành công.",
+            title: "Password updated",
+            description: "Your password has been successfully updated.",
           })
         }
       } else {
         toast({
-          title: "Cập nhật thất bại",
+          title: "Update failed",
           description: result.error,
           variant: "destructive",
         })
@@ -460,20 +501,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi cập nhật hồ sơ:", error)
+      console.error("Profile update error:", error)
       throw error
     }
   }
 
-  // Liên kết với tài khoản Google
+  // Link with Google account
   const handleLinkWithGoogleAccount = async () => {
     if (!auth.currentUser) {
       toast({
-        title: "Yêu cầu xác thực",
-        description: "Bạn phải đăng nhập để liên kết tài khoản.",
+        title: "Authentication required",
+        description: "You must be logged in to link accounts.",
         variant: "destructive",
       })
-      throw new Error("Người dùng phải đăng nhập để liên kết tài khoản.")
+      throw new Error("User must be logged in to link accounts.")
     }
 
     try {
@@ -481,32 +522,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (result.success) {
         toast({
-          title: "Tài khoản đã được liên kết",
-          description: "Tài khoản Google của bạn đã được liên kết thành công.",
+          title: "Account linked",
+          description: "Your Google account has been successfully linked.",
         })
       } else {
         toast({
-          title: "Liên kết thất bại",
+          title: "Linking failed",
           description: result.error,
           variant: "destructive",
         })
-        throw new Error("Lỗi khi liên kết tài khoản Google: " + result.error)
+        throw new Error("Error linking Google account: " + result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi liên kết tài khoản Google:", error)
+      console.error("Error linking Google account:", error)
       throw error
     }
   }
 
-  // Liên kết với tài khoản GitHub
+  // Link with GitHub account
   const handleLinkWithGithubAccount = async () => {
     if (!auth.currentUser) {
       toast({
-        title: "Yêu cầu xác thực",
-        description: "Bạn phải đăng nhập để liên kết tài khoản.",
+        title: "Authentication required",
+        description: "You must be logged in to link accounts.",
         variant: "destructive",
       })
-      throw new Error("Người dùng phải đăng nhập để liên kết tài khoản.")
+      throw new Error("User must be logged in to link accounts.")
     }
 
     try {
@@ -514,19 +555,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (result.success) {
         toast({
-          title: "Tài khoản đã được liên kết",
-          description: "Tài khoản GitHub của bạn đã được liên kết thành công.",
+          title: "Account linked",
+          description: "Your GitHub account has been successfully linked.",
         })
       } else {
         toast({
-          title: "Liên kết thất bại",
+          title: "Linking failed",
           description: result.error,
           variant: "destructive",
         })
-        throw new Error("Lỗi khi liên kết tài khoản GitHub: " + result.error)
+        throw new Error("Error linking GitHub account: " + result.error)
       }
     } catch (error: any) {
-      console.error("Lỗi liên kết tài khoản GitHub:", error)
+      console.error("Error linking GitHub account:", error)
       throw error
     }
   }
@@ -561,7 +602,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error("useAuth phải được sử dụng trong AuthProvider")
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }

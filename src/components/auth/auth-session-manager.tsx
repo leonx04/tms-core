@@ -6,7 +6,6 @@ import { useToast } from "@/hooks/use-toast"
 import { usePathname, useRouter } from "next/navigation"
 import { Suspense, useCallback, useEffect, useState, useRef } from "react"
 import { useSearchParamsWithSuspense } from "@/hooks/use-search-params-with-suspense"
-// Import functions from jwt-service
 import { clearAuthTokens, updateLastActivity } from "@/services/jwt-service"
 
 // Component using useSearchParams with Suspense

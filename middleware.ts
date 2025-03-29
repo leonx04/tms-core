@@ -1,32 +1,13 @@
 import { jwtVerify } from "jose"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
+import { publicRoutes } from "@/utils/route-utils"
 
 // Secret key for JWT verification - should match your Firebase config
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key")
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    "/",
-    "/login",
-    "/register",
-    "/reset-password",
-    "/forgot-password",
-    "/upgrade",
-    // Footer pages
-    "/roadmap",
-    "/changelog",
-    "/about",
-    "/blog",
-    "/careers",
-    "/contact",
-    "/terms",
-    "/privacy",
-    "/cookies",
-  ]
 
   // Check if route is public
   const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))

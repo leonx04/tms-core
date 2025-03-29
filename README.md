@@ -62,7 +62,7 @@ src/
 ```
 
 ## Route Performance
-
+.
 Below is an overview of the route sizes and their first-load JavaScript (`JS`) sizes:
 
 ```

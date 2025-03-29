@@ -33,11 +33,21 @@ export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProvid
   useEffect(() => {
     setMounted(true)
 
+    // Add preload class to prevent transitions on initial load
+    document.documentElement.classList.add("preload")
+
     // Load theme from localStorage if available
     const storedTheme = localStorage.getItem("theme") as Theme | null
     if (storedTheme && ["dark", "light", "system"].includes(storedTheme)) {
       setThemeState(storedTheme)
     }
+
+    // Remove preload class after a short delay
+    const timer = setTimeout(() => {
+      document.documentElement.classList.remove("preload")
+    }, 300)
+
+    return () => clearTimeout(timer)
   }, [])
 
   // Handle system theme changes

@@ -7,6 +7,8 @@ import { onAuthStateChanged } from "firebase/auth"
 import { useRouter } from "next/navigation"
 import type React from "react"
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react"
+import { isPublicRoute } from "@/utils/route-utils"
+import { usePathname } from "next/navigation"
 
 // Import services
 import {
@@ -75,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true)
   const { toast } = useToast()
   const router = useRouter()
+  const pathname = usePathname()
 
   // Use refs to track user data loading/authentication process
   const userDataFetchInProgress = useRef(false)
@@ -132,8 +135,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const handleLogoutFromOtherTab = useCallback(() => {
     setUser(null)
     setUserData(null)
-    router.push("/login")
-  }, [router])
+
+    // Only redirect to login if not on a public page
+    if (pathname && !isPublicRoute(pathname)) {
+      router.push("/login")
+    }
+  }, [router, pathname])
 
   // Handle session update from other tab
   const handleSessionUpdateFromOtherTab = useCallback(() => {
@@ -265,6 +272,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Don't redirect to login on public routes when loading completes
+  useEffect(() => {
+    if (!loading && !user && pathname && !isPublicRoute(pathname)) {
+      router.push("/login")
+    }
+  }, [user, loading, router, pathname])
+
   // Sign in with email and password
   const handleSignIn = async (email: string, password: string): Promise<void> => {
     try {
@@ -391,8 +405,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           description: "You have successfully logged out.",
         })
 
-        // Use router instead of window.location
-        router.push("/login")
+        // Only redirect to login if not on a public page
+        if (pathname && !isPublicRoute(pathname)) {
+          router.push("/login")
+        } else {
+          // If on a public page, stay there
+          router.refresh()
+        }
       } else {
         toast({
           title: "Logout failed",

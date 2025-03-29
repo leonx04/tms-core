@@ -16,29 +16,53 @@ export const publicRoutes = [
   "/terms",
   "/privacy",
   "/cookies",
+  // Add any additional public routes here
 ]
 
-// Helper function to check if a route is public
-export const isPublicRoute = (path: string): boolean => {
-  // Always consider these paths as public regardless of what comes after
-  const alwaysPublicPrefixes = ["/static/", "/_next/", "/images/", "/api/webhooks/", "/favicon.ico"]
+// Static assets and API routes that should always be accessible
+export const alwaysPublicPrefixes = [
+  "/static/",
+  "/_next/",
+  "/images/",
+  "/api/webhooks/",
+  "/favicon.ico",
+  "/assets/",
+  "/fonts/",
+]
 
-  // Check if path starts with any always-public prefix
+/**
+ * Checks if a route is public and doesn't require authentication
+ * @param path The path to check
+ * @returns boolean indicating if the path is public
+ */
+export const isPublicRoute = (path: string): boolean => {
+  // First check static assets and API routes
   for (const prefix of alwaysPublicPrefixes) {
     if (path.startsWith(prefix)) {
       return true
     }
   }
 
-  // Check if path is in the public routes list
-  return publicRoutes.some((route) => {
+  // Check exact matches and nested routes
+  for (const route of publicRoutes) {
     // Exact match
     if (path === route) return true
 
     // Path starts with route/ (for nested routes)
     if (path.startsWith(`${route}/`)) return true
+  }
 
-    return false
-  })
+  // If we get here, the route is not public
+  return false
+}
+
+/**
+ * Checks if a route is a login-related route
+ * @param path The path to check
+ * @returns boolean indicating if the path is a login-related route
+ */
+export const isAuthRoute = (path: string): boolean => {
+  const authRoutes = ["/login", "/register", "/forgot-password", "/reset-password"]
+  return authRoutes.includes(path)
 }
 

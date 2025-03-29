@@ -38,6 +38,7 @@ export async function middleware(request: NextRequest) {
       await jwtVerify(token, JWT_SECRET)
       return NextResponse.next()
     } catch (error) {
+      console.error("JWT verification failed:", error)
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
   }
@@ -59,6 +60,7 @@ export async function middleware(request: NextRequest) {
       isValidToken = true
     } catch (error) {
       // Invalid token, we'll handle below
+      console.error("Token verification failed:", error)
     }
   }
 

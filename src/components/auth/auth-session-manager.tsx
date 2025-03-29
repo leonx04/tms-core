@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Suspense, useEffect, useState, useRef } from "react"
 import { useSearchParamsWithSuspense } from "@/hooks/use-search-params-with-suspense"
 import { clearAuthTokens, updateLastActivity } from "@/services/jwt-service"
-import { isPublicRoute } from "@/utils/route-utils"
+import { isPublicRoute, isAuthRoute } from "@/utils/route-utils"
 
 // Component using useSearchParams with Suspense
 function AuthSessionContent() {
@@ -56,6 +56,11 @@ function AuthSessionContent() {
         return
       }
 
+      // Skip auth checks for auth routes (login, register, etc.) when user is not logged in
+      if (isAuthRoute(pathname) && !user) {
+        return
+      }
+
       // Avoid checking auth multiple times for logged in users
       if (user && didInitialCheck.current) {
         return
@@ -82,7 +87,7 @@ function AuthSessionContent() {
           }
 
           // Valid session - redirect if needed
-          if (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password") {
+          if (isAuthRoute(pathname)) {
             redirectInProgress.current = true
             const redirectUrl = sessionStorage.getItem("redirectAfterAuth")
 
@@ -119,7 +124,7 @@ function AuthSessionContent() {
       updateLastActivity()
     }
 
-    // Add event listeners for user activities
+    // Add event listeners for user activities with passive option for better performance
     window.addEventListener("mousemove", updateActivityTime, { passive: true })
     window.addEventListener("keydown", updateActivityTime, { passive: true })
     window.addEventListener("click", updateActivityTime, { passive: true })

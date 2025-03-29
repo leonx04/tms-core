@@ -1,5 +1,6 @@
 "use client"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
 import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Button } from "@/components/ui/button"
@@ -67,17 +68,12 @@ export default function Header() {
                   className="flex items-center space-x-2 rounded-full px-2 py-1.5 hover:bg-muted/50 transition-colors"
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
                 >
-                  {userData?.photoURL ? (
-                    <img
-                      src={userData.photoURL || "/placeholder.svg"}
-                      alt={userData.displayName || "User"}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      {userData?.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
-                    </div>
-                  )}
+                  <Avatar className="h-8 w-8 border border-border/30">
+                    <AvatarImage src={user?.photoURL || undefined} alt={userData?.displayName || "User"} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {userData?.displayName?.charAt(0) || user?.email?.charAt(0) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
 
@@ -158,17 +154,12 @@ export default function Header() {
             {user ? (
               <>
                 <div className="flex items-center space-x-3 py-2">
-                  {userData?.photoURL ? (
-                    <img
-                      src={userData.photoURL || "/placeholder.svg"}
-                      alt={userData.displayName || "User"}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      {userData?.displayName?.charAt(0) || user.email?.charAt(0) || "U"}
-                    </div>
-                  )}
+                  <Avatar className="h-10 w-10 border border-border/30">
+                    <AvatarImage src={user?.photoURL || undefined} alt={userData?.displayName || "User"} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {userData?.displayName?.charAt(0) || user?.email?.charAt(0) || "U"}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
                     <div className="font-medium">{userData?.displayName || user.email}</div>
                     <div className="text-xs text-muted-foreground">{user.email}</div>

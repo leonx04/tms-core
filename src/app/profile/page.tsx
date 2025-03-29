@@ -198,7 +198,7 @@ export default function ProfilePage() {
 
   // Helper: Check if a provider is linked
   const isProviderLinked = (providerId: string) => {
-    return user?.providerData.some((provider) => provider.providerId === providerId)
+    return user?.providerData.some((provider: { providerId: string }) => provider.providerId === providerId)
   }
 
   // Calculate subscription expiry percentage

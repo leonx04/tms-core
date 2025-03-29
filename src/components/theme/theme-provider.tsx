@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useMemo } from "react"
 
 type Theme = "dark" | "light" | "system"
 
@@ -14,47 +13,96 @@ type ThemeProviderProps = {
 type ThemeProviderState = {
   theme: Theme
   setTheme: (theme: Theme) => void
+  resolvedTheme: "dark" | "light"
 }
 
 const initialState: ThemeProviderState = {
   theme: "system",
   setTheme: () => null,
+  resolvedTheme: "light",
 }
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 export function ThemeProvider({ children, defaultTheme = "system" }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(defaultTheme)
+  const [theme, setThemeState] = useState<Theme>(defaultTheme)
+  const [resolvedTheme, setResolvedTheme] = useState<"dark" | "light">("light")
+  const [mounted, setMounted] = useState(false)
 
+  // Only set theme after component is mounted to avoid hydration mismatch
   useEffect(() => {
+    setMounted(true)
+
     // Load theme from localStorage if available
     const storedTheme = localStorage.getItem("theme") as Theme | null
     if (storedTheme && ["dark", "light", "system"].includes(storedTheme)) {
-      setTheme(storedTheme)
+      setThemeState(storedTheme)
     }
   }, [])
 
+  // Handle system theme changes
   useEffect(() => {
-    const root = window.document.documentElement
-    root.classList.remove("light", "dark")
+    if (!mounted) return
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+
+    const handleChange = () => {
+      if (theme === "system") {
+        const newResolvedTheme = mediaQuery.matches ? "dark" : "light"
+        setResolvedTheme(newResolvedTheme)
+        updateDocumentClass(newResolvedTheme)
+      }
+    }
+
+    // Initial check
+    handleChange()
+
+    // Listen for changes
+    mediaQuery.addEventListener("change", handleChange)
+    return () => mediaQuery.removeEventListener("change", handleChange)
+  }, [theme, mounted])
+
+  // Apply theme changes
+  useEffect(() => {
+    if (!mounted) return
 
     if (theme === "system") {
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
-      root.classList.add(systemTheme)
-      return
+      setResolvedTheme(systemTheme)
+      updateDocumentClass(systemTheme)
+    } else {
+      setResolvedTheme(theme)
+      updateDocumentClass(theme)
     }
+  }, [theme, mounted])
 
-    root.classList.add(theme)
-  }, [theme])
+  // Optimize theme class updates
+  const updateDocumentClass = (newTheme: string) => {
+    const root = window.document.documentElement
 
-  const value = {
-    theme,
-    setTheme: (newTheme: Theme) => {
-      setTheme(newTheme)
-      // Store theme in localStorage
-      localStorage.setItem("theme", newTheme)
-    },
+    // Use classList for better performance
+    if (newTheme === "dark") {
+      root.classList.add("dark")
+    } else {
+      root.classList.remove("dark")
+    }
   }
+
+  const setTheme = (newTheme: Theme) => {
+    setThemeState(newTheme)
+    // Store theme in localStorage
+    localStorage.setItem("theme", newTheme)
+  }
+
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo(
+    () => ({
+      theme,
+      setTheme,
+      resolvedTheme,
+    }),
+    [theme, resolvedTheme],
+  )
 
   return <ThemeProviderContext.Provider value={value}>{children}</ThemeProviderContext.Provider>
 }
@@ -66,3 +114,4 @@ export const useTheme = () => {
   }
   return context
 }
+

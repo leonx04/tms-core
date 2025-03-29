@@ -1,16 +1,13 @@
 import { jwtVerify } from "jose"
 import type { NextRequest } from "next/server"
 import { NextResponse } from "next/server"
-import { publicRoutes } from "@/utils/route-utils"
+import { isPublicRoute } from "@/utils/route-utils"
 
 // Secret key for JWT verification - should match your Firebase config
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "your-secret-key")
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
-
-  // Check if route is public
-  const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
 
   // Skip middleware for static assets, API routes, and files
   if (
@@ -19,6 +16,11 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/api/webhooks/") || // Ensure webhooks are always allowed
     pathname.includes(".") // Skip files like favicon.ico, etc.
   ) {
+    return NextResponse.next()
+  }
+
+  // Always allow access to public routes without authentication
+  if (isPublicRoute(pathname)) {
     return NextResponse.next()
   }
 
@@ -36,7 +38,6 @@ export async function middleware(request: NextRequest) {
       await jwtVerify(token, JWT_SECRET)
       return NextResponse.next()
     } catch (error) {
-      console.error("JWT verification failed:", error)
       return NextResponse.json({ error: "Invalid token" }, { status: 401 })
     }
   }
@@ -58,12 +59,11 @@ export async function middleware(request: NextRequest) {
       isValidToken = true
     } catch (error) {
       // Invalid token, we'll handle below
-      console.error("Token verification failed:", error)
     }
   }
 
   // If route is not public and no valid token, redirect to login
-  if (!isPublicRoute && !isValidToken) {
+  if (!isValidToken) {
     const url = new URL("/login", request.url)
     // Use special parameter to indicate this is a middleware redirect
     url.searchParams.set("callbackUrl", encodeURIComponent(pathname))

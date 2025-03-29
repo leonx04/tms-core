@@ -13,16 +13,20 @@ import "./globals.css"
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap", // Add display swap for better performance
 })
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap", // Add display swap for better performance
 })
 
 export const metadata: Metadata = {
   title: "TMC - Task Management Core",
   description: "A comprehensive task management for software development teams",
+  // Add viewport metadata for better mobile experience
+  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
 }
 
 const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS
@@ -65,6 +69,11 @@ export default function RootLayout({
           name="twitter:image"
           content="https://raw.githubusercontent.com/leonx04/tms-core/refs/heads/master/public/tmc.png"
         />
+
+        {/* Theme color for browser UI */}
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
+
         {/* Google Analytics */}
         {GA_TRACKING_ID && (
           <>

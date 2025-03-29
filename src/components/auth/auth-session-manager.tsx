@@ -4,9 +4,10 @@ import { Toaster } from "@/components/ui/toaster"
 import { useAuth } from "@/contexts/auth-context"
 import { useToast } from "@/hooks/use-toast"
 import { usePathname, useRouter } from "next/navigation"
-import { Suspense, useCallback, useEffect, useState, useRef } from "react"
+import { Suspense, useEffect, useState, useRef } from "react"
 import { useSearchParamsWithSuspense } from "@/hooks/use-search-params-with-suspense"
 import { clearAuthTokens, updateLastActivity } from "@/services/jwt-service"
+import { isPublicRoute } from "@/utils/route-utils"
 
 // Component using useSearchParams with Suspense
 function AuthSessionContent() {
@@ -21,34 +22,6 @@ function AuthSessionContent() {
   const authCheckInProgress = useRef(false)
   const redirectInProgress = useRef(false)
   const didInitialCheck = useRef(false)
-
-  // Public routes that don't require authentication
-  const publicRoutes = [
-    "/",
-    "/login",
-    "/register",
-    "/reset-password",
-    "/forgot-password",
-    "/upgrade",
-    // Footer pages
-    "/roadmap",
-    "/changelog",
-    "/about",
-    "/blog",
-    "/careers",
-    "/contact",
-    "/terms",
-    "/privacy",
-    "/cookies",
-  ]
-
-  // Check if route is public
-  const isPublicRoute = useCallback(
-    (path: string) => {
-      return publicRoutes.some((route) => path === route || path.startsWith(`${route}/`))
-    },
-    [publicRoutes],
-  )
 
   // Get callbackUrl from URL parameters if present
   useEffect(() => {
@@ -78,7 +51,12 @@ function AuthSessionContent() {
         return
       }
 
-      // Avoid checking auth multiple times
+      // CRITICAL: Skip auth checks completely for public routes when user is not logged in
+      if (isPublicRoute(pathname) && !user) {
+        return
+      }
+
+      // Avoid checking auth multiple times for logged in users
       if (user && didInitialCheck.current) {
         return
       }
@@ -95,7 +73,11 @@ function AuthSessionContent() {
             // If session is invalid, log out
             clearAuthTokens()
             await signOut()
-            router.push("/login")
+
+            // Only redirect to login if not on a public page
+            if (!isPublicRoute(pathname)) {
+              router.push("/login")
+            }
             return
           }
 
@@ -111,6 +93,12 @@ function AuthSessionContent() {
               router.push("/projects")
             }
           }
+        } else if (!isPublicRoute(pathname)) {
+          // User is not authenticated and trying to access a protected route
+          // Save current path for redirect after login
+          sessionStorage.setItem("redirectAfterAuth", pathname)
+          redirectInProgress.current = true
+          router.push(`/login?callbackUrl=${encodeURIComponent(pathname)}`)
         }
       } catch (error) {
         console.error("Error in auth check:", error)
@@ -125,18 +113,18 @@ function AuthSessionContent() {
 
   // Handle user activity events to update last activity time
   useEffect(() => {
+    if (!user) return // Skip if no user is logged in
+
     const updateActivityTime = () => {
-      if (user) {
-        updateLastActivity()
-      }
+      updateLastActivity()
     }
 
     // Add event listeners for user activities
-    window.addEventListener("mousemove", updateActivityTime)
-    window.addEventListener("keydown", updateActivityTime)
-    window.addEventListener("click", updateActivityTime)
-    window.addEventListener("scroll", updateActivityTime)
-    window.addEventListener("touchstart", updateActivityTime)
+    window.addEventListener("mousemove", updateActivityTime, { passive: true })
+    window.addEventListener("keydown", updateActivityTime, { passive: true })
+    window.addEventListener("click", updateActivityTime, { passive: true })
+    window.addEventListener("scroll", updateActivityTime, { passive: true })
+    window.addEventListener("touchstart", updateActivityTime, { passive: true })
 
     return () => {
       // Clean up event listeners
@@ -150,22 +138,28 @@ function AuthSessionContent() {
 
   // Periodically check token validity
   useEffect(() => {
+    if (!user) return // Skip if no user is logged in
+
     // Check token when page loads
     const checkTokenValidity = async () => {
-      if (user && !authCheckInProgress.current) {
-        authCheckInProgress.current = true
-        try {
-          const isValid = await checkAuthState()
-          if (!isValid) {
-            clearAuthTokens()
-            await signOut()
+      if (authCheckInProgress.current) return
+
+      authCheckInProgress.current = true
+      try {
+        const isValid = await checkAuthState()
+        if (!isValid) {
+          clearAuthTokens()
+          await signOut()
+
+          // Only redirect to login if not on a public page
+          if (!isPublicRoute(pathname)) {
             router.push("/login")
           }
-        } catch (error) {
-          console.error("Error checking token validity:", error)
-        } finally {
-          authCheckInProgress.current = false
         }
+      } catch (error) {
+        console.error("Error checking token validity:", error)
+      } finally {
+        authCheckInProgress.current = false
       }
     }
 
@@ -177,16 +171,14 @@ function AuthSessionContent() {
 
     // Check token when tab becomes visible
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible" && user) {
+      if (document.visibilityState === "visible") {
         checkTokenValidity()
       }
     }
 
     // Update last activity time before closing page
     const handleBeforeUnload = () => {
-      if (user) {
-        updateLastActivity()
-      }
+      updateLastActivity()
     }
 
     document.addEventListener("visibilitychange", handleVisibilityChange)
@@ -198,7 +190,7 @@ function AuthSessionContent() {
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       window.removeEventListener("beforeunload", handleBeforeUnload)
     }
-  }, [user, checkAuthState, router, signOut])
+  }, [user, checkAuthState, router, signOut, pathname])
 
   return null
 }

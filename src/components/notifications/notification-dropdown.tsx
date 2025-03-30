@@ -2,11 +2,12 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
 import { formatDistanceToNow } from "date-fns"
 import { onValue, ref, remove, update } from "firebase/database"
-import { Bell, Check, CheckCheck, Trash2 } from "lucide-react"
+import { Bell, Eye, CheckCheck, Trash2, EyeClosed, Check} from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 // Define the notification type
@@ -26,6 +27,8 @@ export function NotificationDropdown() {
   const [notifications, setNotifications] = useState<NotificationType[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [selectedNotifications, setSelectedNotifications] = useState<string[]>([])
+  const [selectMode, setSelectMode] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
 
@@ -86,6 +89,14 @@ export function NotificationDropdown() {
     }
   }, [])
 
+  // Reset selection when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedNotifications([])
+      setSelectMode(false)
+    }
+  }, [isOpen])
+
   // Mark a notification as read
   const markAsRead = (notificationId: string) => {
     if (!user) return
@@ -100,6 +111,23 @@ export function NotificationDropdown() {
       })
       .catch((error) => {
         console.error("Error marking notification as read:", error)
+      })
+  }
+
+  // Mark a notification as unread
+  const markAsUnread = (notificationId: string) => {
+    if (!user) return
+
+    const notificationRef = ref(database, `notifications/${notificationId}`)
+    update(notificationRef, {
+      status: "unread",
+      readAt: null,
+    })
+      .then(() => {
+        // Update is handled by the onValue listener
+      })
+      .catch((error) => {
+        console.error("Error marking notification as unread:", error)
       })
   }
 
@@ -129,6 +157,85 @@ export function NotificationDropdown() {
     remove(notificationRef).catch((error) => {
       console.error("Error deleting notification:", error)
     })
+  }
+
+  // Delete all notifications
+  const deleteAllNotifications = () => {
+    if (!user || notifications.length === 0) return
+
+    const updates: Record<string, null> = {}
+
+    notifications.forEach((notification) => {
+      updates[`notifications/${notification.id}`] = null
+    })
+
+    update(ref(database), updates).catch((error) => {
+      console.error("Error deleting all notifications:", error)
+    })
+  }
+
+  // Delete selected notifications
+  const deleteSelectedNotifications = () => {
+    if (!user || selectedNotifications.length === 0) return
+
+    const updates: Record<string, null> = {}
+
+    selectedNotifications.forEach((notificationId) => {
+      updates[`notifications/${notificationId}`] = null
+    })
+
+    update(ref(database), updates)
+      .then(() => {
+        setSelectedNotifications([])
+        setSelectMode(false)
+      })
+      .catch((error) => {
+        console.error("Error deleting selected notifications:", error)
+      })
+  }
+
+  // Mark selected notifications as read
+  const markSelectedAsRead = () => {
+    if (!user || selectedNotifications.length === 0) return
+
+    const updates: Record<string, any> = {}
+
+    selectedNotifications.forEach((notificationId) => {
+      const notification = notifications.find((n) => n.id === notificationId)
+      if (notification && notification.status === "unread") {
+        updates[`notifications/${notificationId}/status`] = "read"
+        updates[`notifications/${notificationId}/readAt`] = new Date().toISOString()
+      }
+    })
+
+    update(ref(database), updates)
+      .then(() => {
+        setSelectedNotifications([])
+        setSelectMode(false)
+      })
+      .catch((error) => {
+        console.error("Error marking selected notifications as read:", error)
+      })
+  }
+
+  // Toggle notification selection
+  const toggleNotificationSelection = (notificationId: string) => {
+    setSelectedNotifications((prev) => {
+      if (prev.includes(notificationId)) {
+        return prev.filter((id) => id !== notificationId)
+      } else {
+        return [...prev, notificationId]
+      }
+    })
+  }
+
+  // Toggle select all notifications
+  const toggleSelectAll = () => {
+    if (selectedNotifications.length === notifications.length) {
+      setSelectedNotifications([])
+    } else {
+      setSelectedNotifications(notifications.map((notification) => notification.id))
+    }
   }
 
   // Get icon based on notification type
@@ -188,11 +295,58 @@ export function NotificationDropdown() {
         <div className="absolute right-0 mt-2 w-80 md:w-96 bg-card rounded-lg shadow-modern border border-border/5 overflow-hidden animate-fadeIn z-50">
           <div className="p-3 border-b border-border flex items-center justify-between">
             <h3 className="font-medium">Notifications</h3>
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markAllAsRead}>
-                <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark all as read
-              </Button>
-            )}
+            <div className="flex items-center gap-1">
+              {selectMode ? (
+                <>
+                  <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => setSelectMode(false)}>
+                    <Check className="h-3.5 w-3.5 mr-1" /> Cancel
+                  </Button>
+                  {selectedNotifications.length > 0 && (
+                    <>
+                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markSelectedAsRead}>
+                        <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark Read
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 px-2 text-destructive"
+                        onClick={deleteSelectedNotifications}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                      </Button>
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  {notifications.length > 0 && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 px-2"
+                        onClick={() => setSelectMode(true)}
+                      >
+                        Select
+                      </Button>
+                      {unreadCount > 0 && (
+                        <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markAllAsRead}>
+                          <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark all read
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7 px-2 text-destructive"
+                        onClick={deleteAllNotifications}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear all
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
 
           <div className="max-h-[70vh] overflow-y-auto">
@@ -208,13 +362,33 @@ export function NotificationDropdown() {
               </div>
             ) : (
               <div>
+                {selectMode && (
+                  <div className="p-2 border-b border-border bg-muted/20 flex items-center">
+                    <Checkbox
+                      id="select-all"
+                      checked={selectedNotifications.length === notifications.length && notifications.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      className="mr-2"
+                    />
+                    <label htmlFor="select-all" className="text-xs">
+                      Select all ({selectedNotifications.length}/{notifications.length})
+                    </label>
+                  </div>
+                )}
                 {notifications.map((notification) => (
                   <div
                     key={notification.id}
                     className={`p-3 border-b border-border hover:bg-muted/30 transition-colors flex items-start ${
                       notification.status === "unread" ? "bg-muted/20" : ""
-                    }`}
+                    } ${selectedNotifications.includes(notification.id) ? "bg-primary/5" : ""}`}
                   >
+                    {selectMode && (
+                      <Checkbox
+                        checked={selectedNotifications.includes(notification.id)}
+                        onCheckedChange={() => toggleNotificationSelection(notification.id)}
+                        className="mr-2 mt-1"
+                      />
+                    )}
                     <div className="mr-3 mt-1">{getNotificationIcon(notification.eventType)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm mb-1 break-words">{notification.message}</p>
@@ -222,34 +396,49 @@ export function NotificationDropdown() {
                         {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                       </p>
                     </div>
-                    <div className="flex flex-col space-y-1 ml-2">
-                      {notification.status === "unread" && (
+                    {!selectMode && (
+                      <div className="flex flex-col space-y-1 ml-2">
+                        {notification.status === "unread" ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              markAsRead(notification.id)
+                            }}
+                            title="Mark as read"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              markAsUnread(notification.id)
+                            }}
+                            title="Mark as unread"
+                          >
+                            <EyeClosed className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6"
+                          className="h-6 w-6 text-destructive"
                           onClick={(e) => {
                             e.stopPropagation()
-                            markAsRead(notification.id)
+                            deleteNotification(notification.id)
                           }}
-                          title="Mark as read"
+                          title="Delete"
                         >
-                          <Check className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteNotification(notification.id)
-                        }}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

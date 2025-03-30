@@ -12,7 +12,7 @@ import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
 import type { Project, User } from "@/types"
 import { formatDate, getRoleColor, getRoleLabel } from "@/utils/utils"
-import { get, push, ref, remove, set } from "firebase/database"
+import { get, push, ref, remove, set, update, query, orderByChild, equalTo } from "firebase/database"
 import {
   AlertCircle,
   ArrowLeft,
@@ -246,6 +246,51 @@ export default function ProjectMembersPage() {
       }
 
       await set(notificationRef, notification)
+
+      // Find all tasks assigned to this member
+      const tasksRef = ref(database, "tasks")
+      const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
+      const tasksSnapshot = await get(tasksQuery)
+
+      if (tasksSnapshot.exists()) {
+        const tasksData = tasksSnapshot.val()
+        const taskUpdates: Record<string, any> = {}
+
+        // Check each task to see if the removed member is assigned to it
+        Object.entries(tasksData).forEach(([taskId, taskData]: [string, any]) => {
+          if (taskData.assignedTo && taskData.assignedTo.includes(memberId)) {
+            // Remove the member ID from assignedTo array
+            const updatedAssignedTo = taskData.assignedTo.filter((id: string) => id !== memberId)
+
+            // Prepare update for this task
+            taskUpdates[`tasks/${taskId}/assignedTo`] = updatedAssignedTo
+
+            // Add task history entry for this change
+            const historyRef = push(ref(database, "taskHistory"))
+            const historyEntry = {
+              taskId,
+              userId: user.uid,
+              timestamp: new Date().toISOString(),
+              changes: [
+                {
+                  field: "assignedTo",
+                  oldValue: taskData.assignedTo.join(", "),
+                  newValue: updatedAssignedTo.join(", "),
+                },
+              ],
+              comment: `Member ${users[memberId]?.displayName || memberId} was removed from project and unassigned from this task`,
+            }
+
+            // We need to set this separately as it uses push()
+            set(historyRef, historyEntry)
+          }
+        })
+
+        // Apply all task updates in a single operation if there are any
+        if (Object.keys(taskUpdates).length > 0) {
+          await update(ref(database), taskUpdates)
+        }
+      }
 
       // Update local state
       const updatedMembers = { ...project.members }

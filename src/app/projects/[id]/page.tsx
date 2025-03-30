@@ -1,5 +1,6 @@
 "use client"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ImportExportToolbar } from "@/components/excel/import-export-toolbar"
 import { PageHeader } from "@/components/layout/page-header"
 import { AssigneeGroup } from "@/components/ui/assignee-group"
@@ -9,13 +10,13 @@ import { Card } from "@/components/ui/card"
 import { EmptyState } from "@/components/ui/empty-state"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import {
-    Pagination,
-    PaginationContent,
-    PaginationEllipsis,
-    PaginationItem,
-    PaginationLink,
-    PaginationNext,
-    PaginationPrevious,
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { database } from "@/config/firebase"
@@ -24,21 +25,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import type { Project, Task, User } from "@/types"
 import { formatDate, getPriorityColor, getStatusColor, getStatusLabel, getTypeColor } from "@/utils/utils"
 import { equalTo, get, orderByChild, query, ref } from "firebase/database"
-import {
-    Calendar,
-    ChevronDown,
-    ChevronRight,
-    Clock,
-    Filter,
-    Grid,
-    Layers,
-    List,
-    Plus,
-    Search,
-    Settings,
-    Users,
-    Webhook
-} from "lucide-react"
+import { Calendar, ChevronDown, ChevronRight, Clock, Filter, Grid, Layers, List, Plus, Search, Settings, Users, Webhook } from 'lucide-react'
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import React, { type JSX, useEffect, useState } from "react"
@@ -182,6 +169,15 @@ export default function ProjectDetailPage() {
 
   const findChildTasks = (taskId: string) => {
     return filteredTasks.filter((task) => task.parentTaskId === taskId)
+  }
+
+  // Helper function to get user photo URL
+  const getUserPhotoURL = (userId: string) => {
+    const userData = users[userId];
+    if (!userData) return undefined;
+
+    // Check for different possible property names for the photo URL
+    return userData.photoURL || userData.photoUrl || userData.avatarUrl || userData.avatar || undefined;
   }
 
   if (loading) {
@@ -839,4 +835,3 @@ export default function ProjectDetailPage() {
     </div>
   )
 }
-

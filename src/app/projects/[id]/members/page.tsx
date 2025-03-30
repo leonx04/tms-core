@@ -2,6 +2,7 @@
 
 import type React from "react"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { PageHeader } from "@/components/layout/page-header"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +13,20 @@ import { useAuth } from "@/contexts/auth-context"
 import type { Project, User } from "@/types"
 import { formatDate, getRoleColor, getRoleLabel } from "@/utils/utils"
 import { get, push, ref, remove, set } from "firebase/database"
-import { AlertCircle, ArrowLeft, CheckCircle, Code, FileText, Info, Mail, Shield, TestTube, Trash2, UserPlus, X } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowLeft,
+  CheckCircle,
+  Code,
+  FileText,
+  Info,
+  Mail,
+  Shield,
+  TestTube,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -65,6 +79,12 @@ export default function ProjectMembersPage() {
 
         // Fetch all users who are members of this project
         const userIds = Object.keys(projectData.members)
+
+        // Make sure to include the owner ID if it's not already in the members list
+        if (projectData.ownerId && !userIds.includes(projectData.ownerId)) {
+          userIds.push(projectData.ownerId)
+        }
+
         const usersData: Record<string, User> = {}
 
         for (const userId of userIds) {
@@ -75,6 +95,19 @@ export default function ProjectMembersPage() {
             usersData[userId] = {
               id: userId,
               ...userSnapshot.val(),
+            }
+          }
+        }
+
+        // Debug: Log user data to see what's available
+        console.log("Users data:", usersData)
+
+        // If the owner is the current user, make sure we have their photo
+        if (projectData.ownerId && user.uid === projectData.ownerId && user.photoURL) {
+          if (usersData[user.uid]) {
+            usersData[user.uid] = {
+              ...usersData[user.uid],
+              photoURL: user.photoURL,
             }
           }
         }
@@ -91,9 +124,7 @@ export default function ProjectMembersPage() {
   }, [user, projectId, router])
 
   const handleRoleToggle = (role: string) => {
-    setSelectedRoles((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    )
+    setSelectedRoles((prev) => (prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]))
   }
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -278,6 +309,21 @@ export default function ProjectMembersPage() {
     }
   }
 
+  // Helper function to get user photo URL, checking multiple possible property names and sources
+  const getUserPhotoURL = (memberId: string) => {
+    // If this is the current user, use their photo from auth
+    if (user && user.uid === memberId && user.photoURL) {
+      return user.photoURL
+    }
+
+    // Check if we have the user in our state
+    const userData = users[memberId]
+    if (!userData) return undefined
+
+    // Check for different possible property names for the photo URL
+    return userData.photoURL || userData.photoUrl || userData.avatarUrl || userData.avatar || undefined
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -316,10 +362,7 @@ export default function ProjectMembersPage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
         </Link>
 
-        <PageHeader
-          title="Manage Members"
-          description={`Invite and manage team members for ${project.name}`}
-        />
+        <PageHeader title="Manage Members" description={`Invite and manage team members for ${project.name}`} />
 
         {!isAdmin && (
           <Alert className="mb-6 bg-muted/50 border-muted">
@@ -357,84 +400,76 @@ export default function ProjectMembersPage() {
                       <th className="px-4 py-3 text-left text-sm font-medium">User</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Roles</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Added</th>
-                      {isAdmin && (
-                        <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
-                      )}
+                      {isAdmin && <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {project.members &&
-                      Object.entries(project.members).map(([memberId, memberData]) => (
-                        <tr
-                          key={memberId}
-                          className="hover:bg-muted/30 transition-colors"
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center">
-                              <div className="h-9 w-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium mr-3">
-                                {users[memberId]?.displayName?.charAt(0) || "?"}
-                              </div>
-                              <div>
-                                <div className="font-medium flex items-center">
-                                  {users[memberId]?.displayName || "Unknown user"}
-                                  {memberId === project.ownerId && (
-                                    <Badge variant="default" className="ml-2">
-                                      Owner
-                                    </Badge>
-                                  )}
-                                </div>
-                                <p className="text-xs text-muted-foreground">
-                                  {users[memberId]?.email || "No email"}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              {memberData.roles.map((role) => (
-                                <Badge
-                                  key={role}
-                                  variant="role"
-                                  className={getRoleColor(role)}
-                                  animation="fade"
-                                >
-                                  {role === "admin" ? (
-                                    <Shield className="mr-1 h-3 w-3" />
-                                  ) : role === "dev" ? (
-                                    <Code className="mr-1 h-3 w-3" />
-                                  ) : role === "tester" ? (
-                                    <TestTube className="mr-1 h-3 w-3" />
-                                  ) : (
-                                    <FileText className="mr-1 h-3 w-3" />
-                                  )}
-                                  {getRoleLabel(role)}
-                                </Badge>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div className="flex flex-col">
-                              <span>{formatDate(memberData.addedAt)}</span>
-                              <span className="text-xs text-muted-foreground">
-                                by{" "}
-                                {users[memberData.addedBy]?.displayName || "Unknown"}
-                              </span>
-                            </div>
-                          </td>
-                          {isAdmin && (
+                      Object.entries(project.members).map(([memberId, memberData]) => {
+                        // Get photo URL for this member
+                        const photoURL = getUserPhotoURL(memberId)
+
+                        return (
+                          <tr key={memberId} className="hover:bg-muted/30 transition-colors">
                             <td className="px-4 py-3">
-                              {user &&
-                                memberId !== user.uid &&
-                                memberId !== project.ownerId && (
+                              <div className="flex items-center">
+                                <Avatar className="h-9 w-9 mr-3 border border-border/30">
+                                  <AvatarImage src={photoURL} alt={users[memberId]?.displayName || "User"} />
+                                  <AvatarFallback className="bg-primary/10 text-primary">
+                                    {users[memberId]?.displayName?.charAt(0) || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium flex items-center">
+                                    {users[memberId]?.displayName || "Unknown user"}
+                                    {memberId === project.ownerId && (
+                                      <Badge variant="default" className="ml-2">
+                                        Owner
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {users[memberId]?.email || "No email"}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {memberData.roles.map((role) => (
+                                  <Badge key={role} variant="role" className={getRoleColor(role)} animation="fade">
+                                    {role === "admin" ? (
+                                      <Shield className="mr-1 h-3 w-3" />
+                                    ) : role === "dev" ? (
+                                      <Code className="mr-1 h-3 w-3" />
+                                    ) : role === "tester" ? (
+                                      <TestTube className="mr-1 h-3 w-3" />
+                                    ) : (
+                                      <FileText className="mr-1 h-3 w-3" />
+                                    )}
+                                    {getRoleLabel(role)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <div className="flex flex-col">
+                                <span>{formatDate(memberData.addedAt)}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  by {users[memberData.addedBy]?.displayName || "Unknown"}
+                                </span>
+                              </div>
+                            </td>
+                            {isAdmin && (
+                              <td className="px-4 py-3">
+                                {user && memberId !== user.uid && memberId !== project.ownerId && (
                                   <div className="flex items-center space-x-2">
                                     {showDeleteConfirm === memberId ? (
                                       <>
                                         <Button
                                           variant="destructive"
                                           size="sm"
-                                          onClick={() =>
-                                            handleRemoveMember(memberId)
-                                          }
+                                          onClick={() => handleRemoveMember(memberId)}
                                           className="rounded-lg"
                                         >
                                           Confirm
@@ -442,9 +477,7 @@ export default function ProjectMembersPage() {
                                         <Button
                                           variant="outline"
                                           size="sm"
-                                          onClick={() =>
-                                            setShowDeleteConfirm(null)
-                                          }
+                                          onClick={() => setShowDeleteConfirm(null)}
                                           className="rounded-lg"
                                         >
                                           <X className="h-4 w-4" />
@@ -454,9 +487,7 @@ export default function ProjectMembersPage() {
                                       <Button
                                         variant="outline"
                                         size="sm"
-                                        onClick={() =>
-                                          setShowDeleteConfirm(memberId)
-                                        }
+                                        onClick={() => setShowDeleteConfirm(memberId)}
                                         className="text-destructive hover:text-destructive hover:bg-destructive/10 rounded-lg"
                                       >
                                         <Trash2 className="h-4 w-4" />
@@ -464,10 +495,11 @@ export default function ProjectMembersPage() {
                                     )}
                                   </div>
                                 )}
-                            </td>
-                          )}
-                        </tr>
-                      ))}
+                              </td>
+                            )}
+                          </tr>
+                        )
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -482,12 +514,8 @@ export default function ProjectMembersPage() {
                 <div className="p-6">
                   <form onSubmit={handleInvite} className="space-y-5">
                     <div>
-                      <label
-                        htmlFor="email"
-                        className="block text-sm font-medium mb-1"
-                      >
-                        Email Address{" "}
-                        <span className="text-destructive">*</span>
+                      <label htmlFor="email" className="block text-sm font-medium mb-1">
+                        Email Address <span className="text-destructive">*</span>
                       </label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -506,8 +534,7 @@ export default function ProjectMembersPage() {
 
                     <div>
                       <label className="block text-sm font-medium mb-2">
-                        Roles{" "}
-                        <span className="text-destructive">*</span>
+                        Roles <span className="text-destructive">*</span>
                       </label>
                       <div className="space-y-3 bg-muted/50 p-4 rounded-lg">
                         <div className="flex items-center">
@@ -519,10 +546,7 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("admin")}
                             disabled={isInviting}
                           />
-                          <label
-                            htmlFor="role-admin"
-                            className="ml-2 block text-sm"
-                          >
+                          <label htmlFor="role-admin" className="ml-2 block text-sm">
                             <span className="font-medium">Admin</span> - Can manage project settings and members
                           </label>
                         </div>
@@ -536,10 +560,7 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("dev")}
                             disabled={isInviting}
                           />
-                          <label
-                            htmlFor="role-dev"
-                            className="ml-2 block text-sm"
-                          >
+                          <label htmlFor="role-dev" className="ml-2 block text-sm">
                             <span className="font-medium">Developer</span> - Can update task status and link commits
                           </label>
                         </div>
@@ -553,10 +574,7 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("tester")}
                             disabled={isInviting}
                           />
-                          <label
-                            htmlFor="role-tester"
-                            className="ml-2 block text-sm"
-                          >
+                          <label htmlFor="role-tester" className="ml-2 block text-sm">
                             <span className="font-medium">Tester</span> - Can verify and close tasks
                           </label>
                         </div>
@@ -570,10 +588,7 @@ export default function ProjectMembersPage() {
                             onChange={() => handleRoleToggle("documentWriter")}
                             disabled={isInviting}
                           />
-                          <label
-                            htmlFor="role-doc"
-                            className="ml-2 block text-sm"
-                          >
+                          <label htmlFor="role-doc" className="ml-2 block text-sm">
                             <span className="font-medium">Document Writer</span> - Can manage task documentation
                           </label>
                         </div>
@@ -598,3 +613,4 @@ export default function ProjectMembersPage() {
     </div>
   )
 }
+

@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { User } from "@/types"
+import { useAuth } from "@/contexts/auth-context"
 
 interface UserAvatarProps {
   user: User
@@ -10,8 +11,18 @@ interface UserAvatarProps {
 }
 
 export function UserAvatar({ user, size = "md", showTooltip = true, className = "" }: UserAvatarProps) {
-  // Get photo URL from various possible properties
-  const photoURL = user.photoURL || user.photoUrl || user.avatarUrl || user.avatar
+  const { user: currentUser } = useAuth()
+  
+  // Get photo URL with special handling for current user
+  let photoURL = null
+  
+  // If this is the current user, prioritize the photoURL from auth context
+  if (currentUser && currentUser.uid === user.id && currentUser.photoURL) {
+    photoURL = currentUser.photoURL
+  } else {
+    // Otherwise use the user data from the database with fallbacks
+    photoURL = user.photoURL || user.photoUrl || user.avatarUrl || user.avatar
+  }
 
   // Determine size classes
   const sizeClasses = {

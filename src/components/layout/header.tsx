@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 export default function Header() {
   const { user, userData, signOut } = useAuth()
@@ -16,21 +16,51 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const mobileMenuRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   // Handle scroll detection for header styling
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10)
+
+      // Close mobile menu on scroll
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false)
+      }
     }
 
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  }, [mobileMenuOpen])
 
   // Close mobile menu when route changes
   useEffect(() => {
     setMobileMenuOpen(false)
   }, [router])
+
+  // Handle click outside to close mobile menu
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If menu is open and click is outside menu and not on the menu button
+      if (
+        mobileMenuOpen &&
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(event.target as Node) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(event.target as Node)
+      ) {
+        setMobileMenuOpen(false)
+      }
+    }
+
+    // Add click event listener to document
+    document.addEventListener("mousedown", handleClickOutside)
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [mobileMenuOpen])
 
   // Disable body scrolling when mobile menu is open
   useEffect(() => {
@@ -166,6 +196,7 @@ export default function Header() {
           {user && <NotificationDropdown isMobile={true} />}
           <ThemeToggle />
           <button
+            ref={menuButtonRef}
             className="text-foreground p-1 rounded-md hover:bg-muted/50 transition-colors"
             onClick={toggleMobileMenu}
             aria-label="Toggle menu"
@@ -179,15 +210,22 @@ export default function Header() {
       {/* Mobile Menu - Slide from top with improved animation */}
       {mobileMenuOpen && (
         <div
-          className="md:hidden fixed inset-x-0 top-[57px] bottom-0 z-40 bg-background/95 backdrop-blur-sm animate-in slide-in-from-top duration-300 overflow-y-auto"
+          ref={mobileMenuRef}
+          className="md:hidden fixed inset-x-0 top-[57px] z-40 bg-background/95 backdrop-blur-sm animate-in slide-in-from-top duration-300 overflow-y-auto mobile-menu-container"
           aria-modal="true"
           role="dialog"
+          onClick={(e) => {
+            // Close menu when clicking on the background (not on interactive elements)
+            if ((e.target as HTMLElement).classList.contains("mobile-menu-container")) {
+              setMobileMenuOpen(false)
+            }
+          }}
         >
-          <div className="container mx-auto px-4 py-6 space-y-4">
+          <div className="container mx-auto px-4 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
             {user ? (
               <>
                 <div className="flex items-center space-x-3 py-2 border border-border/30 rounded-lg p-3 bg-card/50">
-                  <Avatar className="h-12 w-12 border border-border/30">
+                  <Avatar className="h-10 w-10 border border-border/30">
                     <AvatarImage src={user?.photoURL || undefined} alt={userData?.displayName || "User"} />
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {userData?.displayName?.charAt(0) || user?.email?.charAt(0) || "U"}
@@ -199,10 +237,10 @@ export default function Header() {
                   </div>
                 </div>
 
-                <nav className="grid gap-1 pt-2">
+                <nav className="grid gap-1">
                   <Link
                     href="/projects"
-                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Folder className="mr-3 h-5 w-5" />
@@ -210,7 +248,7 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/profile"
-                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <User className="mr-3 h-5 w-5" />
@@ -218,7 +256,7 @@ export default function Header() {
                   </Link>
                 </nav>
 
-                <div className="pt-4 mt-4 border-t border-border">
+                <div className="pt-3 mt-3 border-t border-border">
                   <Button
                     variant="destructive"
                     className="w-full justify-start"
@@ -234,10 +272,10 @@ export default function Header() {
               </>
             ) : (
               <>
-                <nav className="grid gap-1 pt-2">
+                <nav className="grid gap-1">
                   <Link
                     href="/"
-                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     <Home className="mr-3 h-5 w-5" />
@@ -245,21 +283,21 @@ export default function Header() {
                   </Link>
                   <Link
                     href="/#features"
-                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Features
                   </Link>
                   <Link
                     href="/#pricing"
-                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     Pricing
                   </Link>
                 </nav>
 
-                <div className="grid grid-cols-2 gap-3 pt-4 mt-4 border-t border-border">
+                <div className="grid grid-cols-2 gap-3 pt-3 mt-3 border-t border-border">
                   <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full">
                       Login

@@ -839,7 +839,11 @@ export default function ProjectDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-border/10">
                   {paginatedData.map((task) => {
+                    // Thay thế phần renderTaskRow trong hàm map của paginatedData với đoạn code sau:
+
                     const renderTaskRow = (task: Task, level = 0): JSX.Element => {
+                      // Giới hạn tối đa 4 cấp phân cấp
+                      const currentLevel = Math.min(level, 3)
                       const childTasks = findChildTasks(task.id)
                       const hasChildren = childTasks.length > 0
                       const isExpanded = autoExpand || expandedTasks[task.id]
@@ -855,34 +859,44 @@ export default function ProjectDetailPage() {
                           <tr className="hover:bg-muted/30 transition-colors">
                             <td className="px-4 py-3 w-[250px] max-w-[250px]">
                               <div className="flex items-center">
-                                {Array.from({ length: level }).map((_, index) => (
-                                  <div key={index} className="flex items-center justify-center w-6">
-                                    <div className="w-0.5 h-6 bg-border/50"></div>
-                                  </div>
-                                ))}
-                                {hasChildren ? (
-                                  <button
-                                    onClick={(e) => {
-                                      if (!autoExpand) {
-                                        e.preventDefault()
-                                        toggleTaskExpansion(task.id)
-                                      }
-                                    }}
-                                    className="mr-2 focus:outline-none flex-shrink-0"
-                                    aria-label={isExpanded ? "Collapse" : "Expand"}
-                                  >
-                                    {isExpanded ? (
-                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                    ) : (
-                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                  </button>
-                                ) : (
-                                  <div className="w-6 mr-2"></div>
-                                )}
+                                {/* Tạo một div cố định cho mỗi cấp phân cấp */}
+                                <div
+                                  className="flex items-center"
+                                  style={{ width: `${currentLevel * 24}px`, minWidth: `${currentLevel * 24}px` }}
+                                >
+                                  {currentLevel > 0 && (
+                                    <div className="h-full w-full flex items-center justify-end pr-2">
+                                      <div className="w-0.5 h-6 bg-border/50"></div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Nút mở rộng/thu gọn */}
+                                <div className="w-6 flex-shrink-0">
+                                  {hasChildren ? (
+                                    <button
+                                      onClick={(e) => {
+                                        if (!autoExpand) {
+                                          e.preventDefault()
+                                          toggleTaskExpansion(task.id)
+                                        }
+                                      }}
+                                      className="focus:outline-none"
+                                      aria-label={isExpanded ? "Collapse" : "Expand"}
+                                    >
+                                      {isExpanded ? (
+                                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                      ) : (
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                      )}
+                                    </button>
+                                  ) : null}
+                                </div>
+
+                                {/* Tiêu đề task */}
                                 <Link
                                   href={`/projects/${projectId}/tasks/${task.id}`}
-                                  className="hover:text-primary transition-colors block truncate max-w-[180px]"
+                                  className="hover:text-primary transition-colors block truncate max-w-[180px] ml-2"
                                   title={task.title}
                                 >
                                   {task.title}
@@ -942,7 +956,7 @@ export default function ProjectDetailPage() {
                           </tr>
                           {hasChildren &&
                             isExpanded &&
-                            childTasks.map((childTask) => renderTaskRow(childTask, level + 1))}
+                            childTasks.map((childTask) => renderTaskRow(childTask, currentLevel + 1))}
                         </React.Fragment>
                       )
                     }

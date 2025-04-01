@@ -3,11 +3,13 @@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
+import { useMediaQuery } from "@/hooks/use-media-query"
 import { formatDistanceToNow } from "date-fns"
 import { onValue, ref, remove, update } from "firebase/database"
-import { Bell, Eye, CheckCheck, Trash2, EyeClosed, Check} from "lucide-react"
+import { Bell, Check, CheckCheck, Eye, EyeOff, Trash2, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 
 // Define the notification type
@@ -22,7 +24,11 @@ type NotificationType = {
   readAt?: string
 }
 
-export function NotificationDropdown() {
+interface NotificationDropdownProps {
+  isMobile?: boolean
+}
+
+export function NotificationDropdown({ isMobile = false }: NotificationDropdownProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationType[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -31,6 +37,8 @@ export function NotificationDropdown() {
   const [selectMode, setSelectMode] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
+  const isMobileView = useMediaQuery("(max-width: 768px)")
+  const shouldUseSheet = isMobile || isMobileView
 
   // Fetch notifications from Firebase
   useEffect(() => {
@@ -77,6 +85,8 @@ export function NotificationDropdown() {
 
   // Close dropdown when clicking outside
   useEffect(() => {
+    if (shouldUseSheet) return // Skip for mobile sheet view
+
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false)
@@ -87,7 +97,7 @@ export function NotificationDropdown() {
     return () => {
       document.removeEventListener("mousedown", handleClickOutside)
     }
-  }, [])
+  }, [shouldUseSheet])
 
   // Reset selection when dropdown closes
   useEffect(() => {
@@ -280,6 +290,188 @@ export function NotificationDropdown() {
     }
   }
 
+  // Header actions component
+  const HeaderActions = () => (
+    <div className="flex items-center gap-1 flex-wrap justify-end">
+      {selectMode ? (
+        <>
+          <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => setSelectMode(false)}>
+            <Check className="h-3.5 w-3.5 mr-1" /> Cancel
+          </Button>
+          {selectedNotifications.length > 0 && (
+            <>
+              <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markSelectedAsRead}>
+                <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark Read
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7 px-2 text-destructive"
+                onClick={deleteSelectedNotifications}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+              </Button>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {notifications.length > 0 && (
+            <>
+              <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => setSelectMode(true)}>
+                Select
+              </Button>
+              {unreadCount > 0 && (
+                <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markAllAsRead}>
+                  <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark all read
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs h-7 px-2 text-destructive"
+                onClick={deleteAllNotifications}
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear all
+              </Button>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  )
+
+  // Notification list component
+  const NotificationList = () => (
+    <div className={`${shouldUseSheet ? "max-h-[calc(100vh-10rem)]" : "max-h-[70vh]"} overflow-y-auto`}>
+      {loading ? (
+        <div className="p-4 text-center text-muted-foreground">
+          <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
+          <p>Loading notifications...</p>
+        </div>
+      ) : notifications.length === 0 ? (
+        <div className="p-8 text-center text-muted-foreground">
+          <Bell className="h-10 w-10 mx-auto mb-2 opacity-20" />
+          <p>No notifications yet</p>
+        </div>
+      ) : (
+        <div>
+          {selectMode && (
+            <div className="p-2 border-b border-border bg-muted/20 flex items-center">
+              <Checkbox
+                id="select-all"
+                checked={selectedNotifications.length === notifications.length && notifications.length > 0}
+                onCheckedChange={toggleSelectAll}
+                className="mr-2"
+              />
+              <label htmlFor="select-all" className="text-xs">
+                Select all ({selectedNotifications.length}/{notifications.length})
+              </label>
+            </div>
+          )}
+          {notifications.map((notification) => (
+            <div
+              key={notification.id}
+              className={`p-3 border-b border-border hover:bg-muted/30 transition-colors flex items-start ${
+                notification.status === "unread" ? "bg-muted/20" : ""
+              } ${selectedNotifications.includes(notification.id) ? "bg-primary/5" : ""}`}
+            >
+              {selectMode && (
+                <Checkbox
+                  checked={selectedNotifications.includes(notification.id)}
+                  onCheckedChange={() => toggleNotificationSelection(notification.id)}
+                  className="mr-2 mt-1"
+                />
+              )}
+              <div className="mr-3 mt-1">{getNotificationIcon(notification.eventType)}</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm mb-1 break-words">{notification.message}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                </p>
+              </div>
+              {!selectMode && (
+                <div className="flex flex-col space-y-1 ml-2">
+                  {notification.status === "unread" ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        markAsRead(notification.id)
+                      }}
+                      title="Mark as read"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        markAsUnread(notification.id)
+                      }}
+                      title="Mark as unread"
+                    >
+                      <EyeOff className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteNotification(notification.id)
+                    }}
+                    title="Delete"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
+  // For mobile, use a Sheet component
+  if (shouldUseSheet) {
+    return (
+      <Sheet>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="rounded-full relative">
+            <Bell className="h-5 w-5" />
+            {unreadCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground">
+                {unreadCount}
+              </Badge>
+            )}
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="bottom" className="h-[85vh] p-0 rounded-t-xl">
+          <SheetHeader className="px-4 py-3 border-b border-border flex flex-row items-center justify-between">
+            <SheetTitle className="text-left">Notifications</SheetTitle>
+            <div className="flex items-center gap-2">
+              <HeaderActions />
+              <SheetClose className="rounded-full h-7 w-7 p-0 flex items-center justify-center">
+                <X className="h-4 w-4" />
+                <span className="sr-only">Close</span>
+              </SheetClose>
+            </div>
+          </SheetHeader>
+          <NotificationList />
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  // For desktop, use the dropdown
   return (
     <div className="relative" ref={dropdownRef}>
       <Button variant="ghost" size="icon" className="rounded-full relative" onClick={() => setIsOpen(!isOpen)}>
@@ -295,155 +487,9 @@ export function NotificationDropdown() {
         <div className="absolute right-0 mt-2 w-80 md:w-96 bg-card rounded-lg shadow-modern border border-border/5 overflow-hidden animate-fadeIn z-50">
           <div className="p-3 border-b border-border flex items-center justify-between">
             <h3 className="font-medium">Notifications</h3>
-            <div className="flex items-center gap-1">
-              {selectMode ? (
-                <>
-                  <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={() => setSelectMode(false)}>
-                    <Check className="h-3.5 w-3.5 mr-1" /> Cancel
-                  </Button>
-                  {selectedNotifications.length > 0 && (
-                    <>
-                      <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markSelectedAsRead}>
-                        <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark Read
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-7 px-2 text-destructive"
-                        onClick={deleteSelectedNotifications}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                      </Button>
-                    </>
-                  )}
-                </>
-              ) : (
-                <>
-                  {notifications.length > 0 && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-7 px-2"
-                        onClick={() => setSelectMode(true)}
-                      >
-                        Select
-                      </Button>
-                      {unreadCount > 0 && (
-                        <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markAllAsRead}>
-                          <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark all read
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-7 px-2 text-destructive"
-                        onClick={deleteAllNotifications}
-                      >
-                        <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear all
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </div>
+            <HeaderActions />
           </div>
-
-          <div className="max-h-[70vh] overflow-y-auto">
-            {loading ? (
-              <div className="p-4 text-center text-muted-foreground">
-                <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
-                <p>Loading notifications...</p>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">
-                <Bell className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                <p>No notifications yet</p>
-              </div>
-            ) : (
-              <div>
-                {selectMode && (
-                  <div className="p-2 border-b border-border bg-muted/20 flex items-center">
-                    <Checkbox
-                      id="select-all"
-                      checked={selectedNotifications.length === notifications.length && notifications.length > 0}
-                      onCheckedChange={toggleSelectAll}
-                      className="mr-2"
-                    />
-                    <label htmlFor="select-all" className="text-xs">
-                      Select all ({selectedNotifications.length}/{notifications.length})
-                    </label>
-                  </div>
-                )}
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-3 border-b border-border hover:bg-muted/30 transition-colors flex items-start ${
-                      notification.status === "unread" ? "bg-muted/20" : ""
-                    } ${selectedNotifications.includes(notification.id) ? "bg-primary/5" : ""}`}
-                  >
-                    {selectMode && (
-                      <Checkbox
-                        checked={selectedNotifications.includes(notification.id)}
-                        onCheckedChange={() => toggleNotificationSelection(notification.id)}
-                        className="mr-2 mt-1"
-                      />
-                    )}
-                    <div className="mr-3 mt-1">{getNotificationIcon(notification.eventType)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm mb-1 break-words">{notification.message}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                      </p>
-                    </div>
-                    {!selectMode && (
-                      <div className="flex flex-col space-y-1 ml-2">
-                        {notification.status === "unread" ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              markAsRead(notification.id)
-                            }}
-                            title="Mark as read"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              markAsUnread(notification.id)
-                            }}
-                            title="Mark as unread"
-                          >
-                            <EyeClosed className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            deleteNotification(notification.id)
-                          }}
-                          title="Delete"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <NotificationList />
         </div>
       )}
     </div>

@@ -1,11 +1,11 @@
 "use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
 import { ThemeToggle } from "@/components/theme/theme-toggle"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from "lucide-react"
+import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from 'lucide-react'
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -25,6 +25,11 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [router])
 
   const handleSignOut = async () => {
     await signOut()
@@ -135,98 +140,105 @@ export default function Header() {
           )}
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Header Actions */}
         <div className="md:hidden flex items-center space-x-2">
+          {user && (
+            <NotificationDropdown isMobile={true} />
+          )}
           <ThemeToggle />
           <button
             className="text-foreground p-1 rounded-md hover:bg-muted/50 transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
       </div>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Slide from top with improved animation */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-card animate-fadeIn">
-          <div className="container mx-auto px-4 py-3 space-y-3">
+        <div className="md:hidden fixed inset-x-0 top-[57px] bottom-0 z-40 bg-background/95 backdrop-blur-sm animate-in slide-in-from-top duration-300 overflow-y-auto">
+          <div className="container mx-auto px-4 py-6 space-y-4">
             {user ? (
               <>
-                <div className="flex items-center space-x-3 py-2">
-                  <Avatar className="h-10 w-10 border border-border/30">
+                <div className="flex items-center space-x-3 py-2 border border-border/30 rounded-lg p-3 bg-card/50">
+                  <Avatar className="h-12 w-12 border border-border/30">
                     <AvatarImage src={user?.photoURL || undefined} alt={userData?.displayName || "User"} />
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {userData?.displayName?.charAt(0) || user?.email?.charAt(0) || "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <div className="font-medium">{userData?.displayName || user.email}</div>
-                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                    <div className="font-medium">{userData?.displayName || "User"}</div>
+                    <div className="text-xs text-muted-foreground truncate max-w-[200px]">{user.email}</div>
                   </div>
                 </div>
-                <div className="h-px bg-border"></div>
-                <Link
-                  href="/projects"
-                  className="flex items-center py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Folder className="mr-2 h-4 w-4" />
-                  Projects
-                </Link>
-                <Link
-                  href="/profile"
-                  className="flex items-center py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
-                </Link>
-                <div className="h-px bg-border"></div>
-                <button
-                  className="flex items-center py-2 text-sm font-medium text-destructive w-full"
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
-                </button>
+                
+                <nav className="grid gap-1 pt-2">
+                  <Link
+                    href="/projects"
+                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                  >
+                    <Folder className="mr-3 h-5 w-5" />
+                    Projects
+                  </Link>
+                  <Link
+                    href="/profile"
+                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                  >
+                    <User className="mr-3 h-5 w-5" />
+                    Profile
+                  </Link>
+                </nav>
+                
+                <div className="pt-4 mt-4 border-t border-border">
+                  <Button 
+                    variant="destructive" 
+                    className="w-full justify-start"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
+                  </Button>
+                </div>
               </>
             ) : (
               <>
-                <Link
-                  href="/"
-                  className="flex items-center py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <Home className="mr-2 h-4 w-4" />
-                  Home
-                </Link>
-                <Link
-                  href="/#features"
-                  className="flex items-center py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Features
-                </Link>
-                <Link
-                  href="/#pricing"
-                  className="flex items-center py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Pricing
-                </Link>
-                <Link
-                  href="/login"
-                  className="flex items-center py-2 text-sm font-medium hover:text-primary transition-colors"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Login
-                </Link>
-                <Link href="/register" className="block py-2" onClick={() => setMobileMenuOpen(false)}>
-                  <Button size="sm" className="w-full">
-                    Sign Up
-                  </Button>
-                </Link>
+                <nav className="grid gap-1 pt-2">
+                  <Link
+                    href="/"
+                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                  >
+                    <Home className="mr-3 h-5 w-5" />
+                    Home
+                  </Link>
+                  <Link
+                    href="/#features"
+                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                  >
+                    Features
+                  </Link>
+                  <Link
+                    href="/#pricing"
+                    className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                  >
+                    Pricing
+                  </Link>
+                </nav>
+                
+                <div className="grid grid-cols-2 gap-3 pt-4 mt-4 border-t border-border">
+                  <Link href="/login">
+                    <Button variant="outline" className="w-full">
+                      Login
+                    </Button>
+                  </Link>
+                  <Link href="/register">
+                    <Button className="w-full">
+                      Sign Up
+                    </Button>
+                  </Link>
+                </div>
               </>
             )}
           </div>
@@ -235,4 +247,3 @@ export default function Header() {
     </header>
   )
 }
-

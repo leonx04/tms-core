@@ -293,29 +293,29 @@ export default function ProjectDetailPage() {
             </div>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[80vh]">
+          <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
             <DialogTitle>Filter by Status</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-4">
             <RadioGroup value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="" id="status-all" />
                 <Label htmlFor="status-all">All Statuses</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="todo" id="status-todo" />
                 <Label htmlFor="status-todo">To Do</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="in_progress" id="status-in-progress" />
                 <Label htmlFor="status-in-progress">In Progress</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="resolved" id="status-resolved" />
                 <Label htmlFor="status-resolved">Resolved</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="closed" id="status-closed" />
                 <Label htmlFor="status-closed">Closed</Label>
               </div>
@@ -344,29 +344,29 @@ export default function ProjectDetailPage() {
             </div>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[80vh]">
+          <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
             <DialogTitle>Filter by Type</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-4">
             <RadioGroup value={typeFilter || ""} onValueChange={(value) => setTypeFilter(value || null)}>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="" id="type-all" />
                 <Label htmlFor="type-all">All Types</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="bug" id="type-bug" />
                 <Label htmlFor="type-bug">Bug</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="feature" id="type-feature" />
                 <Label htmlFor="type-feature">Feature</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="enhancement" id="type-enhancement" />
                 <Label htmlFor="type-enhancement">Enhancement</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="documentation" id="type-documentation" />
                 <Label htmlFor="type-documentation">Documentation</Label>
               </div>
@@ -395,21 +395,21 @@ export default function ProjectDetailPage() {
             </div>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[80vh]">
+          <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
             <DialogTitle>Filter by Member</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-4">
             <RadioGroup value={memberFilter || ""} onValueChange={(value) => setMemberFilter(value || null)}>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="" id="member-all" />
                 <Label htmlFor="member-all">All Members</Label>
               </div>
               {Object.values(users).map((member) => (
-                <div key={member.id} className="flex items-center space-x-2">
+                <div key={member.id} className="flex items-center space-x-2 py-1">
                   <RadioGroupItem value={member.id} id={`member-${member.id}`} />
                   <Label htmlFor={`member-${member.id}`} className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
+                    <Avatar className="h-6 w-6 flex-shrink-0">
                       <AvatarImage src={getUserPhotoURL(member.id)} />
                       <AvatarFallback>{member.displayName?.charAt(0) || "U"}</AvatarFallback>
                     </Avatar>
@@ -444,29 +444,29 @@ export default function ProjectDetailPage() {
             </div>
           </Button>
         </DialogTrigger>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[425px] flex flex-col max-h-[80vh]">
+          <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
             <DialogTitle>Filter by Priority</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          <div className="flex-1 overflow-y-auto py-4">
             <RadioGroup value={priorityFilter || ""} onValueChange={(value) => setPriorityFilter(value || null)}>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="" id="priority-all" />
                 <Label htmlFor="priority-all">All Priorities</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="low" id="priority-low" />
                 <Label htmlFor="priority-low">Low</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="medium" id="priority-medium" />
                 <Label htmlFor="priority-medium">Medium</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="high" id="priority-high" />
                 <Label htmlFor="priority-high">High</Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 py-1">
                 <RadioGroupItem value="critical" id="priority-critical" />
                 <Label htmlFor="priority-critical">Critical</Label>
               </div>
@@ -596,12 +596,12 @@ export default function ProjectDetailPage() {
                   {activeFilterCount > 0 && <Badge className="ml-2">{activeFilterCount}</Badge>}
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+              <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0 flex flex-col">
                 <SheetHeader className="px-4 py-3 border-b border-border sticky top-0 bg-background z-10">
                   <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
-                <div className="py-4 px-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 10rem)" }}>
-                  <div className="space-y-6">
+                <div className="flex-1 overflow-y-auto">
+                  <div className="py-4 px-4 space-y-6">
                     {/* Status Filter */}
                     <div className="space-y-3">
                       <h3 className="text-sm font-medium">Status</h3>

@@ -91,6 +91,23 @@ export default function ProjectDetailPage() {
   // Count active filters
   const activeFilterCount = [statusFilter, typeFilter, memberFilter, priorityFilter].filter(Boolean).length
 
+  // Đảm bảo URL ảnh của người dùng hiện tại cũng được lấy đúng
+  useEffect(() => {
+    if (user && users[user.uid]) {
+      // Cập nhật thông tin người dùng hiện tại nếu cần
+      const currentUserData = users[user.uid]
+      if (!currentUserData.photoURL && user.photoURL) {
+        setUsers((prev) => ({
+          ...prev,
+          [user.uid]: {
+            ...prev[user.uid],
+            photoURL: user.photoURL,
+          },
+        }))
+      }
+    }
+  }, [user, users])
+
   useEffect(() => {
     const fetchProjectData = async () => {
       if (!user || !projectId) return
@@ -410,7 +427,7 @@ export default function ProjectDetailPage() {
                   <RadioGroupItem value={member.id} id={`member-${member.id}`} />
                   <Label htmlFor={`member-${member.id}`} className="flex items-center gap-2">
                     <Avatar className="h-6 w-6 flex-shrink-0">
-                      <AvatarImage src={getUserPhotoURL(member.id)} />
+                      <AvatarImage src={getUserPhotoURL(member.id)} alt={member.displayName || "User"} />
                       <AvatarFallback>{member.displayName?.charAt(0) || "U"}</AvatarFallback>
                     </Avatar>
                     <span className="truncate max-w-[200px]">{member.displayName || "Unknown"}</span>
@@ -705,7 +722,7 @@ export default function ProjectDetailPage() {
                             <RadioGroupItem value={member.id} id={`m-member-${member.id}`} />
                             <Label htmlFor={`m-member-${member.id}`} className="flex items-center gap-2">
                               <Avatar className="h-6 w-6 flex-shrink-0">
-                                <AvatarImage src={getUserPhotoURL(member.id)} />
+                                <AvatarImage src={getUserPhotoURL(member.id)} alt={member.displayName || "User"} />
                                 <AvatarFallback>{member.displayName?.charAt(0) || "U"}</AvatarFallback>
                               </Avatar>
                               <span className="truncate max-w-[180px]">{member.displayName || "Unknown"}</span>

@@ -1,11 +1,11 @@
 "use client"
 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { NotificationDropdown } from "@/components/notifications/notification-dropdown"
 import { ThemeToggle } from "@/components/theme/theme-toggle"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from 'lucide-react'
+import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -17,6 +17,7 @@ export default function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
+  // Handle scroll detection for header styling
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 10)
@@ -31,9 +32,29 @@ export default function Header() {
     setMobileMenuOpen(false)
   }, [router])
 
+  // Disable body scrolling when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      // Add class to disable scrolling
+      document.body.classList.add("overflow-hidden")
+    } else {
+      // Remove class to re-enable scrolling
+      document.body.classList.remove("overflow-hidden")
+    }
+
+    // Cleanup function to ensure scrolling is re-enabled when component unmounts
+    return () => {
+      document.body.classList.remove("overflow-hidden")
+    }
+  }, [mobileMenuOpen])
+
   const handleSignOut = async () => {
     await signOut()
     router.push("/login")
+  }
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen)
   }
 
   return (
@@ -142,14 +163,13 @@ export default function Header() {
 
         {/* Mobile Header Actions */}
         <div className="md:hidden flex items-center space-x-2">
-          {user && (
-            <NotificationDropdown isMobile={true} />
-          )}
+          {user && <NotificationDropdown isMobile={true} />}
           <ThemeToggle />
           <button
             className="text-foreground p-1 rounded-md hover:bg-muted/50 transition-colors"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            onClick={toggleMobileMenu}
             aria-label="Toggle menu"
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -158,7 +178,11 @@ export default function Header() {
 
       {/* Mobile Menu - Slide from top with improved animation */}
       {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-x-0 top-[57px] bottom-0 z-40 bg-background/95 backdrop-blur-sm animate-in slide-in-from-top duration-300 overflow-y-auto">
+        <div
+          className="md:hidden fixed inset-x-0 top-[57px] bottom-0 z-40 bg-background/95 backdrop-blur-sm animate-in slide-in-from-top duration-300 overflow-y-auto"
+          aria-modal="true"
+          role="dialog"
+        >
           <div className="container mx-auto px-4 py-6 space-y-4">
             {user ? (
               <>
@@ -174,11 +198,12 @@ export default function Header() {
                     <div className="text-xs text-muted-foreground truncate max-w-[200px]">{user.email}</div>
                   </div>
                 </div>
-                
+
                 <nav className="grid gap-1 pt-2">
                   <Link
                     href="/projects"
                     className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     <Folder className="mr-3 h-5 w-5" />
                     Projects
@@ -186,17 +211,21 @@ export default function Header() {
                   <Link
                     href="/profile"
                     className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     <User className="mr-3 h-5 w-5" />
                     Profile
                   </Link>
                 </nav>
-                
+
                 <div className="pt-4 mt-4 border-t border-border">
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="destructive"
                     className="w-full justify-start"
-                    onClick={handleSignOut}
+                    onClick={() => {
+                      handleSignOut()
+                      setMobileMenuOpen(false)
+                    }}
                   >
                     <LogOut className="mr-2 h-4 w-4" />
                     Sign Out
@@ -209,6 +238,7 @@ export default function Header() {
                   <Link
                     href="/"
                     className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     <Home className="mr-3 h-5 w-5" />
                     Home
@@ -216,27 +246,27 @@ export default function Header() {
                   <Link
                     href="/#features"
                     className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     Features
                   </Link>
                   <Link
                     href="/#pricing"
                     className="flex items-center p-3 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
                   >
                     Pricing
                   </Link>
                 </nav>
-                
+
                 <div className="grid grid-cols-2 gap-3 pt-4 mt-4 border-t border-border">
-                  <Link href="/login">
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full">
                       Login
                     </Button>
                   </Link>
-                  <Link href="/register">
-                    <Button className="w-full">
-                      Sign Up
-                    </Button>
+                  <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                    <Button className="w-full">Sign Up</Button>
                   </Link>
                 </div>
               </>
@@ -247,3 +277,4 @@ export default function Header() {
     </header>
   )
 }
+

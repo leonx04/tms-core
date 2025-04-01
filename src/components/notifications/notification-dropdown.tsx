@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { formatDistanceToNow } from "date-fns"
 import { onValue, ref, remove, update } from "firebase/database"
-import { Bell, Check, CheckCheck, Eye, EyeOff, Trash2, X } from "lucide-react"
+import { Bell, Check, CheckCheck, Eye, EyeOff, Trash2, X } from 'lucide-react'
 import { useEffect, useRef, useState } from "react"
 
 // Define the notification type
@@ -38,6 +38,7 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
   const isMobileView = useMediaQuery("(max-width: 768px)")
+  const isSmallScreen = useMediaQuery("(max-width: 390px)")
   const shouldUseSheet = isMobile || isMobileView
 
   // Fetch notifications from Firebase
@@ -323,7 +324,7 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
               </Button>
               {unreadCount > 0 && (
                 <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={markAllAsRead}>
-                  <CheckCheck className="h-3.5 w-3.5 mr-1" /> Mark all read
+                  <CheckCheck className="h-3.5 w-3.5 mr-1" /> {isSmallScreen ? "Read all" : "Mark all read"}
                 </Button>
               )}
               <Button
@@ -332,7 +333,7 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
                 className="text-xs h-7 px-2 text-destructive"
                 onClick={deleteAllNotifications}
               >
-                <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear all
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> {isSmallScreen ? "Clear" : "Clear all"}
               </Button>
             </>
           )}
@@ -343,7 +344,7 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
 
   // Notification list component
   const NotificationList = () => (
-    <div className={`${shouldUseSheet ? "max-h-[calc(100vh-10rem)]" : "max-h-[70vh]"} overflow-y-auto`}>
+    <div className={`overflow-y-auto`} style={{ maxHeight: shouldUseSheet ? "calc(100vh - 10rem)" : "70vh" }}>
       {loading ? (
         <div className="p-4 text-center text-muted-foreground">
           <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary mx-auto mb-2"></div>
@@ -383,7 +384,7 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
                   className="mr-2 mt-1"
                 />
               )}
-              <div className="mr-3 mt-1">{getNotificationIcon(notification.eventType)}</div>
+              <div className="mr-3 mt-1 flex-shrink-0">{getNotificationIcon(notification.eventType)}</div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm mb-1 break-words">{notification.message}</p>
                 <p className="text-xs text-muted-foreground">
@@ -391,7 +392,7 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
                 </p>
               </div>
               {!selectMode && (
-                <div className="flex flex-col space-y-1 ml-2">
+                <div className="flex flex-col space-y-1 ml-2 flex-shrink-0">
                   {notification.status === "unread" ? (
                     <Button
                       variant="ghost"
@@ -454,8 +455,8 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
             )}
           </Button>
         </SheetTrigger>
-        <SheetContent side="bottom" className="h-[85vh] p-0 rounded-t-xl">
-          <SheetHeader className="px-4 py-3 border-b border-border flex flex-row items-center justify-between">
+        <SheetContent side="bottom" className="h-[85vh] max-h-[85vh] p-0 rounded-t-xl">
+          <SheetHeader className="px-4 py-3 border-b border-border flex flex-row items-center justify-between sticky top-0 bg-background z-10">
             <SheetTitle className="text-left">Notifications</SheetTitle>
             <div className="flex items-center gap-2">
               <HeaderActions />
@@ -485,7 +486,7 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 md:w-96 bg-card rounded-lg shadow-modern border border-border/5 overflow-hidden animate-fadeIn z-50">
-          <div className="p-3 border-b border-border flex items-center justify-between">
+          <div className="p-3 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
             <h3 className="font-medium">Notifications</h3>
             <HeaderActions />
           </div>
@@ -495,4 +496,3 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
     </div>
   )
 }
-

@@ -18,17 +18,43 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { database } from "@/config/firebase"
 import { useAuth } from "@/contexts/auth-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import type { Project, Task, User } from "@/types"
 import { formatDate, getPriorityColor, getStatusColor, getStatusLabel, getTypeColor } from "@/utils/utils"
 import { equalTo, get, orderByChild, query, ref } from "firebase/database"
-import { Calendar, ChevronDown, ChevronRight, Clock, Filter, Grid, Layers, List, Plus, Search, Settings, Users, Webhook } from 'lucide-react'
+import {
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Filter,
+  Grid,
+  List,
+  Plus,
+  Search,
+  Settings,
+  Users,
+  Webhook,
+  X,
+} from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import React, { type JSX, useEffect, useState } from "react"
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+  SheetClose,
+  SheetFooter,
+} from "@/components/ui/sheet"
+import { Separator } from "@/components/ui/separator"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null)
@@ -48,9 +74,22 @@ export default function ProjectDetailPage() {
   const router = useRouter()
   const projectId = params.id as string
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({})
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false)
 
   const isMobile = useMediaQuery("(max-width: 768px)")
   const isSmallScreen = useMediaQuery("(max-width: 1024px)")
+  const isSmallHeight = useMediaQuery("(max-height: 700px)")
+
+  // Function to clear all filters
+  const clearAllFilters = () => {
+    setStatusFilter(null)
+    setTypeFilter(null)
+    setMemberFilter(null)
+    setPriorityFilter(null)
+  }
+
+  // Count active filters
+  const activeFilterCount = [statusFilter, typeFilter, memberFilter, priorityFilter].filter(Boolean).length
 
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -173,11 +212,11 @@ export default function ProjectDetailPage() {
 
   // Helper function to get user photo URL
   const getUserPhotoURL = (userId: string) => {
-    const userData = users[userId];
-    if (!userData) return undefined;
+    const userData = users[userId]
+    if (!userData) return undefined
 
     // Check for different possible property names for the photo URL
-    return userData.photoURL || userData.photoUrl || userData.avatarUrl || userData.avatar || undefined;
+    return userData.photoURL || userData.photoUrl || userData.avatarUrl || userData.avatar || undefined
   }
 
   if (loading) {
@@ -231,253 +270,470 @@ export default function ProjectDetailPage() {
   const startItem = Math.min(totalItems, (currentPage - 1) * itemsPerPage + 1)
   const endItem = Math.min(totalItems, currentPage * itemsPerPage)
 
+  // Filter components for desktop
+  const DesktopFilters = () => (
+    <div className="hidden md:flex gap-2 flex-wrap">
+      {/* Status Filter */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="h-10 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <span>{statusFilter ? getStatusLabel(statusFilter) : "Status"}</span>
+              {statusFilter && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  <X
+                    className="h-3 w-3"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setStatusFilter(null)
+                    }}
+                  />
+                </Badge>
+              )}
+            </div>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Filter by Status</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <RadioGroup value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="" id="status-all" />
+                <Label htmlFor="status-all">All Statuses</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="todo" id="status-todo" />
+                <Label htmlFor="status-todo">To Do</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="in_progress" id="status-in-progress" />
+                <Label htmlFor="status-in-progress">In Progress</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="resolved" id="status-resolved" />
+                <Label htmlFor="status-resolved">Resolved</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="closed" id="status-closed" />
+                <Label htmlFor="status-closed">Closed</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Type Filter */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="h-10 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <span>{typeFilter ? typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1) : "Type"}</span>
+              {typeFilter && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  <X
+                    className="h-3 w-3"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setTypeFilter(null)
+                    }}
+                  />
+                </Badge>
+              )}
+            </div>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Filter by Type</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <RadioGroup value={typeFilter || ""} onValueChange={(value) => setTypeFilter(value || null)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="" id="type-all" />
+                <Label htmlFor="type-all">All Types</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="bug" id="type-bug" />
+                <Label htmlFor="type-bug">Bug</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="feature" id="type-feature" />
+                <Label htmlFor="type-feature">Feature</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="enhancement" id="type-enhancement" />
+                <Label htmlFor="type-enhancement">Enhancement</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="documentation" id="type-documentation" />
+                <Label htmlFor="type-documentation">Documentation</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Member Filter */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="h-10 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <span>{memberFilter ? users[memberFilter]?.displayName || "Member" : "Assigned To"}</span>
+              {memberFilter && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  <X
+                    className="h-3 w-3"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setMemberFilter(null)
+                    }}
+                  />
+                </Badge>
+              )}
+            </div>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Filter by Member</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <RadioGroup value={memberFilter || ""} onValueChange={(value) => setMemberFilter(value || null)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="" id="member-all" />
+                <Label htmlFor="member-all">All Members</Label>
+              </div>
+              {Object.values(users).map((member) => (
+                <div key={member.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={member.id} id={`member-${member.id}`} />
+                  <Label htmlFor={`member-${member.id}`} className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={getUserPhotoURL(member.id)} />
+                      <AvatarFallback>{member.displayName?.charAt(0) || "U"}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate max-w-[200px]">{member.displayName || "Unknown"}</span>
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Priority Filter */}
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline" className="h-10 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2">
+              <span>
+                {priorityFilter ? priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1) : "Priority"}
+              </span>
+              {priorityFilter && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  <X
+                    className="h-3 w-3"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setPriorityFilter(null)
+                    }}
+                  />
+                </Badge>
+              )}
+            </div>
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Filter by Priority</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
+            <RadioGroup value={priorityFilter || ""} onValueChange={(value) => setPriorityFilter(value || null)}>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="" id="priority-all" />
+                <Label htmlFor="priority-all">All Priorities</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="low" id="priority-low" />
+                <Label htmlFor="priority-low">Low</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="medium" id="priority-medium" />
+                <Label htmlFor="priority-medium">Medium</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="high" id="priority-high" />
+                <Label htmlFor="priority-high">High</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="critical" id="priority-critical" />
+                <Label htmlFor="priority-critical">Critical</Label>
+              </div>
+            </RadioGroup>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+
   return (
     <div className="min-h-screen bg-background">
-      <main className="container mx-auto px-4 py-8">
-        <PageHeader title={project.name} description={project.description || "No description provided"}>
+      <main className="container mx-auto px-4 py-4 md:py-8">
+        <PageHeader
+          title={project.name}
+          description={isSmallHeight && isMobile ? undefined : project.description || "No description provided"}
+        >
           <div className="flex gap-2">
-            <Link href={`/projects/${projectId}/members`}>
-              <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
-                <Users className="h-4 w-4 mr-2" /> Members
-              </Button>
-            </Link>
-            {userRoles.includes("admin") && (
-              <Link href={`/projects/${projectId}/settings`}>
-                <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
-                  <Settings className="h-4 w-4 mr-2" /> Settings
-                </Button>
-              </Link>
+            {!isMobile && (
+              <>
+                <Link href={`/projects/${projectId}/members`}>
+                  <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
+                    <Users className="h-4 w-4 mr-2" /> Members
+                  </Button>
+                </Link>
+                {userRoles.includes("admin") && (
+                  <Link href={`/projects/${projectId}/settings`}>
+                    <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
+                      <Settings className="h-4 w-4 mr-2" /> Settings
+                    </Button>
+                  </Link>
+                )}
+                {userRoles.includes("admin") && (
+                  <Link href={`/projects/${projectId}/webhooks`}>
+                    <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
+                      <Webhook className="h-4 w-4 mr-2" /> Webhook Log
+                    </Button>
+                  </Link>
+                )}
+              </>
             )}
-            {userRoles.includes("admin") && (
-              <Link href={`/projects/${projectId}/webhooks`}>
-                <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
-                  <Webhook className="h-4 w-4 mr-2" /> Webhook Log
-                </Button>
-              </Link>
+            {isMobile && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px] max-h-[80vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Project Options</DialogTitle>
+                  </DialogHeader>
+                  <div className="grid gap-4 py-4">
+                    <Link href={`/projects/${projectId}/members`}>
+                      <Button variant="outline" className="w-full justify-start">
+                        <Users className="h-4 w-4 mr-2" /> Members
+                      </Button>
+                    </Link>
+                    {userRoles.includes("admin") && (
+                      <Link href={`/projects/${projectId}/settings`}>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Settings className="h-4 w-4 mr-2" /> Settings
+                        </Button>
+                      </Link>
+                    )}
+                    {userRoles.includes("admin") && (
+                      <Link href={`/projects/${projectId}/webhooks`}>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Webhook className="h-4 w-4 mr-2" /> Webhook Log
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
             )}
           </div>
         </PageHeader>
 
-        <div className="mb-6">
-          <ImportExportToolbar
-            projectId={projectId}
-            tasks={tasks}
-            userId={user?.uid || ""}
-            onImportComplete={() => {
-              // Refresh tasks when import is complete
-              const fetchProjectData = async () => {
-                if (!user || !projectId) return
+        {!isSmallHeight && (
+          <div className="mb-4 md:mb-6">
+            <ImportExportToolbar
+              projectId={projectId}
+              tasks={tasks}
+              userId={user?.uid || ""}
+              onImportComplete={() => {
+                // Refresh tasks when import is complete
+                const fetchProjectData = async () => {
+                  if (!user || !projectId) return
 
-                try {
-                  setLoading(true)
-                  // Fetch tasks for the project
-                  const tasksRef = ref(database, "tasks")
-                  const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
-                  const tasksSnapshot = await get(tasksQuery)
+                  try {
+                    setLoading(true)
+                    // Fetch tasks for the project
+                    const tasksRef = ref(database, "tasks")
+                    const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
+                    const tasksSnapshot = await get(tasksQuery)
 
-                  if (tasksSnapshot.exists()) {
-                    const tasksData = tasksSnapshot.val()
-                    const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
-                      id,
-                      ...data,
-                    }))
-                    setTasks(tasksList)
+                    if (tasksSnapshot.exists()) {
+                      const tasksData = tasksSnapshot.val()
+                      const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
+                        id,
+                        ...data,
+                      }))
+                      setTasks(tasksList)
+                    }
+                  } catch (error) {
+                    console.error("Error fetching tasks:", error)
+                  } finally {
+                    setLoading(false)
                   }
-                } catch (error) {
-                  console.error("Error fetching tasks:", error)
-                } finally {
-                  setLoading(false)
                 }
-              }
 
-              fetchProjectData()
-            }}
-          />
-        </div>
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:flex gap-2 w-full md:w-auto">
-            {/* Status Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <Filter className="h-4 w-4 flex-shrink-0" />
-                    <span className="block truncate">{statusFilter ? getStatusLabel(statusFilter) : "Status"}</span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-1">
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setStatusFilter(null)}
-                >
-                  All Statuses
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setStatusFilter("todo")}
-                >
-                  To Do
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setStatusFilter("in_progress")}
-                >
-                  In Progress
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setStatusFilter("resolved")}
-                >
-                  Resolved
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setStatusFilter("closed")}
-                >
-                  Closed
-                </button>
-              </PopoverContent>
-            </Popover>
-
-            {/* Type Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <Layers className="h-4 w-4 flex-shrink-0" />
-                    <span className="block truncate">
-                      {typeFilter ? typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1) : "Type"}
-                    </span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-1">
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setTypeFilter(null)}
-                >
-                  All Types
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setTypeFilter("bug")}
-                >
-                  Bug
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setTypeFilter("feature")}
-                >
-                  Feature
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setTypeFilter("enhancement")}
-                >
-                  Enhancement
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setTypeFilter("documentation")}
-                >
-                  Documentation
-                </button>
-              </PopoverContent>
-            </Popover>
-
-            {/* Member Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <Users className="h-4 w-4 flex-shrink-0" />
-                    <span className="block truncate">
-                      {memberFilter ? users[memberFilter]?.displayName || "Member" : "Assigned To"}
-                    </span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-1">
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setMemberFilter(null)}
-                >
-                  All Members
-                </button>
-                {Object.values(users).map((member) => (
-                  <button
-                    key={member.id}
-                    className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                    onClick={() => setMemberFilter(member.id)}
-                  >
-                    {member.displayName || "Unknown"}
-                  </button>
-                ))}
-              </PopoverContent>
-            </Popover>
-
-            {/* Priority Filter */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full h-10 rounded-lg shadow-sm justify-between">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="block truncate">
-                      {priorityFilter ? priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1) : "Priority"}
-                    </span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 flex-shrink-0 ml-2" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-1">
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setPriorityFilter(null)}
-                >
-                  All Priorities
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setPriorityFilter("low")}
-                >
-                  Low
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setPriorityFilter("medium")}
-                >
-                  Medium
-                </button>
-                <button
-                  className="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-                  onClick={() => setPriorityFilter("high")}
-                >
-                  High
-                </button>
-              </PopoverContent>
-            </Popover>
+                fetchProjectData()
+              }}
+            />
           </div>
+        )}
 
-          {/* Search input - make it full width on mobile */}
-          <div className="relative w-full md:w-auto md:flex-1 md:min-w-[200px] mb-4 md:mb-0">
-            <div className="relative h-10">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search tasks..."
-                className="w-full h-10 pl-10 pr-4 py-2 rounded-lg border border-input shadow-sm bg-background focus:ring-2 focus:ring-primary/10 focus:border-primary transition-colors"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-2 md:gap-4">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            {/* Mobile Filter Button */}
+            <Sheet open={isFilterSheetOpen} onOpenChange={setIsFilterSheetOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="md:hidden h-10 rounded-lg shadow-sm flex-1">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filters
+                  {activeFilterCount > 0 && <Badge className="ml-2">{activeFilterCount}</Badge>}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[300px] sm:w-[400px] p-0">
+                <SheetHeader className="px-4 py-3 border-b border-border sticky top-0 bg-background z-10">
+                  <SheetTitle>Filters</SheetTitle>
+                </SheetHeader>
+                <div className="py-4 px-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 10rem)" }}>
+                  <div className="space-y-6">
+                    {/* Status Filter */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Status</h3>
+                      <RadioGroup value={statusFilter || ""} onValueChange={(value) => setStatusFilter(value || null)}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="" id="m-status-all" />
+                          <Label htmlFor="m-status-all">All Statuses</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="todo" id="m-status-todo" />
+                          <Label htmlFor="m-status-todo">To Do</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="in_progress" id="m-status-in-progress" />
+                          <Label htmlFor="m-status-in-progress">In Progress</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="resolved" id="m-status-resolved" />
+                          <Label htmlFor="m-status-resolved">Resolved</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="closed" id="m-status-closed" />
+                          <Label htmlFor="m-status-closed">Closed</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-            <div className="flex items-center border border-border rounded-lg overflow-hidden shadow-sm h-10">
+                    <Separator />
+
+                    {/* Type Filter */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Type</h3>
+                      <RadioGroup value={typeFilter || ""} onValueChange={(value) => setTypeFilter(value || null)}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="" id="m-type-all" />
+                          <Label htmlFor="m-type-all">All Types</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="bug" id="m-type-bug" />
+                          <Label htmlFor="m-type-bug">Bug</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="feature" id="m-type-feature" />
+                          <Label htmlFor="m-type-feature">Feature</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="enhancement" id="m-type-enhancement" />
+                          <Label htmlFor="m-type-enhancement">Enhancement</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="documentation" id="m-type-documentation" />
+                          <Label htmlFor="m-type-documentation">Documentation</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    <Separator />
+
+                    {/* Priority Filter */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Priority</h3>
+                      <RadioGroup
+                        value={priorityFilter || ""}
+                        onValueChange={(value) => setPriorityFilter(value || null)}
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="" id="m-priority-all" />
+                          <Label htmlFor="m-priority-all">All Priorities</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="low" id="m-priority-low" />
+                          <Label htmlFor="m-priority-low">Low</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="medium" id="m-priority-medium" />
+                          <Label htmlFor="m-priority-medium">Medium</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="high" id="m-priority-high" />
+                          <Label htmlFor="m-priority-high">High</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="critical" id="m-priority-critical" />
+                          <Label htmlFor="m-priority-critical">Critical</Label>
+                        </div>
+                      </RadioGroup>
+                    </div>
+
+                    <Separator />
+
+                    {/* Member Filter */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-medium">Assigned To</h3>
+                      <RadioGroup value={memberFilter || ""} onValueChange={(value) => setMemberFilter(value || null)}>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="" id="m-member-all" />
+                          <Label htmlFor="m-member-all">All Members</Label>
+                        </div>
+                        {Object.values(users).map((member) => (
+                          <div key={member.id} className="flex items-center space-x-2">
+                            <RadioGroupItem value={member.id} id={`m-member-${member.id}`} />
+                            <Label htmlFor={`m-member-${member.id}`} className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6 flex-shrink-0">
+                                <AvatarImage src={getUserPhotoURL(member.id)} />
+                                <AvatarFallback>{member.displayName?.charAt(0) || "U"}</AvatarFallback>
+                              </Avatar>
+                              <span className="truncate max-w-[180px]">{member.displayName || "Unknown"}</span>
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                    </div>
+                  </div>
+                </div>
+                <SheetFooter className="p-4 border-t border-border sticky bottom-0 bg-background z-10">
+                  <div className="flex flex-row gap-2 w-full">
+                    <Button variant="outline" onClick={clearAllFilters} className="flex-1">
+                      Clear All
+                    </Button>
+                    <SheetClose asChild>
+                      <Button className="flex-1">Apply Filters</Button>
+                    </SheetClose>
+                  </div>
+                </SheetFooter>
+              </SheetContent>
+            </Sheet>
+
+            {/* Desktop Filters */}
+            <DesktopFilters />
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center border border-border rounded-lg overflow-hidden shadow-sm h-10 ml-auto md:ml-0">
               <button
                 className={`p-2 h-full ${viewMode === "list" ? "bg-muted" : "hover:bg-muted/50"} transition-colors`}
                 onClick={() => setViewMode("list")}
@@ -493,6 +749,20 @@ export default function ProjectDetailPage() {
                 <Grid className="h-4 w-4" />
               </button>
             </div>
+          </div>
+
+          {/* Search and Create Task */}
+          <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2 mt-2 md:mt-0">
+            <div className="relative w-full md:w-[250px]">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search tasks..."
+                className="w-full h-10 pl-10 pr-4 py-2 rounded-lg border border-input shadow-sm bg-background focus:ring-2 focus:ring-primary/10 focus:border-primary transition-colors"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
             <Link href={`/projects/${projectId}/tasks/create`} className="w-full sm:w-auto">
               <Button className="rounded-lg shadow-sm h-10 w-full">
@@ -503,6 +773,40 @@ export default function ProjectDetailPage() {
             </Link>
           </div>
         </div>
+
+        {/* Active Filters Summary */}
+        {activeFilterCount > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mb-4">
+            <span className="text-sm text-muted-foreground">Active filters:</span>
+            {statusFilter && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Status: {getStatusLabel(statusFilter)}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setStatusFilter(null)} />
+              </Badge>
+            )}
+            {typeFilter && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Type: {typeFilter.charAt(0).toUpperCase() + typeFilter.slice(1)}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setTypeFilter(null)} />
+              </Badge>
+            )}
+            {priorityFilter && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Priority: {priorityFilter.charAt(0).toUpperCase() + priorityFilter.slice(1)}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setPriorityFilter(null)} />
+              </Badge>
+            )}
+            {memberFilter && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                Assigned to: {users[memberFilter]?.displayName || "Unknown"}
+                <X className="h-3 w-3 cursor-pointer" onClick={() => setMemberFilter(null)} />
+              </Badge>
+            )}
+            <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-7 px-2 text-xs">
+              Clear all
+            </Button>
+          </div>
+        )}
 
         {filteredTasks.length === 0 ? (
           <EmptyState
@@ -522,7 +826,7 @@ export default function ProjectDetailPage() {
         ) : viewMode === "list" ? (
           <Card className="shadow-sm border-border/60 animate-fadeIn overflow-hidden">
             <div className="overflow-x-auto">
-              <table className={`w-full table-auto ${isMobile ? "min-w-[600px]" : "min-w-[900px]"}`}>
+              <table className="w-full table-auto">
                 <thead>
                   <tr className="bg-muted/50">
                     <th className="px-4 py-3 text-left text-sm font-medium w-[250px] max-w-[250px]">Title</th>
@@ -835,3 +1139,4 @@ export default function ProjectDetailPage() {
     </div>
   )
 }
+

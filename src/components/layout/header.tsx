@@ -5,7 +5,7 @@ import { NotificationDropdown } from "@/components/notifications/notification-dr
 import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from "lucide-react"
+import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from 'lucide-react'
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
@@ -136,7 +136,7 @@ export default function Header() {
                 {userMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 bg-card rounded-lg shadow-modern border border-border/5 overflow-hidden animate-fadeIn">
                     <div className="p-2">
-                      <div className="px-3 py-2 text-sm font-medium text-muted-foreground">
+                      <div className="px-3 py-2 text-sm font-medium text-muted-foreground truncate">
                         {userData?.displayName || user.email}
                       </div>
                       <div className="h-px bg-border my-1"></div>
@@ -211,7 +211,8 @@ export default function Header() {
       {mobileMenuOpen && (
         <div
           ref={mobileMenuRef}
-          className="md:hidden fixed inset-x-0 top-[57px] z-40 bg-background/95 backdrop-blur-sm animate-in slide-in-from-top duration-300 overflow-y-auto mobile-menu-container"
+          className="md:hidden fixed inset-x-0 top-[57px] z-40 bg-background/95 backdrop-blur-sm animate-in slide-in-from-top duration-300 mobile-menu-container"
+          style={{ maxHeight: "calc(100vh - 57px)", overflowY: "auto" }}
           aria-modal="true"
           role="dialog"
           onClick={(e) => {
@@ -221,19 +222,19 @@ export default function Header() {
             }
           }}
         >
-          <div className="container mx-auto px-4 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
+          <div className="container mx-auto px-4 py-4 space-y-3">
             {user ? (
               <>
                 <div className="flex items-center space-x-3 py-2 border border-border/30 rounded-lg p-3 bg-card/50">
-                  <Avatar className="h-10 w-10 border border-border/30">
+                  <Avatar className="h-10 w-10 border border-border/30 flex-shrink-0">
                     <AvatarImage src={user?.photoURL || undefined} alt={userData?.displayName || "User"} />
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {userData?.displayName?.charAt(0) || user?.email?.charAt(0) || "U"}
                     </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <div className="font-medium">{userData?.displayName || "User"}</div>
-                    <div className="text-xs text-muted-foreground truncate max-w-[200px]">{user.email}</div>
+                  <div className="min-w-0">
+                    <div className="font-medium truncate">{userData?.displayName || "User"}</div>
+                    <div className="text-xs text-muted-foreground truncate">{user.email}</div>
                   </div>
                 </div>
 
@@ -243,7 +244,7 @@ export default function Header() {
                     className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <Folder className="mr-3 h-5 w-5" />
+                    <Folder className="mr-3 h-5 w-5 flex-shrink-0" />
                     Projects
                   </Link>
                   <Link
@@ -251,7 +252,7 @@ export default function Header() {
                     className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <User className="mr-3 h-5 w-5" />
+                    <User className="mr-3 h-5 w-5 flex-shrink-0" />
                     Profile
                   </Link>
                 </nav>
@@ -278,7 +279,7 @@ export default function Header() {
                     className="flex items-center p-2.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    <Home className="mr-3 h-5 w-5" />
+                    <Home className="mr-3 h-5 w-5 flex-shrink-0" />
                     Home
                   </Link>
                   <Link
@@ -315,4 +316,3 @@ export default function Header() {
     </header>
   )
 }
-

@@ -7,13 +7,31 @@ import { AssigneeGroup } from "@/components/ui/assignee-group"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip"
 import { database } from "@/config/firebase"
 import { formatTextWithLinks } from "@/config/format-text-with-links"
 import { useAuth } from "@/contexts/auth-context"
@@ -31,29 +49,29 @@ import {
   TASK_STATUS,
 } from "@/utils/utils"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
-import {
-  ArrowLeft,
-  Calendar,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Clock,
-  Edit,
-  GitCommit,
-  MessageSquare,
-  Plus,
-  Save,
-  User,
-  ImageIcon,
-} from "lucide-react"
+import { AlertCircle, ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit, GitCommit, MessageSquare, Plus, Save, User, ImageIcon, CheckCircle2, AlertTriangle, X, Loader2, FileText, Paperclip, ExternalLink, Download, RefreshCw } from 'lucide-react'
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { MediaUploader } from "@/components/cloudinary/media-uploader"
 import { TaskMediaSection } from "@/components/task/task-media-section"
 import { CommentMediaUploader } from "@/components/comment/comment-media-uploader"
 import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service"
 import Image from "next/image"
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
@@ -105,6 +123,11 @@ export default function TaskDetailPage() {
   const taskId = params.taskId as string
   const [usersLoading, setUsersLoading] = useState<Record<string, boolean>>({})
   const { toast } = useToast()
+  const commentInputRef = useRef<HTMLTextAreaElement>(null)
+
+  // Status change confirmation dialog
+  const [showStatusConfirmDialog, setShowStatusConfirmDialog] = useState(false)
+  const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null)
 
   // Subtask creation state
   const [showSubtaskDialog, setShowSubtaskDialog] = useState(false)
@@ -120,6 +143,13 @@ export default function TaskDetailPage() {
   const [subtaskTagInput, setSubtaskTagInput] = useState<string>("")
   const [subtaskCommitId, setSubtaskCommitId] = useState<string>("")
   const [subtaskMedia, setSubtaskMedia] = useState<any[]>([])
+
+  // Comment pagination
+  const [commentsPage, setCommentsPage] = useState(1)
+  const commentsPerPage = 10
+  const totalCommentPages = Math.ceil(comments.length / commentsPerPage)
+  const paginatedComments = comments.slice(0, commentsPage * commentsPerPage)
+  const hasMoreComments = commentsPage < totalCommentPages
 
   // Check if we're on a mobile device
   const isMobile = useMediaQuery("(max-width: 640px)")
@@ -194,223 +224,224 @@ export default function TaskDetailPage() {
     }
   }
 
-  useEffect(() => {
-    const fetchTaskData = async () => {
-      if (!user || !projectId || !taskId) return
+  const fetchTaskData = useCallback(async () => {
+    if (!user || !projectId || !taskId) return
 
-      try {
-        // Fetch task details
-        const taskRef = ref(database, `tasks/${taskId}`)
-        const taskSnapshot = await get(taskRef)
+    try {
+      setLoading(true)
+      // Fetch task details
+      const taskRef = ref(database, `tasks/${taskId}`)
+      const taskSnapshot = await get(taskRef)
 
-        if (!taskSnapshot.exists()) {
-          toast({
-            title: "Task not found",
-            description: "The task you're looking for doesn't exist",
-            variant: "destructive",
-          })
-          router.push(`/projects/${projectId}`)
-          return
-        }
+      if (!taskSnapshot.exists()) {
+        toast({
+          title: "Task not found",
+          description: "The task you're looking for doesn't exist",
+          variant: "destructive",
+        })
+        router.push(`/projects/${projectId}`)
+        return
+      }
 
-        const taskData = {
-          id: taskId,
-          ...taskSnapshot.val(),
-        }
+      const taskData = {
+        id: taskId,
+        ...taskSnapshot.val(),
+      }
 
-        // Check if task belongs to this project
-        if (taskData.projectId !== projectId) {
-          toast({
-            title: "Invalid task",
-            description: "This task doesn't belong to the current project",
-            variant: "destructive",
-          })
-          router.push(`/projects/${projectId}`)
-          return
-        }
+      // Check if task belongs to this project
+      if (taskData.projectId !== projectId) {
+        toast({
+          title: "Invalid task",
+          description: "This task doesn't belong to the current project",
+          variant: "destructive",
+        })
+        router.push(`/projects/${projectId}`)
+        return
+      }
 
-        setTask(taskData)
+      setTask(taskData)
 
-        // Fetch project to check if user is a member
-        const projectRef = ref(database, `projects/${projectId}`)
-        const projectSnapshot = await get(projectRef)
+      // Fetch project to check if user is a member
+      const projectRef = ref(database, `projects/${projectId}`)
+      const projectSnapshot = await get(projectRef)
 
-        if (!projectSnapshot.exists()) {
-          toast({
-            title: "Project not found",
-            description: "The project you're looking for doesn't exist",
-            variant: "destructive",
-          })
-          router.push("/projects")
-          return
-        }
+      if (!projectSnapshot.exists()) {
+        toast({
+          title: "Project not found",
+          description: "The project you're looking for doesn't exist",
+          variant: "destructive",
+        })
+        router.push("/projects")
+        return
+      }
 
-        const projectData = projectSnapshot.val()
-        setProjectData(projectData)
+      const projectData = projectSnapshot.val()
+      setProjectData(projectData)
 
-        // Check if user is a member of this project
-        if (!projectData.members || !projectData.members[user.uid]) {
-          toast({
-            title: "Access denied",
-            description: "You don't have access to this project",
-            variant: "destructive",
-          })
-          router.push("/projects")
-          return
-        }
+      // Check if user is a member of this project
+      if (!projectData.members || !projectData.members[user.uid]) {
+        toast({
+          title: "Access denied",
+          description: "You don't have access to this project",
+          variant: "destructive",
+        })
+        router.push("/projects")
+        return
+      }
 
-        // Check if Cloudinary is configured for this project
-        const cloudinaryConfig = await getCloudinaryConfigByProjectId(projectId)
-        setCloudinaryConfigExists(!!cloudinaryConfig)
+      // Check if Cloudinary is configured for this project
+      const cloudinaryConfig = await getCloudinaryConfigByProjectId(projectId)
+      setCloudinaryConfigExists(!!cloudinaryConfig)
 
-        // Fetch all users involved in this task
-        const userIds = new Set<string>()
-        userIds.add(taskData.createdBy)
+      // Fetch all users involved in this task
+      const userIds = new Set<string>()
+      userIds.add(taskData.createdBy)
 
-        if (taskData.assignedTo) {
-          taskData.assignedTo.forEach((id: string) => userIds.add(id))
-        }
+      if (taskData.assignedTo) {
+        taskData.assignedTo.forEach((id: string) => userIds.add(id))
+      }
 
-        const usersData: Record<string, FirebaseUser> = {}
+      const usersData: Record<string, FirebaseUser> = {}
 
-        for (const userId of userIds) {
-          const userRef = ref(database, `users/${userId}`)
-          const userSnapshot = await get(userRef)
+      for (const userId of userIds) {
+        const userRef = ref(database, `users/${userId}`)
+        const userSnapshot = await get(userRef)
 
-          if (userSnapshot.exists()) {
-            usersData[userId] = {
-              id: userId,
-              ...userSnapshot.val(),
-            }
+        if (userSnapshot.exists()) {
+          usersData[userId] = {
+            id: userId,
+            ...userSnapshot.val(),
           }
         }
+      }
 
-        setUsers(usersData)
+      setUsers(usersData)
 
-        // Fetch comments for this task
-        const commentsRef = ref(database, "comments")
-        const commentsQuery = query(commentsRef, orderByChild("taskId"), equalTo(taskId))
-        const commentsSnapshot = await get(commentsQuery)
+      // Fetch comments for this task
+      const commentsRef = ref(database, "comments")
+      const commentsQuery = query(commentsRef, orderByChild("taskId"), equalTo(taskId))
+      const commentsSnapshot = await get(commentsQuery)
 
-        if (commentsSnapshot.exists()) {
-          const commentsData = commentsSnapshot.val()
-          const commentsList = Object.entries(commentsData)
-            .map(([id, data]: [string, any]) => ({
-              id,
-              ...data,
-            }))
-            .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-
-          setComments(commentsList)
-
-          // Add comment authors to users
-          for (const comment of commentsList) {
-            if (!usersData[comment.userId]) {
-              const userRef = ref(database, `users/${comment.userId}`)
-              const userSnapshot = await get(userRef)
-
-              if (userSnapshot.exists()) {
-                usersData[comment.userId] = {
-                  id: comment.userId,
-                  ...userSnapshot.val(),
-                }
-              }
-            }
-          }
-        }
-
-        // Fetch task history
-        const historyRef = ref(database, "taskHistory")
-        const historyQuery = query(historyRef, orderByChild("taskId"), equalTo(taskId))
-        const historySnapshot = await get(historyQuery)
-
-        if (historySnapshot.exists()) {
-          const historyData = historySnapshot.val()
-          const historyList = Object.entries(historyData)
-            .map(([id, data]: [string, any]) => ({
-              id,
-              ...data,
-            }))
-            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-
-          setHistory(historyList)
-
-          // Add history authors to users
-          for (const entry of historyList) {
-            if (!usersData[entry.userId]) {
-              const userRef = ref(database, `users/${entry.userId}`)
-              const userSnapshot = await get(userRef)
-
-              if (userSnapshot.exists()) {
-                usersData[entry.userId] = {
-                  id: entry.userId,
-                  ...userSnapshot.val(),
-                }
-              }
-            }
-          }
-        }
-
-        // Fetch parent task if exists
-        if (taskData.parentTaskId) {
-          const parentTaskRef = ref(database, `tasks/${taskData.parentTaskId}`)
-          const parentTaskSnapshot = await get(parentTaskRef)
-
-          if (parentTaskSnapshot.exists()) {
-            setParentTask({
-              id: taskData.parentTaskId,
-              ...parentTaskSnapshot.val(),
-            })
-          }
-        }
-
-        // Fetch child tasks
-        const tasksRef = ref(database, "tasks")
-        const childTasksQuery = query(tasksRef, orderByChild("parentTaskId"), equalTo(taskId))
-        const childTasksSnapshot = await get(childTasksQuery)
-
-        if (childTasksSnapshot.exists()) {
-          const childTasksData = childTasksSnapshot.val()
-          const childTasksList = Object.entries(childTasksData).map(([id, data]: [string, any]) => ({
+      if (commentsSnapshot.exists()) {
+        const commentsData = commentsSnapshot.val()
+        const commentsList = Object.entries(commentsData)
+          .map(([id, data]: [string, any]) => ({
             id,
             ...data,
           }))
+          .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 
-          setChildTasks(childTasksList)
+        setComments(commentsList)
 
-          if (childTasksList.length > 0) {
-            const calculatedPercent = calculatePercentDone(childTasksList)
-            if (taskData.percentDone === undefined || taskData.percentDone !== calculatedPercent) {
-              const taskRef = ref(database, `tasks/${taskId}`)
-              await update(taskRef, {
-                percentDone: calculatedPercent,
-                updatedAt: new Date().toISOString(),
-              })
+        // Add comment authors to users
+        for (const comment of commentsList) {
+          if (!usersData[comment.userId]) {
+            const userRef = ref(database, `users/${comment.userId}`)
+            const userSnapshot = await get(userRef)
 
-              setTask({
-                ...taskData,
-                percentDone: calculatedPercent,
-                updatedAt: new Date().toISOString(),
-              })
+            if (userSnapshot.exists()) {
+              usersData[comment.userId] = {
+                id: comment.userId,
+                ...userSnapshot.val(),
+              }
             }
           }
         }
-
-        setUsers(usersData)
-      } catch (error) {
-        console.error("Error fetching task data:", error)
-        toast({
-          title: "Error",
-          description: "Failed to load task data. Please try again.",
-          variant: "destructive",
-        })
-      } finally {
-        setLoading(false)
       }
-    }
 
-    fetchTaskData()
+      // Fetch task history
+      const historyRef = ref(database, "taskHistory")
+      const historyQuery = query(historyRef, orderByChild("taskId"), equalTo(taskId))
+      const historySnapshot = await get(historyQuery)
+
+      if (historySnapshot.exists()) {
+        const historyData = historySnapshot.val()
+        const historyList = Object.entries(historyData)
+          .map(([id, data]: [string, any]) => ({
+            id,
+            ...data,
+          }))
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+
+        setHistory(historyList)
+
+        // Add history authors to users
+        for (const entry of historyList) {
+          if (!usersData[entry.userId]) {
+            const userRef = ref(database, `users/${entry.userId}`)
+            const userSnapshot = await get(userRef)
+
+            if (userSnapshot.exists()) {
+              usersData[entry.userId] = {
+                id: entry.userId,
+                ...userSnapshot.val(),
+              }
+            }
+          }
+        }
+      }
+
+      // Fetch parent task if exists
+      if (taskData.parentTaskId) {
+        const parentTaskRef = ref(database, `tasks/${taskData.parentTaskId}`)
+        const parentTaskSnapshot = await get(parentTaskRef)
+
+        if (parentTaskSnapshot.exists()) {
+          setParentTask({
+            id: taskData.parentTaskId,
+            ...parentTaskSnapshot.val(),
+          })
+        }
+      }
+
+      // Fetch child tasks
+      const tasksRef = ref(database, "tasks")
+      const childTasksQuery = query(tasksRef, orderByChild("parentTaskId"), equalTo(taskId))
+      const childTasksSnapshot = await get(childTasksQuery)
+
+      if (childTasksSnapshot.exists()) {
+        const childTasksData = childTasksSnapshot.val()
+        const childTasksList = Object.entries(childTasksData).map(([id, data]: [string, any]) => ({
+          id,
+          ...data,
+        }))
+
+        setChildTasks(childTasksList)
+
+        if (childTasksList.length > 0) {
+          const calculatedPercent = calculatePercentDone(childTasksList)
+          if (taskData.percentDone === undefined || taskData.percentDone !== calculatedPercent) {
+            const taskRef = ref(database, `tasks/${taskId}`)
+            await update(taskRef, {
+              percentDone: calculatedPercent,
+              updatedAt: new Date().toISOString(),
+            })
+
+            setTask({
+              ...taskData,
+              percentDone: calculatedPercent,
+              updatedAt: new Date().toISOString(),
+            })
+          }
+        }
+      }
+
+      setUsers(usersData)
+    } catch (error) {
+      console.error("Error fetching task data:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load task data. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading(false)
+    }
   }, [user, projectId, taskId, router, toast])
+
+  useEffect(() => {
+    fetchTaskData()
+  }, [fetchTaskData])
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -491,10 +522,18 @@ export default function TaskDetailPage() {
     }
   }
 
+  // Initiate status update - show confirmation dialog
+  const initiateStatusUpdate = (newStatus: string) => {
+    setPendingStatusChange(newStatus)
+    setShowStatusConfirmDialog(true)
+  }
+
+  // Confirm and execute status update
   const handleStatusUpdate = async (newStatus: string) => {
     if (!user || !task) return
 
     setIsUpdatingStatus(true)
+    setShowStatusConfirmDialog(false)
 
     try {
       const oldStatus = task.status
@@ -584,6 +623,7 @@ export default function TaskDetailPage() {
       })
     } finally {
       setIsUpdatingStatus(false)
+      setPendingStatusChange(null)
     }
   }
 
@@ -752,6 +792,23 @@ export default function TaskDetailPage() {
     }
   }
 
+  const getStatusChangeMessage = () => {
+    if (!task || !pendingStatusChange) return ""
+    
+    switch (pendingStatusChange) {
+      case TASK_STATUS.TODO:
+        return "Are you sure you want to reopen this task? This will change the status from Closed to To Do."
+      case TASK_STATUS.IN_PROGRESS:
+        return "Are you sure you want to start progress on this task? This will change the status from To Do to In Progress."
+      case TASK_STATUS.RESOLVED:
+        return "Are you sure you want to resolve this task? This will change the status from In Progress to Resolved."
+      case TASK_STATUS.CLOSED:
+        return "Are you sure you want to close this task? This will change the status from Resolved to Closed."
+      default:
+        return `Are you sure you want to change the status to ${getStatusLabel(pendingStatusChange)}?`
+    }
+  }
+
   const fetchUserData = async (userId: string) => {
     setUsersLoading((prev) => ({ ...prev, [userId]: true }))
     try {
@@ -815,11 +872,47 @@ export default function TaskDetailPage() {
     return item?.format && item.format.toLowerCase() === "pdf"
   }
 
+  const refreshTaskData = () => {
+    fetchTaskData()
+    toast({
+      title: "Refreshed",
+      description: "Task data has been refreshed",
+    })
+  }
+
+  const loadMoreComments = () => {
+    setCommentsPage(prev => prev + 1)
+  }
+
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
-        <div className="flex h-[calc(100vh-64px)] justify-center items-center">
-          <LoadingSpinner size="lg" />
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col gap-6">
+            <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
+              <ArrowLeft className="h-4 w-4" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+            
+            <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
+              <div className="bg-muted/50 border-b border-border p-6">
+                <div className="flex flex-col gap-4">
+                  <Skeleton className="h-8 w-3/4" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-6 w-20" />
+                    <Skeleton className="h-6 w-24" />
+                    <Skeleton className="h-6 w-16" />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="p-6">
+                <div className="flex justify-center items-center py-12">
+                  <LoadingSpinner size="lg" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -829,13 +922,14 @@ export default function TaskDetailPage() {
     return (
       <div className="bg-background min-h-screen">
         <div className="container mx-auto px-4 py-8">
-          <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Task not found</h2>
-            <p className="text-muted-foreground mb-6">
+          <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground" />
+            <h2 className="text-xl font-semibold">Task not found</h2>
+            <p className="text-muted-foreground max-w-md">
               The task you're looking for doesn't exist or you don't have access to it.
             </p>
             <Link href={`/projects/${projectId}`}>
-              <Button className="rounded-lg shadow-sm">Go to Project</Button>
+              <Button className="rounded-lg shadow-sm mt-2">Go to Project</Button>
             </Link>
           </div>
         </div>
@@ -861,28 +955,40 @@ export default function TaskDetailPage() {
   return (
     <div className="bg-background min-h-screen">
       <main className="container mx-auto px-4 py-8">
-        {parentTask ? (
-          <Link
-            href={`/projects/${projectId}/tasks/${parentTask.id}`}
-            className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center mb-6 transition-colors"
+        <div className="flex items-center justify-between mb-6">
+          {parentTask ? (
+            <Link
+              href={`/projects/${projectId}/tasks/${parentTask.id}`}
+              className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Parent Task
+            </Link>
+          ) : (
+            <Link
+              href={`/projects/${projectId}`}
+              className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Project
+            </Link>
+          )}
+          
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={refreshTaskData}
+            className="text-muted-foreground hover:text-foreground"
+            title="Refresh task data"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Parent Task
-          </Link>
-        ) : (
-          <Link
-            href={`/projects/${projectId}`}
-            className="text-muted-foreground text-sm hover:text-foreground inline-flex items-center mb-6 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Project
-          </Link>
-        )}
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
 
-        <div className="bg-card border border-border rounded-xl shadow-sm animate-fadeIn mb-8 overflow-hidden">
-          <div className="bg-muted/50 border-b border-border p-4 md:p-6">
-            <div className="flex flex-col justify-between gap-4 items-start mb-4 md:flex-row md:items-center">
-              <h1 className="text-xl break-words font-bold md:text-2xl">{task.title}</h1>
+        <Card className="mb-8 shadow-sm border-border animate-fadeIn overflow-hidden">
+          <CardHeader className="bg-muted/50 border-b border-border p-4 md:p-6 space-y-4">
+            <div className="flex flex-col justify-between gap-4 items-start md:flex-row md:items-center">
+              <CardTitle className="text-xl break-words font-bold md:text-2xl">{task.title}</CardTitle>
 
-              <div className="flex items-center self-start space-x-2">
+              <div className="flex flex-wrap items-center self-start gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -899,18 +1005,25 @@ export default function TaskDetailPage() {
 
                 {canUpdateStatus() && (
                   <Button
-                    onClick={() => handleStatusUpdate(getNextStatus() as string)}
+                    onClick={() => initiateStatusUpdate(getNextStatus() as string)}
                     disabled={isUpdatingStatus}
                     size="sm"
                     className="rounded-lg shadow-sm"
                   >
-                    {getNextStatusLabel()}
+                    {isUpdatingStatus ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : (
+                      getNextStatusLabel()
+                    )}
                   </Button>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2">
               <Badge variant="type" className={getTypeColor(task.type)} animation="fade">
                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
               </Badge>
@@ -935,7 +1048,7 @@ export default function TaskDetailPage() {
             </div>
 
             {parentTask && (
-              <div className="bg-muted p-3 rounded-lg mb-4">
+              <div className="bg-muted p-3 rounded-lg">
                 <p className="flex text-sm items-center">
                   <span className="text-muted-foreground mr-2">Parent Task:</span>
                   <Link
@@ -949,7 +1062,7 @@ export default function TaskDetailPage() {
               </div>
             )}
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
               {/* Improved TabsList with better scrolling behavior */}
               <div className="relative mb-4">
                 <TabsList
@@ -977,471 +1090,566 @@ export default function TaskDetailPage() {
                 )}
               </div>
 
-              <TabsContent value="details" className="animate-in fade-in-50">
-                <div className="dark:prose-invert max-w-none mb-6 prose">
-                  {task.description ? (
-                    <div
-                      className="break-words"
-                      dangerouslySetInnerHTML={{
-                        __html: formatTextWithLinks(task.description, projectData?.githubRepo),
-                      }}
-                    />
-                  ) : (
-                    <p className="text-muted-foreground italic">No description provided</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2">
-                  <div className="flex items-center">
-                    <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                    <span className="text-muted-foreground text-sm">Created by:</span>
-                    <span className="text-sm font-medium ml-2 truncate">
-                      {users[task.createdBy]?.displayName || "Unknown user"}
-                    </span>
+              <CardContent className="p-0">
+                <TabsContent value="details" className="animate-in fade-in-50 p-4 md:p-6">
+                  <div className="dark:prose-invert max-w-none mb-6 prose">
+                    {task.description ? (
+                      <div
+                        className="break-words"
+                        dangerouslySetInnerHTML={{
+                          __html: formatTextWithLinks(task.description, projectData?.githubRepo),
+                        }}
+                      />
+                    ) : (
+                      <p className="text-muted-foreground italic">No description provided</p>
+                    )}
                   </div>
 
-                  <div className="flex items-center">
-                    <Calendar className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                    <span className="text-muted-foreground text-sm">Created:</span>
-                    <span className="text-sm ml-2">{formatDate(task.createdAt)}</span>
-                  </div>
-
-                  <div className="flex items-center">
-                    <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                    <span className="text-muted-foreground text-sm">Assigned to:</span>
-                    <div className="ml-2">
-                      {task.assignedTo && task.assignedTo.length > 0 ? (
-                        <div className="flex items-center">
-                          <AssigneeGroup users={getAssigneeUsers()} size="sm" />
-
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="ml-2 text-sm text-muted-foreground hidden md:inline-block">
-                                  {task.assignedTo.map((id) => users[id]?.displayName || "Unknown").join(", ")}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>
-                                  Assigned to:{" "}
-                                  {task.assignedTo.map((id) => users[id]?.displayName || "Unknown").join(", ")}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                      )}
+                  <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2">
+                    <div className="flex items-center">
+                      <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                      <span className="text-muted-foreground text-sm">Created by:</span>
+                      <span className="text-sm font-medium ml-2 truncate">
+                        {users[task.createdBy]?.displayName || "Unknown user"}
+                      </span>
                     </div>
-                  </div>
 
-                  {task.dueDate && (
                     <div className="flex items-center">
                       <Calendar className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                      <span className="text-muted-foreground text-sm">Due date:</span>
-                      <span className="text-sm ml-2">{formatDate(task.dueDate)}</span>
+                      <span className="text-muted-foreground text-sm">Created:</span>
+                      <span className="text-sm ml-2">{formatDate(task.createdAt)}</span>
                     </div>
-                  )}
 
-                  {task.estimatedTime && (
                     <div className="flex items-center">
-                      <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                      <span className="text-muted-foreground text-sm">Estimated time:</span>
-                      <span className="text-sm ml-2">{task.estimatedTime} hours</span>
-                    </div>
-                  )}
-                  {task.percentDone !== undefined && (
-                    <div className="col-span-1 flex items-center sm:col-span-2">
-                      <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                      <span className="text-muted-foreground text-sm">Progress:</span>
-                      <div className="bg-muted h-2.5 rounded-full w-full dark:bg-muted max-w-xs ml-2 overflow-hidden">
-                        <div
-                          className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-in-out"
-                          style={{ width: `${task.percentDone}%` }}
-                          title={`${task.percentDone}% complete`}
-                        ></div>
+                      <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                      <span className="text-muted-foreground text-sm">Assigned to:</span>
+                      <div className="ml-2">
+                        {task.assignedTo && task.assignedTo.length > 0 ? (
+                          <div className="flex items-center">
+                            <AssigneeGroup users={getAssigneeUsers()} size="sm" />
+
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="ml-2 text-sm text-muted-foreground hidden md:inline-block">
+                                    {task.assignedTo.map((id) => users[id]?.displayName || "Unknown").join(", ")}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>
+                                    Assigned to:{" "}
+                                    {task.assignedTo.map((id) => users[id]?.displayName || "Unknown").join(", ")}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                        )}
                       </div>
-                      <span className="text-xs ml-2">{task.percentDone}%</span>
+                    </div>
+
+                    {task.dueDate && (
+                      <div className="flex items-center">
+                        <Calendar className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                        <span className="text-muted-foreground text-sm">Due date:</span>
+                        <span className="text-sm ml-2">{formatDate(task.dueDate)}</span>
+                      </div>
+                    )}
+
+                    {task.estimatedTime && (
+                      <div className="flex items-center">
+                        <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                        <span className="text-muted-foreground text-sm">Estimated time:</span>
+                        <span className="text-sm ml-2">{task.estimatedTime} hours</span>
+                      </div>
+                    )}
+                    {task.percentDone !== undefined && (
+                      <div className="col-span-1 flex items-center sm:col-span-2">
+                        <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                        <span className="text-muted-foreground text-sm">Progress:</span>
+                        <div className="bg-muted h-2.5 rounded-full w-full dark:bg-muted max-w-xs ml-2 overflow-hidden">
+                          <div
+                            className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-in-out"
+                            style={{ width: `${task.percentDone}%` }}
+                            title={`${task.percentDone}% complete`}
+                          ></div>
+                        </div>
+                        <span className="text-xs ml-2">{task.percentDone}%</span>
+                      </div>
+                    )}
+
+                    {task.tags && task.tags.length > 0 && (
+                      <div className="col-span-1 flex items-center sm:col-span-2">
+                        <span className="text-muted-foreground text-sm mr-2">Tags:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {task.tags.map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {task.gitCommitId && projectData?.githubRepo && (
+                      <div className="col-span-1 flex items-center sm:col-span-2">
+                        <GitCommit className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
+                        <span className="text-muted-foreground text-sm mr-2">Commit:</span>
+                        <div className="max-w-[300px] truncate">
+                          <CommitLink
+                            url={`https://github.com/${getRepoSlug(projectData.githubRepo)}/commit/${task.gitCommitId}`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {task.status === TASK_STATUS.IN_PROGRESS && user && (
+                    <div className="bg-card border border-border p-4 rounded-lg mb-6">
+                      <h3 className="text-sm font-medium mb-2">Link a commit when resolving</h3>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <input
+                          type="text"
+                          placeholder="Enter commit ID or URL"
+                          value={commitId}
+                          onChange={(e) => setCommitId(e.target.value)}
+                          className="flex-1 bg-background border border-input p-2 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
+                        />
+                        <Button
+                          onClick={() => initiateStatusUpdate(TASK_STATUS.RESOLVED)}
+                          disabled={isUpdatingStatus}
+                          size="sm"
+                          className="rounded-lg shadow-sm"
+                        >
+                          Resolve with Commit
+                        </Button>
+                      </div>
                     </div>
                   )}
 
-                  {task.tags && task.tags.length > 0 && (
-                    <div className="col-span-1 flex items-center sm:col-span-2">
-                      <span className="text-muted-foreground text-sm mr-2">Tags:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {task.tags.map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            {tag}
-                          </Badge>
+                  {task.mediaAttachments && task.mediaAttachments.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-sm font-medium mb-3">Media Attachments</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {task.mediaAttachments.map((media, index) => (
+                          <div
+                            key={index}
+                            className="border rounded-md overflow-hidden cursor-pointer hover:border-primary transition-colors"
+                            onClick={() => {
+                              setSelectedMedia(media)
+                              setShowMediaPreview(true)
+                            }}
+                          >
+                            <div className="aspect-square relative bg-muted">
+                              {isImage(media) ? (
+                                <img
+                                  src={media.url || "/placeholder.svg"}
+                                  alt="Media attachment"
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : isVideo(media) ? (
+                                <div className="flex items-center justify-center h-full">
+                                  <FileText className="h-8 w-8 text-muted-foreground" />
+                                  <span className="absolute bottom-1 right-1 bg-background/80 text-xs px-1 rounded">
+                                    Video
+                                  </span>
+                                </div>
+                              ) : isPdf(media) ? (
+                                <div className="flex items-center justify-center h-full">
+                                  <FileText className="h-8 w-8 text-muted-foreground" />
+                                  <span className="absolute bottom-1 right-1 bg-background/80 text-xs px-1 rounded">
+                                    PDF
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center h-full">
+                                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         ))}
                       </div>
                     </div>
                   )}
+                </TabsContent>
 
-                  {task.gitCommitId && projectData?.githubRepo && (
-                    <div className="col-span-1 flex items-center sm:col-span-2">
-                      <GitCommit className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
-                      <span className="text-muted-foreground text-sm mr-2">Commit:</span>
-                      <div className="max-w-[300px] truncate">
-                        <CommitLink
-                          url={`https://github.com/${getRepoSlug(projectData.githubRepo)}/commit/${task.gitCommitId}`}
+                <TabsContent value="comments" className="animate-in fade-in-50 p-4 md:p-6">
+                  <div className="bg-card border border-border rounded-lg shadow-sm mb-6 overflow-hidden">
+                    <div className="p-4">
+                      <form onSubmit={handleCommentSubmit}>
+                        <textarea
+                          ref={commentInputRef}
+                          placeholder="Add a comment..."
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          className="bg-background border border-input p-3 rounded-lg w-full focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-y transition-colors"
+                          disabled={isSubmittingComment}
                         />
-                      </div>
-                    </div>
-                  )}
-                </div>
 
-                {task.status === TASK_STATUS.IN_PROGRESS && user && (
-                  <div className="bg-card border border-border p-4 rounded-lg mb-6">
-                    <h3 className="text-sm font-medium mb-2">Link a commit when resolving</h3>
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <input
-                        type="text"
-                        placeholder="Enter commit ID or URL"
-                        value={commitId}
-                        onChange={(e) => setCommitId(e.target.value)}
-                        className="flex-1 bg-background border border-input p-2 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
-                      />
-                      <Button
-                        onClick={() => handleStatusUpdate(TASK_STATUS.RESOLVED)}
-                        disabled={isUpdatingStatus}
-                        size="sm"
-                        className="rounded-lg shadow-sm"
-                      >
-                        Resolve with Commit
-                      </Button>
+                        {commentMediaUrl && (
+                          <div className="mt-2 p-2 border rounded-md inline-flex items-center gap-2">
+                            <img
+                              src={commentMediaUrl || "/placeholder.svg"}
+                              alt="Attached media"
+                              className="h-10 w-10 object-cover rounded"
+                            />
+                            <button
+                              type="button"
+                              className="text-xs text-destructive hover:underline"
+                              onClick={() => setCommentMediaUrl(null)}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between mt-2">
+                          <div>
+                            {cloudinaryConfigExists && (
+                              <CommentMediaUploader
+                                projectId={projectId}
+                                taskId={taskId}
+                                onUploadComplete={handleCommentMediaUpload}
+                              />
+                            )}
+                          </div>
+                          <Button
+                            type="submit"
+                            disabled={isSubmittingComment || !commentText.trim()}
+                            className="rounded-lg shadow-sm"
+                          >
+                            {isSubmittingComment ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Submitting...
+                              </>
+                            ) : (
+                              "Add Comment"
+                            )}
+                          </Button>
+                        </div>
+                      </form>
                     </div>
                   </div>
-                )}
 
-                {task.mediaAttachments && task.mediaAttachments.length > 0 && (
-                  <div className="mb-6">
-                    <h3 className="text-sm font-medium mb-3">Media Attachments</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                      {task.mediaAttachments.map((media, index) => (
+                  {comments.length === 0 ? (
+                    <div className="bg-card border border-border rounded-lg shadow-sm text-center py-12">
+                      <MessageSquare className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
+                      <h3 className="text-lg font-medium mb-1">No comments yet</h3>
+                      <p className="text-muted-foreground">Be the first to comment on this task</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {paginatedComments.map((comment) => (
                         <div
-                          key={index}
-                          className="border rounded-md overflow-hidden cursor-pointer"
-                          onClick={() => {
-                            setSelectedMedia(media)
-                            setShowMediaPreview(true)
-                          }}
+                          key={comment.id}
+                          className="bg-card border border-border rounded-lg shadow-sm animate-fadeIn overflow-hidden"
                         >
-                          <div className="aspect-square relative bg-muted">
-                            {isImage(media) ? (
-                              <img
-                                src={media.url || "/placeholder.svg"}
-                                alt="Media attachment"
-                                className="object-cover w-full h-full"
-                              />
-                            ) : (
-                              <div className="flex items-center justify-center h-full">
-                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                          <div className="p-4">
+                            <div className="flex justify-between items-start mb-3">
+                              <div className="flex items-center">
+                                <Avatar className="h-9 w-9 mr-3">
+                                  <AvatarImage 
+                                    src={users[comment.userId]?.photoURL || undefined} 
+                                    alt={users[comment.userId]?.displayName || "User"} 
+                                  />
+                                  <AvatarFallback className="bg-primary text-primary-foreground">
+                                    {users[comment.userId]?.displayName?.charAt(0) || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-medium">{users[comment.userId]?.displayName || "Unknown user"}</p>
+                                  <p className="text-muted-foreground text-xs">
+                                    {formatDateTime(comment.createdAt)}
+                                    {comment.updatedAt && " (edited)"}
+                                  </p>
+                                </div>
                               </div>
-                            )}
+                            </div>
+                            <div className="dark:prose-invert max-w-none pl-12 prose">
+                              <div
+                                dangerouslySetInnerHTML={{
+                                  __html: formatTextWithLinks(comment.content, projectData?.githubRepo),
+                                }}
+                              />
+
+                              {comment.mediaUrl && (
+                                <div className="mt-3">
+                                  <a 
+                                    href={comment.mediaUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="inline-block group"
+                                  >
+                                    <div className="relative">
+                                      <img
+                                        src={comment.mediaUrl || "/placeholder.svg"}
+                                        alt="Comment attachment"
+                                        className="max-h-48 rounded-md border border-border group-hover:border-primary transition-colors"
+                                      />
+                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <ExternalLink className="h-6 w-6 text-white drop-shadow-md" />
+                                      </div>
+                                    </div>
+                                  </a>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="comments" className="animate-in fade-in-50">
-                <div className="bg-card border border-border rounded-lg shadow-sm mb-6 overflow-hidden">
-                  <div className="p-4">
-                    <form onSubmit={handleCommentSubmit}>
-                      <textarea
-                        placeholder="Add a comment..."
-                        value={commentText}
-                        onChange={(e) => setCommentText(e.target.value)}
-                        className="bg-background border border-input p-3 rounded-lg w-full focus:border-primary focus:ring-2 focus:ring-primary/20 min-h-[100px] resize-y transition-colors"
-                        disabled={isSubmittingComment}
-                      />
-
-                      {commentMediaUrl && (
-                        <div className="mt-2 p-2 border rounded-md inline-flex items-center gap-2">
-                          <img
-                            src={commentMediaUrl || "/placeholder.svg"}
-                            alt="Attached media"
-                            className="h-10 w-10 object-cover rounded"
-                          />
-                          <button
-                            type="button"
-                            className="text-xs text-destructive hover:underline"
-                            onClick={() => setCommentMediaUrl(null)}
+                      
+                      {hasMoreComments && (
+                        <div className="flex justify-center pt-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={loadMoreComments}
+                            className="rounded-lg"
                           >
-                            Remove
-                          </button>
+                            Load More Comments
+                          </Button>
                         </div>
                       )}
-
-                      <div className="flex justify-between mt-2">
-                        <div>
-                          {cloudinaryConfigExists && (
-                            <CommentMediaUploader
-                              projectId={projectId}
-                              taskId={taskId}
-                              onUploadComplete={handleCommentMediaUpload}
-                            />
-                          )}
-                        </div>
-                        <Button
-                          type="submit"
-                          disabled={isSubmittingComment || !commentText.trim()}
-                          className="rounded-lg shadow-sm"
-                        >
-                          {isSubmittingComment ? "Submitting..." : "Add Comment"}
-                        </Button>
-                      </div>
-                    </form>
-                  </div>
-                </div>
-
-                {comments.length === 0 ? (
-                  <div className="bg-card border border-border rounded-lg shadow-sm text-center py-12">
-                    <MessageSquare className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
-                    <h3 className="text-lg font-medium mb-1">No comments yet</h3>
-                    <p className="text-muted-foreground">Be the first to comment on this task</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {comments.map((comment) => (
-                      <div
-                        key={comment.id}
-                        className="bg-card border border-border rounded-lg shadow-sm animate-fadeIn overflow-hidden"
-                      >
-                        <div className="p-4">
-                          <div className="flex justify-between items-start mb-3">
-                            <div className="flex items-center">
-                              <div className="flex bg-primary h-9 justify-center rounded-full text-primary-foreground text-sm w-9 font-medium items-center mr-3">
-                                {users[comment.userId]?.displayName?.charAt(0) || "?"}
-                              </div>
-                              <div>
-                                <p className="font-medium">{users[comment.userId]?.displayName || "Unknown user"}</p>
-                                <p className="text-muted-foreground text-xs">
-                                  {formatDateTime(comment.createdAt)}
-                                  {comment.updatedAt && " (edited)"}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="dark:prose-invert max-w-none pl-12 prose">
-                            <div
-                              dangerouslySetInnerHTML={{
-                                __html: formatTextWithLinks(comment.content, projectData?.githubRepo),
-                              }}
-                            />
-
-                            {comment.mediaUrl && (
-                              <div className="mt-3">
-                                <a href={comment.mediaUrl} target="_blank" rel="noopener noreferrer">
-                                  <img
-                                    src={comment.mediaUrl || "/placeholder.svg"}
-                                    alt="Comment attachment"
-                                    className="max-h-48 rounded-md border border-border"
-                                  />
-                                </a>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="history" className="animate-in fade-in-50">
-                {history.length === 0 ? (
-                  <div className="bg-card border border-border rounded-lg shadow-sm text-center py-12">
-                    <Clock className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
-                    <h3 className="text-lg font-medium mb-1">No history yet</h3>
-                    <p className="text-muted-foreground">Task history will appear here</p>
-                  </div>
-                ) : (
-                  <div className="bg-card border border-border rounded-lg shadow-sm animate-fadeIn overflow-hidden">
-                    <div className="p-4">
-                      <ul className="space-y-4">
-                        {history.map((entry) => (
-                          <li key={entry.id} className="border-b border-border last:border-0 last:pb-0 pb-4">
-                            <div className="flex items-start mb-1">
-                              <div className="flex flex-shrink-0 bg-muted h-7 justify-center rounded-full text-muted-foreground text-xs w-7 font-medium items-center mr-2 mt-0.5">
-                                {users[entry.userId]?.displayName?.charAt(0) || "?"}
-                              </div>
-                              <div className="flex-1 break-words">
-                                <p className="text-sm">
-                                  <span className="font-medium">
-                                    {users[entry.userId]?.displayName || "Unknown user"}
-                                  </span>{" "}
-                                  {entry.changes.map((change, index) => (
-                                    <span key={index} className="inline-block">
-                                      {index > 0 && ", "}
-                                      changed {change.field} from{" "}
-                                      <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
-                                        {change.oldValue || "none"}
-                                      </span>{" "}
-                                      to{" "}
-                                      <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
-                                        {change.newValue}
-                                      </span>
-                                    </span>
-                                  ))}
-                                </p>
-                                <p className="text-muted-foreground text-xs">{formatDateTime(entry.timestamp)}</p>
-                              </div>
-                            </div>
-                            {entry.comment && (
-                              <div
-                                className="text-muted-foreground text-sm ml-9 mt-1 break-words"
-                                dangerouslySetInnerHTML={{
-                                  __html: formatTextWithLinks(entry.comment, getRepoSlug(projectData?.githubRepo)),
-                                }}
-                              />
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="subtasks" className="animate-in fade-in-50">
-                <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-                  <div className="bg-muted/50 p-3 border-b border-border flex justify-between items-center">
-                    <h3 className="font-medium">Subtasks ({childTasks.length})</h3>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 rounded-lg"
-                        onClick={() => setShowSubtaskDialog(true)}
-                      >
-                        <Plus className="h-4 w-4 mr-2" /> Add Subtask
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 p-0 rounded-full w-7"
-                        onClick={() => setShowChildTasks(!showChildTasks)}
-                        aria-label={showChildTasks ? "Hide subtasks" : "Show subtasks"}
-                      >
-                        {showChildTasks ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {showChildTasks && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[700px]">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left text-sm font-medium px-4 py-2 w-[40%]">Title</th>
-                            <th className="text-left text-sm font-medium px-4 py-2 w-[20%]">Status</th>
-                            <th className="text-left text-sm font-medium px-4 py-2 w-[25%]">Assigned To</th>
-                            <th className="text-left text-sm font-medium px-4 py-2 w-[15%]">Progress</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {childTasks.map((childTask) => {
-                            // Convert child task assignees to user objects for AssigneeGroup
-                            const childTaskUsers = childTask.assignedTo
-                              ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
-                              : []
-
-                            return (
-                              <tr
-                                key={childTask.id}
-                                className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
-                              >
-                                <td className="px-4 py-2">
-                                  <Link
-                                    href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                    className="text-primary hover:underline truncate block max-w-full"
-                                    title={childTask.title}
-                                  >
-                                    {childTask.title}
-                                  </Link>
-                                </td>
-                                <td className="px-4 py-2 whitespace-nowrap">
-                                  <Badge
-                                    variant="status"
-                                    className={getStatusColor(childTask.status)}
-                                    animation={
-                                      childTask.status === TASK_STATUS.TODO ||
-                                        childTask.status === TASK_STATUS.IN_PROGRESS
-                                        ? "pulse"
-                                        : "fade"
-                                    }
-                                  >
-                                    {getStatusLabel(childTask.status)}
-                                  </Badge>
-                                </td>
-                                <td className="px-4 py-2">
-                                  {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
-                                    <div className="flex items-center">
-                                      <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
-
-                                      <TooltipProvider>
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
-                                              {childTask.assignedTo
-                                                .map((id) => users[id]?.displayName || "Unknown")
-                                                .join(", ")}
-                                            </span>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <p>
-                                              {childTask.assignedTo
-                                                .map((id) => users[id]?.displayName || "Unknown")
-                                                .join(", ")}
-                                            </p>
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      </TooltipProvider>
-                                    </div>
-                                  ) : (
-                                    <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                                  )}
-                                </td>
-                                <td className="px-4 py-2">
-                                  {childTask.percentDone !== undefined && (
-                                    <div className="flex items-center gap-2">
-                                      <div className="bg-muted h-2 rounded-full w-full max-w-24 overflow-hidden">
-                                        <div
-                                          className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
-                                          style={{ width: `${childTask.percentDone}%` }}
-                                        ></div>
-                                      </div>
-                                      <span className="text-xs whitespace-nowrap">{childTask.percentDone}%</span>
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                        </tbody>
-                      </table>
                     </div>
                   )}
-                </div>
-              </TabsContent>
+                </TabsContent>
 
-              <TabsContent value="media" className="animate-in fade-in-50">
-                <TaskMediaSection projectId={projectId} taskId={taskId} />
-              </TabsContent>
+                <TabsContent value="history" className="animate-in fade-in-50 p-4 md:p-6">
+                  {history.length === 0 ? (
+                    <div className="bg-card border border-border rounded-lg shadow-sm text-center py-12">
+                      <Clock className="h-12 text-muted-foreground w-12 mb-2 mx-auto" />
+                      <h3 className="text-lg font-medium mb-1">No history yet</h3>
+                      <p className="text-muted-foreground">Task history will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="bg-card border border-border rounded-lg shadow-sm animate-fadeIn overflow-hidden">
+                      <ScrollArea className="h-[500px] p-4">
+                        <ul className="space-y-4">
+                          {history.map((entry) => (
+                            <li key={entry.id} className="border-b border-border last:border-0 last:pb-0 pb-4">
+                              <div className="flex items-start mb-1">
+                                <Avatar className="h-7 w-7 mr-2 mt-0.5">
+                                  <AvatarImage 
+                                    src={users[entry.userId]?.photoURL || undefined} 
+                                    alt={users[entry.userId]?.displayName || "User"} 
+                                  />
+                                  <AvatarFallback className="bg-muted text-muted-foreground text-xs">
+                                    {users[entry.userId]?.displayName?.charAt(0) || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 break-words">
+                                  <p className="text-sm">
+                                    <span className="font-medium">
+                                      {users[entry.userId]?.displayName || "Unknown user"}
+                                    </span>{" "}
+                                    {entry.changes.map((change, index) => (
+                                      <span key={index} className="inline-block">
+                                        {index > 0 && ", "}
+                                        changed {change.field} from{" "}
+                                        <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
+                                          {change.oldValue || "none"}
+                                        </span>{" "}
+                                        to{" "}
+                                        <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
+                                          {change.newValue}
+                                        </span>
+                                      </span>
+                                    ))}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs">{formatDateTime(entry.timestamp)}</p>
+                                </div>
+                              </div>
+                              {entry.comment && (
+                                <div
+                                  className="text-muted-foreground text-sm ml-9 mt-1 break-words"
+                                  dangerouslySetInnerHTML={{
+                                    __html: formatTextWithLinks(entry.comment, getRepoSlug(projectData?.githubRepo)),
+                                  }}
+                                />
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </ScrollArea>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="subtasks" className="animate-in fade-in-50 p-4 md:p-6">
+                  <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
+                    <div className="bg-muted/50 p-3 border-b border-border flex justify-between items-center">
+                      <h3 className="font-medium">Subtasks ({childTasks.length})</h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 rounded-lg"
+                          onClick={() => setShowSubtaskDialog(true)}
+                        >
+                          <Plus className="h-4 w-4 mr-2" /> Add Subtask
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 p-0 rounded-full w-7"
+                          onClick={() => setShowChildTasks(!showChildTasks)}
+                          aria-label={showChildTasks ? "Hide subtasks" : "Show subtasks"}
+                        >
+                          {showChildTasks ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {showChildTasks && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[700px]">
+                          <thead>
+                            <tr className="border-b border-border">
+                              <th className="text-left text-sm font-medium px-4 py-2 w-[40%]">Title</th>
+                              <th className="text-left text-sm font-medium px-4 py-2 w-[20%]">Status</th>
+                              <th className="text-left text-sm font-medium px-4 py-2 w-[25%]">Assigned To</th>
+                              <th className="text-left text-sm font-medium px-4 py-2 w-[15%]">Progress</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {childTasks.map((childTask) => {
+                              // Convert child task assignees to user objects for AssigneeGroup
+                              const childTaskUsers = childTask.assignedTo
+                                ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
+                                : []
+
+                              return (
+                                <tr
+                                  key={childTask.id}
+                                  className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
+                                >
+                                  <td className="px-4 py-2">
+                                    <Link
+                                      href={`/projects/${projectId}/tasks/${childTask.id}`}
+                                      className="text-primary hover:underline truncate block max-w-full"
+                                      title={childTask.title}
+                                    >
+                                      {childTask.title}
+                                    </Link>
+                                  </td>
+                                  <td className="px-4 py-2 whitespace-nowrap">
+                                    <Badge
+                                      variant="status"
+                                      className={getStatusColor(childTask.status)}
+                                      animation={
+                                        childTask.status === TASK_STATUS.TODO ||
+                                          childTask.status === TASK_STATUS.IN_PROGRESS
+                                          ? "pulse"
+                                          : "fade"
+                                      }
+                                    >
+                                      {getStatusLabel(childTask.status)}
+                                    </Badge>
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
+                                      <div className="flex items-center">
+                                        <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
+
+                                        <TooltipProvider>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
+                                              <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
+                                                {childTask.assignedTo
+                                                  .map((id) => users[id]?.displayName || "Unknown")
+                                                  .join(", ")}
+                                              </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <p>
+                                                {childTask.assignedTo
+                                                  .map((id) => users[id]?.displayName || "Unknown")
+                                                  .join(", ")}
+                                              </p>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-2">
+                                    {childTask.percentDone !== undefined && (
+                                      <div className="flex items-center gap-2">
+                                        <div className="bg-muted h-2 rounded-full w-full max-w-24 overflow-hidden">
+                                          <div
+                                            className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
+                                            style={{ width: `${childTask.percentDone}%` }}
+                                          ></div>
+                                        </div>
+                                        <span className="text-xs whitespace-nowrap">{childTask.percentDone}%</span>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="media" className="animate-in fade-in-50 p-4 md:p-6">
+                  <TaskMediaSection projectId={projectId} taskId={taskId} />
+                </TabsContent>
+              </CardContent>
             </Tabs>
-          </div>
-        </div>
+          </CardHeader>
+        </Card>
+
+        {/* Status Change Confirmation Dialog */}
+        <AlertDialog 
+          open={showStatusConfirmDialog} 
+          onOpenChange={setShowStatusConfirmDialog}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Change Task Status</AlertDialogTitle>
+              <AlertDialogDescription>
+                {getStatusChangeMessage()}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPendingStatusChange(null)}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => pendingStatusChange && handleStatusUpdate(pendingStatusChange)}
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                {isUpdatingStatus ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Confirm Change"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Create Subtask Dialog */}
         <Dialog open={showSubtaskDialog} onOpenChange={setShowSubtaskDialog}>
           <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create Subtask</DialogTitle>
+              <DialogDescription>
+                Create a new subtask for "{task.title}"
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateSubtask} className="space-y-6">
               <div className="space-y-4">
@@ -1654,7 +1862,7 @@ export default function TaskDetailPage() {
                 </div>
               )}
 
-              <div className="flex justify-end space-x-4 pt-4">
+              <DialogFooter className="flex justify-end space-x-4 pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -1665,10 +1873,19 @@ export default function TaskDetailPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isCreatingSubtask} className="rounded-lg shadow-sm">
-                  <Save className="mr-2 h-4 w-4" />
-                  {isCreatingSubtask ? "Creating..." : "Create Subtask"}
+                  {isCreatingSubtask ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Create Subtask
+                    </>
+                  )}
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -1729,11 +1946,13 @@ export default function TaskDetailPage() {
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" asChild>
                       <a href={selectedMedia.url} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
                         Open
                       </a>
                     </Button>
                     <Button variant="outline" size="sm" asChild>
                       <a href={selectedMedia.url} download>
+                        <Download className="h-4 w-4 mr-2" />
                         Download
                       </a>
                     </Button>
@@ -1747,4 +1966,3 @@ export default function TaskDetailPage() {
     </div>
   )
 }
-

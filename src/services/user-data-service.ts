@@ -3,7 +3,7 @@
  */
 import { database } from "@/config/firebase"
 import type { UserData } from "@/types"
-import { get, ref, set, update } from "firebase/database"
+import { get, ref, set } from "firebase/database"
 
 // Fetch user data from database
 export const fetchUserData = async (userId: string): Promise<UserData | null> => {
@@ -41,7 +41,11 @@ export const updateUserData = async (userId: string, data: Partial<UserData>): P
       updates[`users/${userId}/${key}`] = value
     })
 
-    await update(ref(database), updates)
+    // Use set instead of update for more reliable updates
+    for (const [path, value] of Object.entries(updates)) {
+      await set(ref(database, path), value)
+    }
+
     return true
   } catch (error) {
     console.error("Update user data error:", error)

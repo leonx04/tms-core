@@ -4,13 +4,13 @@
 import { auth, database } from "@/config/firebase"
 import type { UserData } from "@/types"
 import {
-    fetchSignInMethodsForEmail,
-    GithubAuthProvider,
-    GoogleAuthProvider,
-    linkWithPopup,
-    signInWithPopup,
+  fetchSignInMethodsForEmail,
+  GithubAuthProvider,
+  GoogleAuthProvider,
+  linkWithPopup,
+  signInWithPopup,
 } from "firebase/auth"
-import { get, ref, set } from "firebase/database"
+import { get, ref, set, update } from "firebase/database"
 import { updateAuthToken } from "./jwt-service"
 
 // Handle social sign-in (common logic for both Google and GitHub)
@@ -22,12 +22,15 @@ export const handleSocialSignIn = async (provider: GoogleAuthProvider | GithubAu
     const userRef = ref(database, `users/${result.user.uid}`)
     const snapshot = await get(userRef)
 
+    // Ensure we always have the latest photoURL
+    const photoURL = result.user.photoURL || ""
+
     if (!snapshot.exists()) {
       const newUserData: UserData = {
         id: result.user.uid,
         email: result.user.email || "",
         displayName: result.user.displayName || "",
-        photoURL: result.user.photoURL || "",
+        photoURL: photoURL,
         packageId: "basic",
         packageExpiry: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
         lastActive: new Date().toISOString(),
@@ -35,8 +38,12 @@ export const handleSocialSignIn = async (provider: GoogleAuthProvider | GithubAu
       }
       await set(userRef, newUserData)
     } else {
-      // Update lastActive in the background
-      set(ref(database, `users/${result.user.uid}/lastActive`), new Date().toISOString()).catch(console.error)
+      // Update photoURL and lastActive
+      const updates = {
+        lastActive: new Date().toISOString(),
+        photoURL: photoURL,
+      }
+      await update(ref(database, `users/${result.user.uid}`), updates)
     }
 
     return { success: true, user: result.user }

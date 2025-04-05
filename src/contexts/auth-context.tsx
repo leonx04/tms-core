@@ -33,7 +33,7 @@ import {
   signInWithGithub,
   signInWithGoogle,
 } from "@/services/social-auth-service"
-import { createUserData, fetchUserData, updateLastActive, updateUserData } from "@/services/user-data-service"
+import { createUserData, fetchUserData as fetchUserDataService, updateLastActive, updateUserData } from "@/services/user-data-service"
 
 type AuthContextType = {
   user: any | null
@@ -58,6 +58,7 @@ type AuthContextType = {
   obscureUserId: (userId: string, visibleChars?: number) => string
   refreshToken: () => Promise<string | null>
   checkAuthState: () => Promise<boolean>
+  fetchUserData: (userId: string) => Promise<UserData | null>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -82,6 +83,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Use refs to track user data loading/authentication process
   const userDataFetchInProgress = useRef(false)
   const authInitialized = useRef(false)
+
+  // Function to fetch user data
+  const handleFetchUserData = async (userId: string): Promise<UserData | null> => {
+    try {
+      const userData = await fetchUserDataService(userId);
+      return userData;
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      return null;
+    }
+  };
 
   // Function to refresh token
   const refreshToken = async () => {
@@ -217,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             try {
               // Fetch user data from database
-              const userDataResult = await fetchUserData(authUser.uid)
+              const userDataResult = await handleFetchUserData(authUser.uid)
 
               if (userDataResult) {
                 setUserData(userDataResult)
@@ -488,11 +500,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Update display name if requested
         if (data.displayName && data.displayName !== user.displayName) {
           updates.displayName = data.displayName
+        
+          // Update the local user object to reflect changes immediately
+          setUser((prevUser: any) => ({
+            ...prevUser,
+            displayName: data.displayName
+          }))
         }
 
         // Update email if requested
         if (data.email && data.email !== user.email) {
           updates.email = data.email
+          
+          // Update the local user object to reflect changes immediately
+          setUser((prevUser: any) => ({
+            ...prevUser,
+            email: data.email
+          }))
         }
 
         // Update user data in database if there are changes
@@ -611,6 +635,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         obscureUserId,
         refreshToken,
         checkAuthState,
+        fetchUserData: handleFetchUserData,
       }}
     >
       {children}

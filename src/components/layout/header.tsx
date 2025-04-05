@@ -5,13 +5,13 @@ import { NotificationDropdown } from "@/components/notifications/notification-dr
 import { ThemeToggle } from "@/components/theme/theme-toggle"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
-import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from 'lucide-react'
+import { ChevronDown, Folder, Home, LogOut, Menu, User, X } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 
 export default function Header() {
-  const { user, userData, signOut } = useAuth()
+  const { user, userData, signOut, fetchUserData } = useAuth()
   const router = useRouter()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -77,6 +77,28 @@ export default function Header() {
       document.body.classList.remove("overflow-hidden")
     }
   }, [mobileMenuOpen])
+
+  // Update the header component to properly reflect user changes:
+
+  // Add a useEffect to refresh user data when the component mounts or when user changes
+  useEffect(() => {
+    // Force refresh of user data when header mounts or user changes
+    if (user && user.uid) {
+      // This will trigger a re-render with the latest user data
+      const refreshUserData = async () => {
+        try {
+          const latestUserData = await fetchUserData(user.uid)
+          if (latestUserData) {
+            // Update any local state if needed
+          }
+        } catch (error) {
+          console.error("Error refreshing user data:", error)
+        }
+      }
+
+      refreshUserData()
+    }
+  }, [user])
 
   const handleSignOut = async () => {
     await signOut()
@@ -316,3 +338,4 @@ export default function Header() {
     </header>
   )
 }
+

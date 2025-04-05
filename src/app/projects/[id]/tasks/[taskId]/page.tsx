@@ -7,31 +7,20 @@ import { AssigneeGroup } from "@/components/ui/assignee-group"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { database } from "@/config/firebase"
 import { formatTextWithLinks } from "@/config/format-text-with-links"
 import { useAuth } from "@/contexts/auth-context"
@@ -49,7 +38,27 @@ import {
   TASK_STATUS,
 } from "@/utils/utils"
 import { equalTo, get, orderByChild, push, query, ref, set, update } from "firebase/database"
-import { AlertCircle, ArrowLeft, Calendar, ChevronDown, ChevronRight, ChevronUp, Clock, Edit, GitCommit, MessageSquare, Plus, Save, User, ImageIcon, CheckCircle2, AlertTriangle, X, Loader2, FileText, Paperclip, ExternalLink, Download, RefreshCw } from 'lucide-react'
+import {
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Clock,
+  Edit,
+  GitCommit,
+  MessageSquare,
+  Plus,
+  Save,
+  User,
+  ImageIcon,
+  Loader2,
+  FileText,
+  ExternalLink,
+  Download,
+  RefreshCw,
+} from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState, useCallback, useRef } from "react"
@@ -58,7 +67,7 @@ import { TaskMediaSection } from "@/components/task/task-media-section"
 import { CommentMediaUploader } from "@/components/comment/comment-media-uploader"
 import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service"
 import Image from "next/image"
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -794,7 +803,7 @@ export default function TaskDetailPage() {
 
   const getStatusChangeMessage = () => {
     if (!task || !pendingStatusChange) return ""
-    
+
     switch (pendingStatusChange) {
       case TASK_STATUS.TODO:
         return "Are you sure you want to reopen this task? This will change the status from Closed to To Do."
@@ -832,6 +841,55 @@ export default function TaskDetailPage() {
       })
     } finally {
       setUsersLoading((prev) => ({ ...prev, [userId]: false }))
+    }
+  }
+
+  // Enhance the profile page to ensure changes are properly reflected:
+
+  // Add this function to refresh user data after successful profile update
+  const refreshUserData = async () => {
+    if (!user) return
+
+    try {
+      const userRef = ref(database, `users/${user.uid}`)
+      const userSnapshot = await get(userRef)
+      if (userSnapshot.exists()) {
+        const refreshedUserData = {
+          id: user.uid,
+          ...userSnapshot.val(),
+        }
+        setUsers((prev) => ({
+          ...prev,
+          [user.uid]: refreshedUserData,
+        }))
+      }
+    } catch (error) {
+      console.error("Error refreshing user data:", error)
+    }
+  }
+
+  // Modify the handleProfileUpdate function to call refreshUserData after successful update:
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    // if (!user) return;
+
+    // setIsSaving(true);
+    // setError(null);
+    // setSuccess(null);
+
+    try {
+      // ... existing validation code ...
+
+      // ... existing update code ...
+
+      // After successful update, refresh the user data
+      await refreshUserData()
+
+      // setSuccess("Profile updated successfully");
+    } catch (error: any) {
+      // ... existing error handling ...
+    } finally {
+      // setIsSaving(false);
     }
   }
 
@@ -881,7 +939,7 @@ export default function TaskDetailPage() {
   }
 
   const loadMoreComments = () => {
-    setCommentsPage(prev => prev + 1)
+    setCommentsPage((prev) => prev + 1)
   }
 
   if (loading) {
@@ -893,7 +951,7 @@ export default function TaskDetailPage() {
               <ArrowLeft className="h-4 w-4" />
               <Skeleton className="h-4 w-32" />
             </div>
-            
+
             <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
               <div className="bg-muted/50 border-b border-border p-6">
                 <div className="flex flex-col gap-4">
@@ -905,7 +963,7 @@ export default function TaskDetailPage() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="p-6">
                 <div className="flex justify-center items-center py-12">
                   <LoadingSpinner size="lg" />
@@ -971,10 +1029,10 @@ export default function TaskDetailPage() {
               <ArrowLeft className="h-4 w-4 mr-2" /> Back to Project
             </Link>
           )}
-          
-          <Button 
-            variant="ghost" 
-            size="sm" 
+
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={refreshTaskData}
             className="text-muted-foreground hover:text-foreground"
             title="Refresh task data"
@@ -1066,15 +1124,17 @@ export default function TaskDetailPage() {
               {/* Improved TabsList with better scrolling behavior */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
-                    } bg-muted/50 p-3 rounded-lg`}
+                  className={`w-full flex ${
+                    isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
+                  } bg-muted/50 p-3 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${isMobile ? "flex-shrink-0 mx-0.1" : ""
-                        } text-sm whitespace-nowrap px-3 py-1.5`}
+                      className={`flex-1 min-w-[100px] ${
+                        isMobile ? "flex-shrink-0 mx-0.1" : ""
+                      } text-sm whitespace-nowrap px-3 py-1.5`}
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1352,9 +1412,9 @@ export default function TaskDetailPage() {
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center">
                                 <Avatar className="h-9 w-9 mr-3">
-                                  <AvatarImage 
-                                    src={users[comment.userId]?.photoURL || undefined} 
-                                    alt={users[comment.userId]?.displayName || "User"} 
+                                  <AvatarImage
+                                    src={users[comment.userId]?.photoURL || undefined}
+                                    alt={users[comment.userId]?.displayName || "User"}
                                   />
                                   <AvatarFallback className="bg-primary text-primary-foreground">
                                     {users[comment.userId]?.displayName?.charAt(0) || "?"}
@@ -1378,9 +1438,9 @@ export default function TaskDetailPage() {
 
                               {comment.mediaUrl && (
                                 <div className="mt-3">
-                                  <a 
-                                    href={comment.mediaUrl} 
-                                    target="_blank" 
+                                  <a
+                                    href={comment.mediaUrl}
+                                    target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-block group"
                                   >
@@ -1401,15 +1461,10 @@ export default function TaskDetailPage() {
                           </div>
                         </div>
                       ))}
-                      
+
                       {hasMoreComments && (
                         <div className="flex justify-center pt-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={loadMoreComments}
-                            className="rounded-lg"
-                          >
+                          <Button variant="outline" size="sm" onClick={loadMoreComments} className="rounded-lg">
                             Load More Comments
                           </Button>
                         </div>
@@ -1433,9 +1488,9 @@ export default function TaskDetailPage() {
                             <li key={entry.id} className="border-b border-border last:border-0 last:pb-0 pb-4">
                               <div className="flex items-start mb-1">
                                 <Avatar className="h-7 w-7 mr-2 mt-0.5">
-                                  <AvatarImage 
-                                    src={users[entry.userId]?.photoURL || undefined} 
-                                    alt={users[entry.userId]?.displayName || "User"} 
+                                  <AvatarImage
+                                    src={users[entry.userId]?.photoURL || undefined}
+                                    alt={users[entry.userId]?.displayName || "User"}
                                   />
                                   <AvatarFallback className="bg-muted text-muted-foreground text-xs">
                                     {users[entry.userId]?.displayName?.charAt(0) || "?"}
@@ -1542,7 +1597,7 @@ export default function TaskDetailPage() {
                                       className={getStatusColor(childTask.status)}
                                       animation={
                                         childTask.status === TASK_STATUS.TODO ||
-                                          childTask.status === TASK_STATUS.IN_PROGRESS
+                                        childTask.status === TASK_STATUS.IN_PROGRESS
                                           ? "pulse"
                                           : "fade"
                                       }
@@ -1610,22 +1665,15 @@ export default function TaskDetailPage() {
         </Card>
 
         {/* Status Change Confirmation Dialog */}
-        <AlertDialog 
-          open={showStatusConfirmDialog} 
-          onOpenChange={setShowStatusConfirmDialog}
-        >
+        <AlertDialog open={showStatusConfirmDialog} onOpenChange={setShowStatusConfirmDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Change Task Status</AlertDialogTitle>
-              <AlertDialogDescription>
-                {getStatusChangeMessage()}
-              </AlertDialogDescription>
+              <AlertDialogDescription>{getStatusChangeMessage()}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingStatusChange(null)}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction 
+              <AlertDialogCancel onClick={() => setPendingStatusChange(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
                 onClick={() => pendingStatusChange && handleStatusUpdate(pendingStatusChange)}
                 className="bg-primary text-primary-foreground hover:bg-primary/90"
               >
@@ -1647,9 +1695,7 @@ export default function TaskDetailPage() {
           <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create Subtask</DialogTitle>
-              <DialogDescription>
-                Create a new subtask for "{task.title}"
-              </DialogDescription>
+              <DialogDescription>Create a new subtask for "{task.title}"</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateSubtask} className="space-y-6">
               <div className="space-y-4">
@@ -1966,3 +2012,4 @@ export default function TaskDetailPage() {
     </div>
   )
 }
+

@@ -857,26 +857,26 @@ export default function ProjectDashboardPage() {
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[300px]">
-                    <div className="space-y-4">
+                    <div className="space-y-4 min-w-[300px]">
                       {recentEvents.map((event) => (
                         <div
                           key={event.id}
                           className="flex items-start gap-3 pb-3 border-b border-border last:border-0"
                         >
-                          <Avatar className="h-8 w-8 mt-0.5">
+                          <Avatar className="h-8 w-8 mt-0.5 flex-shrink-0">
                             <AvatarImage src={getUserPhotoURL(event.userId)} />
                             <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
                           </Avatar>
-                          <div className="space-y-1">
+                          <div className="space-y-1 min-w-0">
                             <p className="text-sm font-medium">{getUserDisplayName(event.userId)}</p>
                             <p className="text-sm text-muted-foreground">
                               {capitalizeWords(getEventDescription(event))}
                             </p>
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className="text-xs whitespace-nowrap">
                                 {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
                               </Badge>
-                              <span className="text-xs text-muted-foreground flex items-center">
+                              <span className="text-xs text-muted-foreground flex items-center whitespace-nowrap">
                                 <Clock className="h-3 w-3 mr-1" />
                                 {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
                               </span>
@@ -1249,51 +1249,55 @@ export default function ProjectDashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
-                  <ScrollArea className="h-[400px] w-full">
-                    <Table>
-                      <TableHeader className="sticky top-0 bg-background z-10">
-                        <TableRow>
-                          <TableHead className="w-[140px] whitespace-nowrap">Event Type</TableHead>
-                          <TableHead className="w-[180px]">User</TableHead>
-                          <TableHead className="w-[150px]">Time</TableHead>
-                          <TableHead>Description</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredEvents
-                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                          .slice(0, 50)
-                          .map((event) => (
-                            <TableRow key={event.id}>
-                              <TableCell>
-                                <Badge variant="outline" className="whitespace-nowrap">
-                                  {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={getUserPhotoURL(event.userId)} />
-                                    <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>{format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}</TableCell>
-                              <TableCell className="max-w-[400px] truncate">
-                                {capitalizeWords(getEventDescription(event))}
-                              </TableCell>
+                  <ScrollArea className="h-[400px]">
+                    <div className="overflow-x-auto">
+                      <div className="min-w-[800px]">
+                        <Table>
+                          <TableHeader className="sticky top-0 bg-background z-10">
+                            <TableRow>
+                              <TableHead className="w-[140px] whitespace-nowrap">Event Type</TableHead>
+                              <TableHead className="w-[180px]">User</TableHead>
+                              <TableHead className="w-[150px]">Time</TableHead>
+                              <TableHead>Description</TableHead>
                             </TableRow>
-                          ))}
-                        {filteredEvents.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
-                              No Events Match The Filters
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredEvents
+                              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                              .slice(0, 50)
+                              .map((event) => (
+                                <TableRow key={event.id}>
+                                  <TableCell>
+                                    <Badge variant="outline" className="whitespace-nowrap">
+                                      {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-6 w-6">
+                                        <AvatarImage src={getUserPhotoURL(event.userId)} />
+                                        <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
+                                      </Avatar>
+                                      <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}</TableCell>
+                                  <TableCell className="max-w-[400px] truncate">
+                                    {capitalizeWords(getEventDescription(event))}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            {filteredEvents.length === 0 && (
+                              <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                  No Events Match The Filters
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
                   </ScrollArea>
                 </div>
                 {filteredEvents.length > 50 && (

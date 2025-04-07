@@ -373,9 +373,8 @@ export function NotificationDropdown({ isMobile = false }: NotificationDropdownP
           {notifications.map((notification) => (
             <div
               key={notification.id}
-              className={`p-3 border-b border-border hover:bg-muted/30 transition-colors flex items-start ${
-                notification.status === "unread" ? "bg-muted/20" : ""
-              } ${selectedNotifications.includes(notification.id) ? "bg-primary/5" : ""}`}
+              className={`p-3 border-b border-border hover:bg-muted/30 transition-colors flex items-start rounded-lg shadow-md ${notification.status === "unread" ? "bg-muted/20" : ""} ${selectedNotifications.includes(notification.id) ? "bg-primary/5" : ""}`}
+              style={{ borderRadius: isMobileView ? '12px' : '8px' }}
             >
               {selectMode && (
                 <Checkbox

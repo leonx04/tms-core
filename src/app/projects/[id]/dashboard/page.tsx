@@ -12,6 +12,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { PageHeader } from "@/components/layout/page-header"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+// Import the updated Tabs components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -331,24 +332,6 @@ export default function ProjectDashboardPage() {
     }, 1000)
   }
 
-  // Filter data by date range
-  const filterByDateRange = (timestamp: string) => {
-    const date = parseISO(timestamp)
-    return isAfter(date, dateRange.from) && isAfter(endOfDay(dateRange.to), date)
-  }
-
-  // Filter data by user
-  const filterByUser = (userId: string) => {
-    if (!userFilter) return true
-    return userId === userFilter
-  }
-
-  // Filter data by event type
-  const filterByEventType = (type: string) => {
-    if (!eventTypeFilter) return true
-    return type === eventTypeFilter
-  }
-
   // Create a list of all events
   const allEvents = useMemo(() => {
     const events: Event[] = []
@@ -418,9 +401,6 @@ export default function ProjectDashboardPage() {
 
   // Filter events based on selected filters
   const filteredEvents = useMemo(() => {
-    const dateFrom = dateRange.from.toISOString()
-    const dateTo = dateRange.to.toISOString()
-
     return allEvents.filter((event) => {
       const date = parseISO(event.timestamp)
       const isInDateRange = isAfter(date, dateRange.from) && isAfter(endOfDay(dateRange.to), date)
@@ -598,6 +578,11 @@ export default function ProjectDashboardPage() {
     }
   }
 
+  // Function to capitalize first letter of each word
+  const capitalizeWords = (text: string) => {
+    return text.replace(/\b\w/g, (char) => char.toUpperCase())
+  }
+
   // Function to export data to CSV
   const exportToCSV = () => {
     // Create CSV header
@@ -618,7 +603,7 @@ export default function ProjectDashboardPage() {
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.setAttribute("href", url)
-    link.setAttribute("download", `dashboard-export-${format(new Date(), "yyyy-MM-dd")}.csv`)
+    link.setAttribute("download", `Dashboard-Export-${format(new Date(), "yyyy-MM-dd")}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -641,10 +626,10 @@ export default function ProjectDashboardPage() {
           <div className="text-center">
             <h2 className="text-xl font-semibold mb-2">Project Not Found</h2>
             <p className="text-muted-foreground mb-6">
-              The project you are looking for does not exist or you do not have access to it.
+              The Project You Are Looking For Does Not Exist Or You Do Not Have Access To It.
             </p>
             <Link href="/projects">
-              <Button className="rounded-lg shadow-sm">Back to Project List</Button>
+              <Button className="rounded-lg shadow-sm">Back To Project List</Button>
             </Link>
           </div>
         </div>
@@ -659,11 +644,11 @@ export default function ProjectDashboardPage() {
           href={`/projects/${projectId}`}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back To Project
         </Link>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <PageHeader title="Dashboard" description={`Activity statistics for project ${project.name}`} />
+          <PageHeader title="Dashboard" description={`Activity Statistics For Project ${project.name}`} />
 
           <Button
             variant="outline"
@@ -693,7 +678,7 @@ export default function ProjectDashboardPage() {
               <Filter className="h-5 w-5 mr-2 text-primary" />
               Filters
             </CardTitle>
-            <CardDescription>Filter data by time range, event type, and user</CardDescription>
+            <CardDescription>Filter Data By Time Range, Event Type, And User</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -788,11 +773,19 @@ export default function ProjectDashboardPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full max-w-3xl">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="timeline">Timeline Chart</TabsTrigger>
-            <TabsTrigger value="distribution">Event Distribution</TabsTrigger>
-            <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsList className="inline-flex h-12 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground overflow-x-auto no-scrollbar flex-nowrap w-full gap-1 px-1 max-w-3xl">
+            <TabsTrigger value="overview" className="flex-shrink-0 min-w-fit">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="timeline" className="flex-shrink-0 min-w-fit">
+              Timeline Chart
+            </TabsTrigger>
+            <TabsTrigger value="distribution" className="flex-shrink-0 min-w-fit">
+              Event Distribution
+            </TabsTrigger>
+            <TabsTrigger value="details" className="flex-shrink-0 min-w-fit">
+              Details
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -860,7 +853,7 @@ export default function ProjectDashboardPage() {
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">Recent Events</CardTitle>
-                  <CardDescription>The 10 most recent events in the project</CardDescription>
+                  <CardDescription>The 10 Most Recent Events In The Project</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[300px]">
@@ -876,7 +869,9 @@ export default function ProjectDashboardPage() {
                           </Avatar>
                           <div className="space-y-1">
                             <p className="text-sm font-medium">{getUserDisplayName(event.userId)}</p>
-                            <p className="text-sm text-muted-foreground">{getEventDescription(event)}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {capitalizeWords(getEventDescription(event))}
+                            </p>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs">
                                 {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
@@ -892,7 +887,7 @@ export default function ProjectDashboardPage() {
                       {recentEvents.length === 0 && (
                         <div className="text-center py-8 text-muted-foreground">
                           <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                          <p>No events found within the selected time range</p>
+                          <p>No Events Found Within The Selected Time Range</p>
                         </div>
                       )}
                     </div>
@@ -903,7 +898,7 @@ export default function ProjectDashboardPage() {
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">Most Active Users</CardTitle>
-                  <CardDescription>Top 5 users with the most activities</CardDescription>
+                  <CardDescription>Top 5 Users With The Most Activities</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -919,13 +914,13 @@ export default function ProjectDashboardPage() {
                             <p className="text-xs text-muted-foreground">{item.user?.email}</p>
                           </div>
                         </div>
-                        <Badge variant="secondary">{item.count} activities</Badge>
+                        <Badge variant="secondary">{item.count} Activities</Badge>
                       </div>
                     ))}
                     {topUsers.length === 0 && (
                       <div className="text-center py-8 text-muted-foreground">
                         <User className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                        <p>No user data available</p>
+                        <p>No User Data Available</p>
                       </div>
                     )}
                   </div>
@@ -939,7 +934,7 @@ export default function ProjectDashboardPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg">Activity Timeline Chart</CardTitle>
-                <CardDescription>Number of activities over time</CardDescription>
+                <CardDescription>Number Of Activities Over Time</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[400px] w-full">
@@ -1013,8 +1008,8 @@ export default function ProjectDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Bar Chart of Activities</CardTitle>
-                  <CardDescription>Number of activities over time</CardDescription>
+                  <CardTitle className="text-lg">Bar Chart Of Activities</CardTitle>
+                  <CardDescription>Number Of Activities Over Time</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px] w-full">
@@ -1060,7 +1055,7 @@ export default function ProjectDashboardPage() {
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">Area Chart</CardTitle>
-                  <CardDescription>Activity trends over time</CardDescription>
+                  <CardDescription>Activity Trends Over Time</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px] w-full">
@@ -1139,7 +1134,7 @@ export default function ProjectDashboardPage() {
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">Event Type Distribution</CardTitle>
-                  <CardDescription>Proportion of event types in the project</CardDescription>
+                  <CardDescription>Proportion Of Event Types In The Project</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px] w-full">
@@ -1166,7 +1161,7 @@ export default function ProjectDashboardPage() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No data available for the selected filters</p>
+                        <p className="text-muted-foreground">No Data Available For The Selected Filters</p>
                       </div>
                     )}
                   </div>
@@ -1176,7 +1171,7 @@ export default function ProjectDashboardPage() {
               <Card className="shadow-sm">
                 <CardHeader>
                   <CardTitle className="text-lg">Notification Status</CardTitle>
-                  <CardDescription>Proportion of read and unread notifications</CardDescription>
+                  <CardDescription>Proportion Of Read And Unread Notifications</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px] w-full">
@@ -1203,7 +1198,7 @@ export default function ProjectDashboardPage() {
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No notification data available</p>
+                        <p className="text-muted-foreground">No Notification Data Available</p>
                       </div>
                     )}
                   </div>
@@ -1214,7 +1209,7 @@ export default function ProjectDashboardPage() {
             <Card className="shadow-sm mt-6">
               <CardHeader>
                 <CardTitle className="text-lg">User Activity Distribution</CardTitle>
-                <CardDescription>Number of activities by each user</CardDescription>
+                <CardDescription>Number Of Activities By Each User</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[400px] w-full">
@@ -1237,7 +1232,7 @@ export default function ProjectDashboardPage() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground">No user activity data available</p>
+                      <p className="text-muted-foreground">No User Activity Data Available</p>
                     </div>
                   )}
                 </div>
@@ -1250,15 +1245,15 @@ export default function ProjectDashboardPage() {
             <Card className="shadow-sm">
               <CardHeader>
                 <CardTitle className="text-lg">Event Details</CardTitle>
-                <CardDescription>List of all filtered events</CardDescription>
+                <CardDescription>List Of All Filtered Events</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border overflow-hidden">
-                  <ScrollArea className="max-h-[600px]">
+                <div className="rounded-md border">
+                  <ScrollArea className="h-[400px] w-full">
                     <Table>
                       <TableHeader className="sticky top-0 bg-background z-10">
                         <TableRow>
-                          <TableHead className="w-[120px]">Event Type</TableHead>
+                          <TableHead className="w-[140px] whitespace-nowrap">Event Type</TableHead>
                           <TableHead className="w-[180px]">User</TableHead>
                           <TableHead className="w-[150px]">Time</TableHead>
                           <TableHead>Description</TableHead>
@@ -1271,7 +1266,7 @@ export default function ProjectDashboardPage() {
                           .map((event) => (
                             <TableRow key={event.id}>
                               <TableCell>
-                                <Badge variant="outline">
+                                <Badge variant="outline" className="whitespace-nowrap">
                                   {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
                                 </Badge>
                               </TableCell>
@@ -1285,13 +1280,15 @@ export default function ProjectDashboardPage() {
                                 </div>
                               </TableCell>
                               <TableCell>{format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}</TableCell>
-                              <TableCell className="max-w-[400px] truncate">{getEventDescription(event)}</TableCell>
+                              <TableCell className="max-w-[400px] truncate">
+                                {capitalizeWords(getEventDescription(event))}
+                              </TableCell>
                             </TableRow>
                           ))}
                         {filteredEvents.length === 0 && (
                           <TableRow>
                             <TableCell colSpan={4} className="h-24 text-center">
-                              No events match the filters
+                              No Events Match The Filters
                             </TableCell>
                           </TableRow>
                         )}
@@ -1301,7 +1298,7 @@ export default function ProjectDashboardPage() {
                 </div>
                 {filteredEvents.length > 50 && (
                   <div className="text-center text-sm text-muted-foreground mt-4">
-                    Displaying the 50 most recent events out of {filteredEvents.length} events
+                    Displaying The 50 Most Recent Events Out Of {filteredEvents.length} Events
                   </div>
                 )}
               </CardContent>

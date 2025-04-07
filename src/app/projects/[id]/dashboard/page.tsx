@@ -153,6 +153,13 @@ export default function ProjectDashboardPage() {
     setDateRange({ from: fromDate, to: now })
   }, [timeRange])
 
+  // Add this at the beginning of the component to ensure loading state is cleared if component unmounts
+  useEffect(() => {
+    return () => {
+      setLoading(false)
+    }
+  }, [])
+
   // Fetch project data and related data
   useEffect(() => {
     const fetchProjectData = async () => {
@@ -205,9 +212,10 @@ export default function ProjectDashboardPage() {
         const tasksQuery = query(tasksRef, orderByChild("projectId"), equalTo(projectId))
         const tasksSnapshot = await get(tasksQuery)
 
+        let tasksList: Task[] = []
         if (tasksSnapshot.exists()) {
           const tasksData = tasksSnapshot.val()
-          const tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
+          tasksList = Object.entries(tasksData).map(([id, data]: [string, any]) => ({
             id,
             ...data,
           }))
@@ -227,7 +235,7 @@ export default function ProjectDashboardPage() {
             }))
             .filter((history) => {
               // Filter history items related to this project's tasks
-              const task = tasks.find((t) => t.id === history.taskId)
+              const task = tasksList.find((t) => t.id === history.taskId)
               return task && task.projectId === projectId
             })
           setTaskHistory(historyList)
@@ -246,7 +254,7 @@ export default function ProjectDashboardPage() {
             }))
             .filter((comment) => {
               // Filter comments related to this project's tasks
-              const task = tasks.find((t) => t.id === comment.taskId)
+              const task = tasksList.find((t) => t.id === comment.taskId)
               return task && task.projectId === projectId
             })
           setComments(commentsList)
@@ -265,7 +273,7 @@ export default function ProjectDashboardPage() {
             }))
             .filter((notification) => {
               // Filter notifications related to this project
-              return notification.referenceId === projectId || tasks.some((t) => t.id === notification.referenceId)
+              return notification.referenceId === projectId || tasksList.some((t) => t.id === notification.referenceId)
             })
           setNotifications(notificationsList)
         }
@@ -282,7 +290,7 @@ export default function ProjectDashboardPage() {
     }
 
     fetchProjectData()
-  }, [user, projectId, router, tasks])
+  }, [user, projectId, router]) // Remove 'tasks' from the dependency array
 
   // Function to generate simulated commit data for demo
   const generateSimulatedCommits = (projectId: string, userIds: string[], days: number) => {

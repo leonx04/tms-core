@@ -12,26 +12,15 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { PageHeader } from "@/components/layout/page-header"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+// Import the updated Tabs components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { DatePickerWithRange } from "@/components/ui/date-range-picker"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  ArrowLeft,
-  BarChart3,
-  Clock,
-  Download,
-  Filter,
-  GitCommit,
-  GitPullRequest,
-  Info,
-  RefreshCw,
-  User,
-} from "lucide-react"
+import { ArrowLeft, BarChart3, Download, Filter, GitCommit, GitPullRequest, Info, RefreshCw, User } from "lucide-react"
 import {
   Area,
   AreaChart,
@@ -75,9 +64,6 @@ const CHART_COLORS = {
   taskCreates: "#82ca9d",
   taskUpdates: "#ffc658",
   comments: "#ff8042",
-  notifications: "#0088fe",
-  read: "#82ca9d",
-  unread: "#ff8042",
 }
 
 // Define event data type
@@ -96,9 +82,6 @@ type Stats = {
   taskCreates: number
   taskUpdates: number
   comments: number
-  notifications: number
-  notificationsRead: number
-  notificationsUnread: number
 }
 
 export default function ProjectDashboardPage() {
@@ -383,20 +366,8 @@ export default function ProjectDashboardPage() {
       })
     })
 
-    // Add notifications
-    notifications.forEach((notification) => {
-      events.push({
-        id: notification.id,
-        type: "NOTIFICATION",
-        userId: notification.userId,
-        timestamp: notification.createdAt,
-        projectId,
-        data: notification,
-      })
-    })
-
     return events
-  }, [commits, tasks, taskHistory, comments, notifications, projectId])
+  }, [commits, tasks, taskHistory, comments, projectId])
 
   // Filter events based on selected filters
   const filteredEvents = useMemo(() => {
@@ -417,9 +388,6 @@ export default function ProjectDashboardPage() {
       taskCreates: 0,
       taskUpdates: 0,
       comments: 0,
-      notifications: 0,
-      notificationsRead: 0,
-      notificationsUnread: 0,
     }
 
     filteredEvents.forEach((event) => {
@@ -435,14 +403,6 @@ export default function ProjectDashboardPage() {
           break
         case "TASK_COMMENT":
           result.comments++
-          break
-        case "NOTIFICATION":
-          result.notifications++
-          if (event.data.status === "read") {
-            result.notificationsRead++
-          } else {
-            result.notificationsUnread++
-          }
           break
       }
     })
@@ -508,14 +468,6 @@ export default function ProjectDashboardPage() {
       { name: "Task Creation", value: stats.taskCreates, color: CHART_COLORS.taskCreates },
       { name: "Task Update", value: stats.taskUpdates, color: CHART_COLORS.taskUpdates },
       { name: "Comments", value: stats.comments, color: CHART_COLORS.comments },
-    ].filter((item) => item.value > 0) // Only include items with values > 0
-  }, [stats])
-
-  // Data for notification chart
-  const notificationData = useMemo(() => {
-    return [
-      { name: "Read", value: stats.notificationsRead, color: CHART_COLORS.read },
-      { name: "Unread", value: stats.notificationsUnread, color: CHART_COLORS.unread },
     ].filter((item) => item.value > 0) // Only include items with values > 0
   }, [stats])
 
@@ -698,15 +650,24 @@ export default function ProjectDashboardPage() {
                   </Select>
 
                   {timeRange === "CUSTOM" && (
-                    <DatePickerWithRange
-                      date={dateRange}
-                      setDate={(date) => {
-                        setDateRange({
-                          from: date.from || new Date(),
-                          to: date.to || new Date(),
-                        })
-                      }}
-                    />
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">From Date</label>
+                        <DatePicker
+                          date={dateRange.from}
+                          setDate={(date) => setDateRange((prev) => ({ ...prev, from: date || prev.from }))}
+                          placeholder="Start date"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground">To Date</label>
+                        <DatePicker
+                          date={dateRange.to}
+                          setDate={(date) => setDateRange((prev) => ({ ...prev, to: date || prev.to }))}
+                          placeholder="End date"
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
@@ -772,24 +733,26 @@ export default function ProjectDashboardPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="inline-flex h-12 items-center justify-start rounded-md bg-muted p-1 text-muted-foreground overflow-x-auto no-scrollbar flex-nowrap w-full gap-1 px-1 max-w-3xl">
-            <TabsTrigger value="overview" className="flex-shrink-0 min-w-fit">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="timeline" className="flex-shrink-0 min-w-fit">
-              Timeline Chart
-            </TabsTrigger>
-            <TabsTrigger value="distribution" className="flex-shrink-0 min-w-fit">
-              Event Distribution
-            </TabsTrigger>
-            <TabsTrigger value="details" className="flex-shrink-0 min-w-fit">
-              Details
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex justify-center w-full">
+            <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground overflow-x-auto no-scrollbar flex-nowrap gap-1 px-1 w-auto">
+              <TabsTrigger value="overview" className="flex-shrink-0 min-w-fit px-3 py-1.5">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="timeline" className="flex-shrink-0 min-w-fit px-3 py-1.5">
+                Timeline
+              </TabsTrigger>
+              <TabsTrigger value="distribution" className="flex-shrink-0 min-w-fit px-3 py-1.5">
+                Distribution
+              </TabsTrigger>
+              <TabsTrigger value="details" className="flex-shrink-0 min-w-fit px-3 py-1.5">
+                Details
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="animate-in fade-in-50">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Commits</CardTitle>
@@ -825,27 +788,6 @@ export default function ProjectDashboardPage() {
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="shadow-sm">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Notifications</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-2xl font-bold">{stats.notifications}</div>
-                    <div className="flex flex-col items-end">
-                      <div className="text-xs text-muted-foreground flex items-center">
-                        <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1"></span>
-                        Read: {stats.notificationsRead}
-                      </div>
-                      <div className="text-xs text-muted-foreground flex items-center">
-                        <span className="inline-block w-2 h-2 rounded-full bg-orange-500 mr-1"></span>
-                        Unread: {stats.notificationsUnread}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -855,42 +797,56 @@ export default function ProjectDashboardPage() {
                   <CardDescription>The 10 Most Recent Events In The Project</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ScrollArea className="h-[300px]">
-                    <div className="space-y-4 min-w-[300px]">
-                      {recentEvents.map((event) => (
-                        <div
-                          key={event.id}
-                          className="flex items-start gap-3 pb-3 border-b border-border last:border-0"
-                        >
-                          <Avatar className="h-8 w-8 mt-0.5 flex-shrink-0">
-                            <AvatarImage src={getUserPhotoURL(event.userId)} />
-                            <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
-                          </Avatar>
-                          <div className="space-y-1 min-w-0">
-                            <p className="text-sm font-medium">{getUserDisplayName(event.userId)}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {capitalizeWords(getEventDescription(event))}
-                            </p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
-                              </Badge>
-                              <span className="text-xs text-muted-foreground flex items-center whitespace-nowrap">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {recentEvents.length === 0 && (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                          <p>No Events Found Within The Selected Time Range</p>
-                        </div>
-                      )}
-                    </div>
-                  </ScrollArea>
+                  <div className="rounded-md border overflow-hidden">
+                    <ScrollArea className="h-[300px]">
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[500px]">
+                          <thead className="bg-muted/50 sticky top-0 z-10">
+                            <tr>
+                              <th className="h-10 px-4 text-left align-middle font-medium">User</th>
+                              <th className="h-10 px-4 text-left align-middle font-medium">Type</th>
+                              <th className="h-10 px-4 text-left align-middle font-medium">Time</th>
+                              <th className="h-10 px-4 text-left align-middle font-medium">Description</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {recentEvents.map((event) => (
+                              <tr key={event.id} className="border-t border-border hover:bg-muted/30">
+                                <td className="p-2 align-middle">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8 flex-shrink-0">
+                                      <AvatarImage src={getUserPhotoURL(event.userId)} />
+                                      <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
+                                  </div>
+                                </td>
+                                <td className="p-2 align-middle">
+                                  <Badge variant="outline" className="whitespace-nowrap">
+                                    {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
+                                  </Badge>
+                                </td>
+                                <td className="p-2 align-middle whitespace-nowrap">
+                                  {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
+                                </td>
+                                <td className="p-2 align-middle max-w-[200px] truncate">
+                                  {capitalizeWords(getEventDescription(event))}
+                                </td>
+                              </tr>
+                            ))}
+                            {recentEvents.length === 0 && (
+                              <tr>
+                                <td colSpan={4} className="h-24 text-center text-muted-foreground">
+                                  <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                                  <p>No Events Found Within The Selected Time Range</p>
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </ScrollArea>
+                  </div>
                 </CardContent>
               </Card>
 
@@ -900,28 +856,48 @@ export default function ProjectDashboardPage() {
                   <CardDescription>Top 5 Users With The Most Activities</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {topUsers.map((item) => (
-                      <div key={item.userId} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={getUserPhotoURL(item.userId)} />
-                            <AvatarFallback>{item.user?.displayName?.charAt(0) || "U"}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{item.user?.displayName || "Unknown User"}</p>
-                            <p className="text-xs text-muted-foreground">{item.user?.email}</p>
-                          </div>
-                        </div>
-                        <Badge variant="secondary">{item.count} Activities</Badge>
+                  <div className="rounded-md border overflow-hidden">
+                    <ScrollArea className="h-[300px]">
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[400px]">
+                          <thead className="bg-muted/50 sticky top-0 z-10">
+                            <tr>
+                              <th className="h-10 px-4 text-left align-middle font-medium">User</th>
+                              <th className="h-10 px-4 text-left align-middle font-medium">Activities</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {topUsers.map((item) => (
+                              <tr key={item.userId} className="border-t border-border hover:bg-muted/30">
+                                <td className="p-2 align-middle">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8 flex-shrink-0">
+                                      <AvatarImage src={getUserPhotoURL(item.userId)} />
+                                      <AvatarFallback>{item.user?.displayName?.charAt(0) || "U"}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                      <p className="font-medium">{item.user?.displayName || "Unknown User"}</p>
+                                      <p className="text-xs text-muted-foreground">{item.user?.email}</p>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="p-2 align-middle">
+                                  <Badge variant="secondary">{item.count} Activities</Badge>
+                                </td>
+                              </tr>
+                            ))}
+                            {topUsers.length === 0 && (
+                              <tr>
+                                <td colSpan={2} className="h-24 text-center text-muted-foreground">
+                                  <User className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                                  <p>No User Data Available</p>
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
                       </div>
-                    ))}
-                    {topUsers.length === 0 && (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <User className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                        <p>No User Data Available</p>
-                      </div>
-                    )}
+                    </ScrollArea>
                   </div>
                 </CardContent>
               </Card>
@@ -1169,74 +1145,37 @@ export default function ProjectDashboardPage() {
 
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Notification Status</CardTitle>
-                  <CardDescription>Proportion Of Read And Unread Notifications</CardDescription>
+                  <CardTitle className="text-lg">User Activity Distribution</CardTitle>
+                  <CardDescription>Number Of Activities By Each User</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px] w-full">
-                    {notificationData.length > 0 ? (
+                    {topUsers.length > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={notificationData}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                          >
-                            {notificationData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip formatter={(value, name) => [value, name]} />
-                          <Legend />
-                        </PieChart>
+                        <BarChart
+                          data={topUsers.map((user) => ({
+                            name: user.user?.displayName || "Unknown",
+                            value: user.count,
+                          }))}
+                          layout="vertical"
+                          margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis type="number" />
+                          <YAxis type="category" dataKey="name" width={80} />
+                          <Tooltip formatter={(value) => [value, "Activities"]} />
+                          <Bar dataKey="value" fill={CHART_COLORS.commits} />
+                        </BarChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <p className="text-muted-foreground">No Notification Data Available</p>
+                        <p className="text-muted-foreground">No User Activity Data Available</p>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
             </div>
-
-            <Card className="shadow-sm mt-6">
-              <CardHeader>
-                <CardTitle className="text-lg">User Activity Distribution</CardTitle>
-                <CardDescription>Number Of Activities By Each User</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[400px] w-full">
-                  {topUsers.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={topUsers.map((user) => ({
-                          name: user.user?.displayName || "Unknown",
-                          value: user.count,
-                        }))}
-                        layout="vertical"
-                        margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis type="number" />
-                        <YAxis type="category" dataKey="name" width={80} />
-                        <Tooltip formatter={(value) => [value, "Activities"]} />
-                        <Bar dataKey="value" fill={CHART_COLORS.commits} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full">
-                      <p className="text-muted-foreground">No User Activity Data Available</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* Details Tab */}
@@ -1247,55 +1186,58 @@ export default function ProjectDashboardPage() {
                 <CardDescription>List Of All Filtered Events</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-hidden">
                   <ScrollArea className="h-[400px]">
                     <div className="overflow-x-auto">
-                      <div className="min-w-[800px]">
-                        <Table>
-                          <TableHeader className="sticky top-0 bg-background z-10">
-                            <TableRow>
-                              <TableHead className="w-[140px] whitespace-nowrap">Event Type</TableHead>
-                              <TableHead className="w-[180px]">User</TableHead>
-                              <TableHead className="w-[150px]">Time</TableHead>
-                              <TableHead>Description</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {filteredEvents
-                              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                              .slice(0, 50)
-                              .map((event) => (
-                                <TableRow key={event.id}>
-                                  <TableCell>
-                                    <Badge variant="outline" className="whitespace-nowrap">
-                                      {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
-                                    </Badge>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center gap-2">
-                                      <Avatar className="h-6 w-6">
-                                        <AvatarImage src={getUserPhotoURL(event.userId)} />
-                                        <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
-                                      </Avatar>
-                                      <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
-                                    </div>
-                                  </TableCell>
-                                  <TableCell>{format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}</TableCell>
-                                  <TableCell className="max-w-[400px] truncate">
-                                    {capitalizeWords(getEventDescription(event))}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            {filteredEvents.length === 0 && (
-                              <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
-                                  No Events Match The Filters
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
+                      <table className="w-full min-w-[800px]">
+                        <thead className="bg-muted/50 sticky top-0 z-10">
+                          <tr>
+                            <th className="h-10 px-4 text-left align-middle font-medium w-[140px] whitespace-nowrap">
+                              Event Type
+                            </th>
+                            <th className="h-10 px-4 text-left align-middle font-medium w-[180px]">User</th>
+                            <th className="h-10 px-4 text-left align-middle font-medium w-[150px]">Time</th>
+                            <th className="h-10 px-4 text-left align-middle font-medium">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredEvents
+                            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                            .slice(0, 50)
+                            .map((event) => (
+                              <tr key={event.id} className="border-t border-border hover:bg-muted/30">
+                                <td className="p-4 align-middle">
+                                  <Badge variant="outline" className="whitespace-nowrap">
+                                    {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
+                                  </Badge>
+                                </td>
+                                <td className="p-4 align-middle">
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6 flex-shrink-0">
+                                      <AvatarImage src={getUserPhotoURL(event.userId)} />
+                                      <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
+                                  </div>
+                                </td>
+                                <td className="p-4 align-middle whitespace-nowrap">
+                                  {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
+                                </td>
+                                <td className="p-4 align-middle max-w-[400px] truncate">
+                                  {capitalizeWords(getEventDescription(event))}
+                                </td>
+                              </tr>
+                            ))}
+                          {filteredEvents.length === 0 && (
+                            <tr>
+                              <td colSpan={4} className="h-24 text-center text-muted-foreground">
+                                <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                                <p>No Events Match The Filters</p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
                     </div>
                   </ScrollArea>
                 </div>

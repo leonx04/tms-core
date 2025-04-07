@@ -50,25 +50,25 @@ import {
 } from "recharts"
 import type { Project, Task, TaskHistory, Comment, Notification, User as UserType } from "@/types"
 
-// Định nghĩa các loại sự kiện
+// Define event types
 const EVENT_TYPES = {
   COMMIT: "Commit",
-  TASK_CREATE: "Tạo task",
-  TASK_UPDATE: "Cập nhật task",
-  TASK_COMMENT: "Bình luận task",
-  NOTIFICATION: "Thông báo",
+  TASK_CREATE: "Task Creation",
+  TASK_UPDATE: "Task Update",
+  TASK_COMMENT: "Task Comment",
+  NOTIFICATION: "Notification",
 }
 
-// Định nghĩa các khoảng thời gian
+// Define time ranges
 const TIME_RANGES = {
-  TODAY: "Hôm nay",
-  YESTERDAY: "Hôm qua",
-  LAST_7_DAYS: "7 ngày qua",
-  LAST_30_DAYS: "30 ngày qua",
-  CUSTOM: "Tùy chỉnh",
+  TODAY: "Today",
+  YESTERDAY: "Yesterday",
+  LAST_7_DAYS: "Last 7 Days",
+  LAST_30_DAYS: "Last 30 Days",
+  CUSTOM: "Custom",
 }
 
-// Định nghĩa các màu cho biểu đồ
+// Define chart colors
 const CHART_COLORS = {
   commits: "#8884d8",
   taskCreates: "#82ca9d",
@@ -79,7 +79,7 @@ const CHART_COLORS = {
   unread: "#ff8042",
 }
 
-// Định nghĩa kiểu dữ liệu cho sự kiện
+// Define event data type
 type Event = {
   id: string
   type: string
@@ -89,7 +89,7 @@ type Event = {
   data: any
 }
 
-// Định nghĩa kiểu dữ liệu cho thống kê
+// Define stats data type
 type Stats = {
   commits: number
   taskCreates: number
@@ -125,9 +125,9 @@ export default function ProjectDashboardPage() {
   const projectId = params.id as string
   const isMobile = useMediaQuery("(max-width: 768px)")
 
-  // Tính toán khoảng thời gian dựa trên lựa chọn
+  // Calculate date range based on selection
   useEffect(() => {
-    if (timeRange === "CUSTOM") return // Không thay đổi nếu là tùy chỉnh
+    if (timeRange === "CUSTOM") return // Do not change if custom
 
     const now = new Date()
     let fromDate: Date
@@ -152,7 +152,7 @@ export default function ProjectDashboardPage() {
     setDateRange({ from: fromDate, to: now })
   }, [timeRange])
 
-  // Tải dữ liệu dự án và các dữ liệu liên quan
+  // Fetch project data and related data
   useEffect(() => {
     const fetchProjectData = async () => {
       if (!user || !projectId) return
@@ -283,7 +283,7 @@ export default function ProjectDashboardPage() {
     fetchProjectData()
   }, [user, projectId, router])
 
-  // Hàm tạo dữ liệu commit giả lập cho demo
+  // Function to generate simulated commit data for demo
   const generateSimulatedCommits = (projectId: string, userIds: string[], days: number) => {
     const commits = []
     const now = new Date()
@@ -312,39 +312,39 @@ export default function ProjectDashboardPage() {
     return commits
   }
 
-  // Làm mới dữ liệu
+  // Refresh data
   const refreshData = () => {
     setRefreshing(true)
-    // Trong ứng dụng thực tế, bạn sẽ gọi lại các API để lấy dữ liệu mới
-    // Ở đây chúng ta sẽ giả lập bằng cách đợi một chút rồi tắt trạng thái refreshing
+    // In a real application, you would call APIs again to fetch new data
+    // Here we simulate by waiting a bit and then turning off the refreshing state
     setTimeout(() => {
       setRefreshing(false)
     }, 1000)
   }
 
-  // Lọc dữ liệu theo khoảng thời gian
+  // Filter data by date range
   const filterByDateRange = (timestamp: string) => {
     const date = parseISO(timestamp)
     return isAfter(date, dateRange.from) && isAfter(endOfDay(dateRange.to), date)
   }
 
-  // Lọc dữ liệu theo người dùng
+  // Filter data by user
   const filterByUser = (userId: string) => {
     if (!userFilter) return true
     return userId === userFilter
   }
 
-  // Lọc dữ liệu theo loại sự kiện
+  // Filter data by event type
   const filterByEventType = (type: string) => {
     if (!eventTypeFilter) return true
     return type === eventTypeFilter
   }
 
-  // Tạo danh sách tất cả các sự kiện
+  // Create a list of all events
   const allEvents = useMemo(() => {
     const events: Event[] = []
 
-    // Thêm commits
+    // Add commits
     commits.forEach((commit) => {
       events.push({
         id: commit.id,
@@ -356,7 +356,7 @@ export default function ProjectDashboardPage() {
       })
     })
 
-    // Thêm task creations
+    // Add task creations
     tasks.forEach((task) => {
       events.push({
         id: `task-create-${task.id}`,
@@ -368,7 +368,7 @@ export default function ProjectDashboardPage() {
       })
     })
 
-    // Thêm task updates từ history
+    // Add task updates from history
     taskHistory.forEach((history) => {
       events.push({
         id: history.id,
@@ -380,7 +380,7 @@ export default function ProjectDashboardPage() {
       })
     })
 
-    // Thêm comments
+    // Add comments
     comments.forEach((comment) => {
       events.push({
         id: comment.id,
@@ -392,7 +392,7 @@ export default function ProjectDashboardPage() {
       })
     })
 
-    // Thêm notifications
+    // Add notifications
     notifications.forEach((notification) => {
       events.push({
         id: notification.id,
@@ -407,14 +407,14 @@ export default function ProjectDashboardPage() {
     return events
   }, [commits, tasks, taskHistory, comments, notifications, projectId])
 
-  // Lọc sự kiện theo các bộ lọc đã chọn
+  // Filter events based on selected filters
   const filteredEvents = useMemo(() => {
     return allEvents.filter(
       (event) => filterByDateRange(event.timestamp) && filterByUser(event.userId) && filterByEventType(event.type),
     )
   }, [allEvents, dateRange, userFilter, eventTypeFilter])
 
-  // Tính toán thống kê tổng quan
+  // Calculate overall statistics
   const stats = useMemo(() => {
     const result: Stats = {
       commits: 0,
@@ -454,12 +454,12 @@ export default function ProjectDashboardPage() {
     return result
   }, [filteredEvents])
 
-  // Dữ liệu cho biểu đồ timeline
+  // Data for timeline chart
   const timelineData = useMemo(() => {
     const data: Record<string, any>[] = []
     const dateMap: Record<string, any> = {}
 
-    // Tạo mảng các ngày trong khoảng thời gian
+    // Create an array of dates within the range
     let currentDate = new Date(dateRange.from)
     const endDate = new Date(dateRange.to)
 
@@ -476,7 +476,7 @@ export default function ProjectDashboardPage() {
       currentDate = new Date(currentDate.setDate(currentDate.getDate() + 1))
     }
 
-    // Đếm sự kiện theo ngày
+    // Count events by date
     filteredEvents.forEach((event) => {
       const dateStr = format(new Date(event.timestamp), "yyyy-MM-dd")
       if (dateMap[dateStr]) {
@@ -497,7 +497,7 @@ export default function ProjectDashboardPage() {
       }
     })
 
-    // Chuyển đổi thành mảng để sử dụng với Recharts
+    // Convert to array for use with Recharts
     Object.values(dateMap).forEach((item) => {
       data.push(item)
     })
@@ -505,30 +505,30 @@ export default function ProjectDashboardPage() {
     return data
   }, [filteredEvents, dateRange])
 
-  // Dữ liệu cho biểu đồ phân bố loại sự kiện
+  // Data for event type distribution chart
   const eventDistributionData = useMemo(() => {
     return [
       { name: "Commits", value: stats.commits, color: CHART_COLORS.commits },
-      { name: "Tạo task", value: stats.taskCreates, color: CHART_COLORS.taskCreates },
-      { name: "Cập nhật task", value: stats.taskUpdates, color: CHART_COLORS.taskUpdates },
-      { name: "Bình luận", value: stats.comments, color: CHART_COLORS.comments },
+      { name: "Task Creation", value: stats.taskCreates, color: CHART_COLORS.taskCreates },
+      { name: "Task Update", value: stats.taskUpdates, color: CHART_COLORS.taskUpdates },
+      { name: "Comments", value: stats.comments, color: CHART_COLORS.comments },
     ]
   }, [stats])
 
-  // Dữ liệu cho biểu đồ thông báo
+  // Data for notification chart
   const notificationData = useMemo(() => {
     return [
-      { name: "Đã đọc", value: stats.notificationsRead, color: CHART_COLORS.read },
-      { name: "Chưa đọc", value: stats.notificationsUnread, color: CHART_COLORS.unread },
+      { name: "Read", value: stats.notificationsRead, color: CHART_COLORS.read },
+      { name: "Unread", value: stats.notificationsUnread, color: CHART_COLORS.unread },
     ]
   }, [stats])
 
-  // Dữ liệu cho bảng sự kiện gần đây
+  // Data for recent events table
   const recentEvents = useMemo(() => {
     return filteredEvents.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 10)
   }, [filteredEvents])
 
-  // Dữ liệu cho bảng người dùng hoạt động nhất
+  // Data for most active users table
   const topUsers = useMemo(() => {
     const userCounts: Record<string, number> = {}
 
@@ -549,54 +549,54 @@ export default function ProjectDashboardPage() {
       .slice(0, 5)
   }, [filteredEvents, users])
 
-  // Hàm lấy tên hiển thị của người dùng
+  // Function to get user's display name
   const getUserDisplayName = (userId: string) => {
     return users[userId]?.displayName || "Unknown User"
   }
 
-  // Hàm lấy URL ảnh đại diện của người dùng
+  // Function to get user's photo URL
   const getUserPhotoURL = (userId: string) => {
     return users[userId]?.photoURL
   }
 
-  // Hàm lấy mô tả cho sự kiện
+  // Function to get event description
   const getEventDescription = (event: Event) => {
     switch (event.type) {
       case "COMMIT":
         return `Commit: ${event.data.message}`
       case "TASK_CREATE":
-        return `Tạo task: ${event.data.title}`
+        return `Task Created: ${event.data.title}`
       case "TASK_UPDATE":
         if (event.data.changes && event.data.changes.length > 0) {
           const change = event.data.changes[0]
-          return `Cập nhật task: ${change.field} từ ${change.oldValue} thành ${change.newValue}`
+          return `Task Updated: ${change.field} from ${change.oldValue} to ${change.newValue}`
         }
-        return "Cập nhật task"
+        return "Task Updated"
       case "TASK_COMMENT":
-        return `Bình luận: ${event.data.content.substring(0, 30)}${event.data.content.length > 30 ? "..." : ""}`
+        return `Comment: ${event.data.content.substring(0, 30)}${event.data.content.length > 30 ? "..." : ""}`
       case "NOTIFICATION":
-        return `Thông báo: ${event.data.message}`
+        return `Notification: ${event.data.message}`
       default:
-        return "Sự kiện không xác định"
+        return "Unknown Event"
     }
   }
 
-  // Hàm xuất dữ liệu ra CSV
+  // Function to export data to CSV
   const exportToCSV = () => {
-    // Tạo header cho file CSV
-    let csvContent = "Loại,Người dùng,Thời gian,Mô tả\n"
+    // Create CSV header
+    let csvContent = "Type,User,Time,Description\n"
 
-    // Thêm dữ liệu từ các sự kiện đã lọc
+    // Add data from filtered events
     filteredEvents.forEach((event) => {
       const eventType = EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type
       const userName = getUserDisplayName(event.userId)
       const timestamp = format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")
-      const description = getEventDescription(event).replace(/,/g, ";") // Thay thế dấu phẩy để tránh lỗi CSV
+      const description = getEventDescription(event).replace(/,/g, ";") // Replace commas to avoid CSV errors
 
       csvContent += `${eventType},${userName},${timestamp},"${description}"\n`
     })
 
-    // Tạo blob và download
+    // Create blob and download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
@@ -622,12 +622,12 @@ export default function ProjectDashboardPage() {
       <div className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center">
-            <h2 className="text-xl font-semibold mb-2">Không tìm thấy dự án</h2>
+            <h2 className="text-xl font-semibold mb-2">Project Not Found</h2>
             <p className="text-muted-foreground mb-6">
-              Dự án bạn đang tìm kiếm không tồn tại hoặc bạn không có quyền truy cập.
+              The project you are looking for does not exist or you do not have access to it.
             </p>
             <Link href="/projects">
-              <Button className="rounded-lg shadow-sm">Quay lại danh sách dự án</Button>
+              <Button className="rounded-lg shadow-sm">Back to Project List</Button>
             </Link>
           </div>
         </div>
@@ -642,11 +642,11 @@ export default function ProjectDashboardPage() {
           href={`/projects/${projectId}`}
           className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại dự án
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Project
         </Link>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-          <PageHeader title="Dashboard" description={`Thống kê hoạt động cho dự án ${project.name}`} />
+          <PageHeader title="Dashboard" description={`Activity statistics for project ${project.name}`} />
 
           <Button
             variant="outline"
@@ -658,34 +658,34 @@ export default function ProjectDashboardPage() {
             {refreshing ? (
               <>
                 <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                Đang làm mới...
+                Refreshing...
               </>
             ) : (
               <>
                 <RefreshCw className="mr-2 h-4 w-4" />
-                Làm mới dữ liệu
+                Refresh Data
               </>
             )}
           </Button>
         </div>
 
-        {/* Bộ lọc */}
+        {/* Filters */}
         <Card className="mb-6 shadow-sm border-border animate-fadeIn">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
               <Filter className="h-5 w-5 mr-2 text-primary" />
-              Bộ lọc
+              Filters
             </CardTitle>
-            <CardDescription>Lọc dữ liệu theo khoảng thời gian, loại sự kiện và người thực hiện</CardDescription>
+            <CardDescription>Filter data by time range, event type, and user</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Khoảng thời gian</label>
+                <label className="text-sm font-medium">Time Range</label>
                 <div className="flex flex-col space-y-2">
                   <Select value={timeRange} onValueChange={setTimeRange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Chọn khoảng thời gian" />
+                      <SelectValue placeholder="Select Time Range" />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.entries(TIME_RANGES).map(([key, value]) => (
@@ -711,16 +711,16 @@ export default function ProjectDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Loại sự kiện</label>
+                <label className="text-sm font-medium">Event Type</label>
                 <Select
                   value={eventTypeFilter || "all"}
                   onValueChange={(value) => setEventTypeFilter(value === "all" ? null : value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Tất cả loại sự kiện" />
+                    <SelectValue placeholder="All Event Types" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tất cả loại sự kiện</SelectItem>
+                    <SelectItem value="all">All Event Types</SelectItem>
                     {Object.entries(EVENT_TYPES).map(([key, value]) => (
                       <SelectItem key={key} value={key}>
                         {value}
@@ -731,16 +731,16 @@ export default function ProjectDashboardPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Người thực hiện</label>
+                <label className="text-sm font-medium">User</label>
                 <Select
                   value={userFilter || "all"}
                   onValueChange={(value) => setUserFilter(value === "all" ? null : value)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Tất cả người dùng" />
+                    <SelectValue placeholder="All Users" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tất cả người dùng</SelectItem>
+                    <SelectItem value="all">All Users</SelectItem>
                     {Object.entries(users).map(([userId, userData]) => (
                       <SelectItem key={userId} value={userId}>
                         {userData.displayName || userData.email}
@@ -760,11 +760,11 @@ export default function ProjectDashboardPage() {
                 setUserFilter(null)
               }}
             >
-              Đặt lại bộ lọc
+              Reset Filters
             </Button>
             <Button variant="outline" onClick={exportToCSV}>
               <Download className="mr-2 h-4 w-4" />
-              Xuất dữ liệu
+              Export Data
             </Button>
           </CardFooter>
         </Card>
@@ -772,18 +772,18 @@ export default function ProjectDashboardPage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="grid grid-cols-2 md:grid-cols-4 w-full max-w-3xl">
-            <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-            <TabsTrigger value="timeline">Biểu đồ thời gian</TabsTrigger>
-            <TabsTrigger value="distribution">Phân bố sự kiện</TabsTrigger>
-            <TabsTrigger value="details">Chi tiết</TabsTrigger>
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline Chart</TabsTrigger>
+            <TabsTrigger value="distribution">Event Distribution</TabsTrigger>
+            <TabsTrigger value="details">Details</TabsTrigger>
           </TabsList>
 
-          {/* Tab Tổng quan */}
+          {/* Overview Tab */}
           <TabsContent value="overview" className="animate-in fade-in-50">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Tổng số commit</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Commits</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
@@ -795,7 +795,7 @@ export default function ProjectDashboardPage() {
 
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Tổng số task</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Tasks</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
@@ -807,7 +807,7 @@ export default function ProjectDashboardPage() {
 
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Cập nhật task</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Task Updates</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
@@ -819,7 +819,7 @@ export default function ProjectDashboardPage() {
 
               <Card className="shadow-sm">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Thông báo</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Notifications</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center justify-between">
@@ -827,11 +827,11 @@ export default function ProjectDashboardPage() {
                     <div className="flex flex-col items-end">
                       <div className="text-xs text-muted-foreground flex items-center">
                         <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1"></span>
-                        Đã đọc: {stats.notificationsRead}
+                        Read: {stats.notificationsRead}
                       </div>
                       <div className="text-xs text-muted-foreground flex items-center">
                         <span className="inline-block w-2 h-2 rounded-full bg-orange-500 mr-1"></span>
-                        Chưa đọc: {stats.notificationsUnread}
+                        Unread: {stats.notificationsUnread}
                       </div>
                     </div>
                   </div>
@@ -842,8 +842,8 @@ export default function ProjectDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Sự kiện gần đây</CardTitle>
-                  <CardDescription>10 sự kiện gần đây nhất trong dự án</CardDescription>
+                  <CardTitle className="text-lg">Recent Events</CardTitle>
+                  <CardDescription>The 10 most recent events in the project</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ScrollArea className="h-[300px]">
@@ -875,7 +875,7 @@ export default function ProjectDashboardPage() {
                       {recentEvents.length === 0 && (
                         <div className="text-center py-8 text-muted-foreground">
                           <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                          <p>Không có sự kiện nào trong khoảng thời gian đã chọn</p>
+                          <p>No events found within the selected time range</p>
                         </div>
                       )}
                     </div>
@@ -885,8 +885,8 @@ export default function ProjectDashboardPage() {
 
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Người dùng hoạt động nhất</CardTitle>
-                  <CardDescription>Top 5 người dùng có nhiều hoạt động nhất</CardDescription>
+                  <CardTitle className="text-lg">Most Active Users</CardTitle>
+                  <CardDescription>Top 5 users with the most activities</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -902,13 +902,13 @@ export default function ProjectDashboardPage() {
                             <p className="text-xs text-muted-foreground">{item.user?.email}</p>
                           </div>
                         </div>
-                        <Badge variant="secondary">{item.count} hoạt động</Badge>
+                        <Badge variant="secondary">{item.count} activities</Badge>
                       </div>
                     ))}
                     {topUsers.length === 0 && (
                       <div className="text-center py-8 text-muted-foreground">
                         <User className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                        <p>Không có dữ liệu người dùng</p>
+                        <p>No user data available</p>
                       </div>
                     )}
                   </div>
@@ -917,21 +917,21 @@ export default function ProjectDashboardPage() {
             </div>
           </TabsContent>
 
-          {/* Tab Biểu đồ thời gian */}
+          {/* Timeline Chart Tab */}
           <TabsContent value="timeline" className="animate-in fade-in-50">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Biểu đồ thời gian hoạt động</CardTitle>
-                <CardDescription>Số lượng hoạt động theo thời gian</CardDescription>
+                <CardTitle className="text-lg">Activity Timeline Chart</CardTitle>
+                <CardDescription>Number of activities over time</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[400px]">
                   <ChartContainer
                     config={{
                       commits: { label: "Commits", color: CHART_COLORS.commits },
-                      taskCreates: { label: "Tạo task", color: CHART_COLORS.taskCreates },
-                      taskUpdates: { label: "Cập nhật task", color: CHART_COLORS.taskUpdates },
-                      comments: { label: "Bình luận", color: CHART_COLORS.comments },
+                      taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
+                      taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
+                      comments: { label: "Comments", color: CHART_COLORS.comments },
                     }}
                   >
                     <LineChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -995,17 +995,17 @@ export default function ProjectDashboardPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Biểu đồ cột hoạt động</CardTitle>
-                  <CardDescription>Số lượng hoạt động theo thời gian</CardDescription>
+                  <CardTitle className="text-lg">Bar Chart of Activities</CardTitle>
+                  <CardDescription>Number of activities over time</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ChartContainer
                       config={{
                         commits: { label: "Commits", color: CHART_COLORS.commits },
-                        taskCreates: { label: "Tạo task", color: CHART_COLORS.taskCreates },
-                        taskUpdates: { label: "Cập nhật task", color: CHART_COLORS.taskUpdates },
-                        comments: { label: "Bình luận", color: CHART_COLORS.comments },
+                        taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
+                        taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
+                        comments: { label: "Comments", color: CHART_COLORS.comments },
                       }}
                     >
                       <BarChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -1040,17 +1040,17 @@ export default function ProjectDashboardPage() {
 
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Biểu đồ diện tích</CardTitle>
-                  <CardDescription>Xu hướng hoạt động theo thời gian</CardDescription>
+                  <CardTitle className="text-lg">Area Chart</CardTitle>
+                  <CardDescription>Activity trends over time</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ChartContainer
                       config={{
                         commits: { label: "Commits", color: CHART_COLORS.commits },
-                        taskCreates: { label: "Tạo task", color: CHART_COLORS.taskCreates },
-                        taskUpdates: { label: "Cập nhật task", color: CHART_COLORS.taskUpdates },
-                        comments: { label: "Bình luận", color: CHART_COLORS.comments },
+                        taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
+                        taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
+                        comments: { label: "Comments", color: CHART_COLORS.comments },
                       }}
                     >
                       <AreaChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -1113,22 +1113,22 @@ export default function ProjectDashboardPage() {
             </div>
           </TabsContent>
 
-          {/* Tab Phân bố sự kiện */}
+          {/* Event Distribution Tab */}
           <TabsContent value="distribution" className="animate-in fade-in-50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Phân bố loại sự kiện</CardTitle>
-                  <CardDescription>Tỷ lệ các loại sự kiện trong dự án</CardDescription>
+                  <CardTitle className="text-lg">Event Type Distribution</CardTitle>
+                  <CardDescription>Proportion of event types in the project</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ChartContainer
                       config={{
                         commits: { label: "Commits", color: CHART_COLORS.commits },
-                        taskCreates: { label: "Tạo task", color: CHART_COLORS.taskCreates },
-                        taskUpdates: { label: "Cập nhật task", color: CHART_COLORS.taskUpdates },
-                        comments: { label: "Bình luận", color: CHART_COLORS.comments },
+                        taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
+                        taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
+                        comments: { label: "Comments", color: CHART_COLORS.comments },
                       }}
                     >
                       <PieChart>
@@ -1156,15 +1156,15 @@ export default function ProjectDashboardPage() {
 
               <Card className="shadow-sm">
                 <CardHeader>
-                  <CardTitle className="text-lg">Trạng thái thông báo</CardTitle>
-                  <CardDescription>Tỷ lệ thông báo đã đọc và chưa đọc</CardDescription>
+                  <CardTitle className="text-lg">Notification Status</CardTitle>
+                  <CardDescription>Proportion of read and unread notifications</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ChartContainer
                       config={{
-                        read: { label: "Đã đọc", color: CHART_COLORS.read },
-                        unread: { label: "Chưa đọc", color: CHART_COLORS.unread },
+                        read: { label: "Read", color: CHART_COLORS.read },
+                        unread: { label: "Unread", color: CHART_COLORS.unread },
                       }}
                     >
                       <PieChart>
@@ -1193,8 +1193,8 @@ export default function ProjectDashboardPage() {
 
             <Card className="shadow-sm mt-6">
               <CardHeader>
-                <CardTitle className="text-lg">Phân bố hoạt động theo người dùng</CardTitle>
-                <CardDescription>Số lượng hoạt động của từng người dùng</CardDescription>
+                <CardTitle className="text-lg">User Activity Distribution</CardTitle>
+                <CardDescription>Number of activities by each user</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[400px]">
@@ -1219,22 +1219,22 @@ export default function ProjectDashboardPage() {
             </Card>
           </TabsContent>
 
-          {/* Tab Chi tiết */}
+          {/* Details Tab */}
           <TabsContent value="details" className="animate-in fade-in-50">
             <Card className="shadow-sm">
               <CardHeader>
-                <CardTitle className="text-lg">Chi tiết sự kiện</CardTitle>
-                <CardDescription>Danh sách tất cả sự kiện đã lọc</CardDescription>
+                <CardTitle className="text-lg">Event Details</CardTitle>
+                <CardDescription>List of all filtered events</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Loại sự kiện</TableHead>
-                        <TableHead>Người thực hiện</TableHead>
-                        <TableHead>Thời gian</TableHead>
-                        <TableHead className="hidden md:table-cell">Mô tả</TableHead>
+                        <TableHead>Event Type</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Time</TableHead>
+                        <TableHead className="hidden md:table-cell">Description</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1266,7 +1266,7 @@ export default function ProjectDashboardPage() {
                       {filteredEvents.length === 0 && (
                         <TableRow>
                           <TableCell colSpan={4} className="h-24 text-center">
-                            Không có sự kiện nào phù hợp với bộ lọc
+                            No events match the filters
                           </TableCell>
                         </TableRow>
                       )}
@@ -1275,7 +1275,7 @@ export default function ProjectDashboardPage() {
                 </div>
                 {filteredEvents.length > 50 && (
                   <div className="text-center text-sm text-muted-foreground mt-4">
-                    Hiển thị 50 sự kiện gần đây nhất trong tổng số {filteredEvents.length} sự kiện
+                    Displaying the 50 most recent events out of {filteredEvents.length} events
                   </div>
                 )}
               </CardContent>

@@ -510,17 +510,15 @@ export default function ProjectDetailPage() {
                     <Users className="h-4 w-4 mr-2" /> Members
                   </Button>
                 </Link>
+                <Link href={`/projects/${projectId}/dashboard`}>
+                  <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
+                    <ChartAreaIcon className="h-4 w-4 mr-2" /> Dashboard
+                  </Button>
+                </Link>
                 {userRoles.includes("admin") && (
                   <Link href={`/projects/${projectId}/settings`}>
                     <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
                       <Settings className="h-4 w-4 mr-2" /> Settings
-                    </Button>
-                  </Link>
-                )}
-                {userRoles.includes("admin") && (
-                  <Link href={`/projects/${projectId}/dashboard`}>
-                    <Button variant="outline" size="sm" className="rounded-lg shadow-sm">
-                      <ChartAreaIcon className="h-4 w-4 mr-2" /> Dashboard
                     </Button>
                   </Link>
                 )}

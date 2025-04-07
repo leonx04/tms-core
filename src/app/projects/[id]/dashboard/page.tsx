@@ -20,7 +20,6 @@ import { DatePickerWithRange } from "@/components/ui/date-range-picker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import {
   ArrowLeft,
   BarChart3,
@@ -45,8 +44,10 @@ import {
   LineChart,
   Pie,
   PieChart,
+  ResponsiveContainer,
   XAxis,
   YAxis,
+  Tooltip,
 } from "recharts"
 import type { Project, Task, TaskHistory, Comment, Notification, User as UserType } from "@/types"
 
@@ -281,7 +282,7 @@ export default function ProjectDashboardPage() {
     }
 
     fetchProjectData()
-  }, [user, projectId, router])
+  }, [user, projectId, router, tasks])
 
   // Function to generate simulated commit data for demo
   const generateSimulatedCommits = (projectId: string, userIds: string[], days: number) => {
@@ -409,9 +410,17 @@ export default function ProjectDashboardPage() {
 
   // Filter events based on selected filters
   const filteredEvents = useMemo(() => {
-    return allEvents.filter(
-      (event) => filterByDateRange(event.timestamp) && filterByUser(event.userId) && filterByEventType(event.type),
-    )
+    const dateFrom = dateRange.from.toISOString()
+    const dateTo = dateRange.to.toISOString()
+
+    return allEvents.filter((event) => {
+      const date = parseISO(event.timestamp)
+      const isInDateRange = isAfter(date, dateRange.from) && isAfter(endOfDay(dateRange.to), date)
+      const isCorrectUser = !userFilter || event.userId === userFilter
+      const isCorrectEventType = !eventTypeFilter || event.type === eventTypeFilter
+
+      return isInDateRange && isCorrectUser && isCorrectEventType
+    })
   }, [allEvents, dateRange, userFilter, eventTypeFilter])
 
   // Calculate overall statistics
@@ -512,7 +521,7 @@ export default function ProjectDashboardPage() {
       { name: "Task Creation", value: stats.taskCreates, color: CHART_COLORS.taskCreates },
       { name: "Task Update", value: stats.taskUpdates, color: CHART_COLORS.taskUpdates },
       { name: "Comments", value: stats.comments, color: CHART_COLORS.comments },
-    ]
+    ].filter((item) => item.value > 0) // Only include items with values > 0
   }, [stats])
 
   // Data for notification chart
@@ -520,7 +529,7 @@ export default function ProjectDashboardPage() {
     return [
       { name: "Read", value: stats.notificationsRead, color: CHART_COLORS.read },
       { name: "Unread", value: stats.notificationsUnread, color: CHART_COLORS.unread },
-    ]
+    ].filter((item) => item.value > 0) // Only include items with values > 0
   }, [stats])
 
   // Data for recent events table
@@ -925,33 +934,34 @@ export default function ProjectDashboardPage() {
                 <CardDescription>Number of activities over time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px]">
-                  <ChartContainer
-                    config={{
-                      commits: { label: "Commits", color: CHART_COLORS.commits },
-                      taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
-                      taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
-                      comments: { label: "Comments", color: CHART_COLORS.comments },
-                    }}
-                  >
+                <div className="h-[400px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="displayDate" />
                       <YAxis />
-                      <ChartTooltip
-                        content={
-                          <ChartTooltipContent
-                            labelFormatter={(value) => {
-                              if (typeof value === "string") {
-                                const parts = value.split("-")
-                                if (parts.length === 3) {
-                                  return format(new Date(value), "dd/MM/yyyy")
-                                }
-                              }
-                              return value
-                            }}
-                          />
-                        }
+                      <Tooltip
+                        formatter={(value, name) => [
+                          value,
+                          name === "commits"
+                            ? "Commits"
+                            : name === "taskCreates"
+                              ? "Task Creation"
+                              : name === "taskUpdates"
+                                ? "Task Update"
+                                : name === "comments"
+                                  ? "Comments"
+                                  : name,
+                        ]}
+                        labelFormatter={(value) => {
+                          if (typeof value === "string") {
+                            const parts = value.split("-")
+                            if (parts.length === 3) {
+                              return format(new Date(value), "dd/MM/yyyy")
+                            }
+                          }
+                          return value
+                        }}
                       />
                       <Legend />
                       <Line
@@ -987,7 +997,7 @@ export default function ProjectDashboardPage() {
                         activeDot={{ r: 6 }}
                       />
                     </LineChart>
-                  </ChartContainer>
+                  </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
@@ -999,33 +1009,34 @@ export default function ProjectDashboardPage() {
                   <CardDescription>Number of activities over time</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
-                    <ChartContainer
-                      config={{
-                        commits: { label: "Commits", color: CHART_COLORS.commits },
-                        taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
-                        taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
-                        comments: { label: "Comments", color: CHART_COLORS.comments },
-                      }}
-                    >
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="displayDate" />
                         <YAxis />
-                        <ChartTooltip
-                          content={
-                            <ChartTooltipContent
-                              labelFormatter={(value) => {
-                                if (typeof value === "string") {
-                                  const parts = value.split("-")
-                                  if (parts.length === 3) {
-                                    return format(new Date(value), "dd/MM/yyyy")
-                                  }
-                                }
-                                return value
-                              }}
-                            />
-                          }
+                        <Tooltip
+                          formatter={(value, name) => [
+                            value,
+                            name === "commits"
+                              ? "Commits"
+                              : name === "taskCreates"
+                                ? "Task Creation"
+                                : name === "taskUpdates"
+                                  ? "Task Update"
+                                  : name === "comments"
+                                    ? "Comments"
+                                    : name,
+                          ]}
+                          labelFormatter={(value) => {
+                            if (typeof value === "string") {
+                              const parts = value.split("-")
+                              if (parts.length === 3) {
+                                return format(new Date(value), "dd/MM/yyyy")
+                              }
+                            }
+                            return value
+                          }}
                         />
                         <Legend />
                         <Bar dataKey="commits" fill={CHART_COLORS.commits} />
@@ -1033,7 +1044,7 @@ export default function ProjectDashboardPage() {
                         <Bar dataKey="taskUpdates" fill={CHART_COLORS.taskUpdates} />
                         <Bar dataKey="comments" fill={CHART_COLORS.comments} />
                       </BarChart>
-                    </ChartContainer>
+                    </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
@@ -1044,33 +1055,34 @@ export default function ProjectDashboardPage() {
                   <CardDescription>Activity trends over time</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
-                    <ChartContainer
-                      config={{
-                        commits: { label: "Commits", color: CHART_COLORS.commits },
-                        taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
-                        taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
-                        comments: { label: "Comments", color: CHART_COLORS.comments },
-                      }}
-                    >
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={timelineData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="displayDate" />
                         <YAxis />
-                        <ChartTooltip
-                          content={
-                            <ChartTooltipContent
-                              labelFormatter={(value) => {
-                                if (typeof value === "string") {
-                                  const parts = value.split("-")
-                                  if (parts.length === 3) {
-                                    return format(new Date(value), "dd/MM/yyyy")
-                                  }
-                                }
-                                return value
-                              }}
-                            />
-                          }
+                        <Tooltip
+                          formatter={(value, name) => [
+                            value,
+                            name === "commits"
+                              ? "Commits"
+                              : name === "taskCreates"
+                                ? "Task Creation"
+                                : name === "taskUpdates"
+                                  ? "Task Update"
+                                  : name === "comments"
+                                    ? "Comments"
+                                    : name,
+                          ]}
+                          labelFormatter={(value) => {
+                            if (typeof value === "string") {
+                              const parts = value.split("-")
+                              if (parts.length === 3) {
+                                return format(new Date(value), "dd/MM/yyyy")
+                              }
+                            }
+                            return value
+                          }}
                         />
                         <Legend />
                         <Area
@@ -1106,7 +1118,7 @@ export default function ProjectDashboardPage() {
                           fillOpacity={0.6}
                         />
                       </AreaChart>
-                    </ChartContainer>
+                    </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
@@ -1122,34 +1134,33 @@ export default function ProjectDashboardPage() {
                   <CardDescription>Proportion of event types in the project</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
-                    <ChartContainer
-                      config={{
-                        commits: { label: "Commits", color: CHART_COLORS.commits },
-                        taskCreates: { label: "Task Creation", color: CHART_COLORS.taskCreates },
-                        taskUpdates: { label: "Task Update", color: CHART_COLORS.taskUpdates },
-                        comments: { label: "Comments", color: CHART_COLORS.comments },
-                      }}
-                    >
-                      <PieChart>
-                        <Pie
-                          data={eventDistributionData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {eventDistributionData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Legend />
-                      </PieChart>
-                    </ChartContainer>
+                  <div className="h-[300px] w-full">
+                    {eventDistributionData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={eventDistributionData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {eventDistributionData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value, name) => [value, name]} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No data available for the selected filters</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1160,32 +1171,33 @@ export default function ProjectDashboardPage() {
                   <CardDescription>Proportion of read and unread notifications</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="h-[300px]">
-                    <ChartContainer
-                      config={{
-                        read: { label: "Read", color: CHART_COLORS.read },
-                        unread: { label: "Unread", color: CHART_COLORS.unread },
-                      }}
-                    >
-                      <PieChart>
-                        <Pie
-                          data={notificationData}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                        >
-                          {notificationData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <ChartTooltip content={<ChartTooltipContent />} />
-                        <Legend />
-                      </PieChart>
-                    </ChartContainer>
+                  <div className="h-[300px] w-full">
+                    {notificationData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={notificationData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {notificationData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip formatter={(value, name) => [value, name]} />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-muted-foreground">No notification data available</p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1197,23 +1209,29 @@ export default function ProjectDashboardPage() {
                 <CardDescription>Number of activities by each user</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-[400px]">
-                  <ChartContainer config={{}}>
-                    <BarChart
-                      data={topUsers.map((user) => ({
-                        name: user.user?.displayName || "Unknown",
-                        value: user.count,
-                      }))}
-                      layout="vertical"
-                      margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="name" width={80} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="value" fill={CHART_COLORS.commits} />
-                    </BarChart>
-                  </ChartContainer>
+                <div className="h-[400px] w-full">
+                  {topUsers.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={topUsers.map((user) => ({
+                          name: user.user?.displayName || "Unknown",
+                          value: user.count,
+                        }))}
+                        layout="vertical"
+                        margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis type="number" />
+                        <YAxis type="category" dataKey="name" width={80} />
+                        <Tooltip formatter={(value) => [value, "Activities"]} />
+                        <Bar dataKey="value" fill={CHART_COLORS.commits} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-muted-foreground">No user activity data available</p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -1227,51 +1245,51 @@ export default function ProjectDashboardPage() {
                 <CardDescription>List of all filtered events</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Event Type</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Time</TableHead>
-                        <TableHead className="hidden md:table-cell">Description</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredEvents
-                        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                        .slice(0, 50)
-                        .map((event) => (
-                          <TableRow key={event.id}>
-                            <TableCell>
-                              <Badge variant="outline">
-                                {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6">
-                                  <AvatarImage src={getUserPhotoURL(event.userId)} />
-                                  <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <span>{getUserDisplayName(event.userId)}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell>{format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}</TableCell>
-                            <TableCell className="hidden md:table-cell max-w-[300px] truncate">
-                              {getEventDescription(event)}
+                <div className="rounded-md border overflow-hidden">
+                  <ScrollArea className="max-h-[600px]">
+                    <Table>
+                      <TableHeader className="sticky top-0 bg-background z-10">
+                        <TableRow>
+                          <TableHead className="w-[120px]">Event Type</TableHead>
+                          <TableHead className="w-[180px]">User</TableHead>
+                          <TableHead className="w-[150px]">Time</TableHead>
+                          <TableHead>Description</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredEvents
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                          .slice(0, 50)
+                          .map((event) => (
+                            <TableRow key={event.id}>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={getUserPhotoURL(event.userId)} />
+                                    <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>{format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}</TableCell>
+                              <TableCell className="max-w-[400px] truncate">{getEventDescription(event)}</TableCell>
+                            </TableRow>
+                          ))}
+                        {filteredEvents.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="h-24 text-center">
+                              No events match the filters
                             </TableCell>
                           </TableRow>
-                        ))}
-                      {filteredEvents.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} className="h-24 text-center">
-                            No events match the filters
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
                 </div>
                 {filteredEvents.length > 50 && (
                   <div className="text-center text-sm text-muted-foreground mt-4">

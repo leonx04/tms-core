@@ -12,15 +12,24 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 import { PageHeader } from "@/components/layout/page-header"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-// Import the updated Tabs components
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { DatePicker } from "@/components/ui/date-picker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { ArrowLeft, BarChart3, Download, Filter, GitCommit, GitPullRequest, Info, RefreshCw, User } from "lucide-react"
+import {
+  ArrowLeft,
+  BarChart3,
+  ChevronRight,
+  Download,
+  Filter,
+  GitCommit,
+  GitPullRequest,
+  Info,
+  RefreshCw,
+  User,
+} from "lucide-react"
 import {
   Area,
   AreaChart,
@@ -753,7 +762,7 @@ export default function ProjectDashboardPage() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="animate-in fade-in-50">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Commits</CardTitle>
                 </CardHeader>
@@ -765,7 +774,7 @@ export default function ProjectDashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Tasks</CardTitle>
                 </CardHeader>
@@ -777,7 +786,7 @@ export default function ProjectDashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Task Updates</CardTitle>
                 </CardHeader>
@@ -791,113 +800,121 @@ export default function ProjectDashboardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <CardTitle className="text-lg">Recent Events</CardTitle>
                   <CardDescription>The 10 Most Recent Events In The Project</CardDescription>
                 </CardHeader>
+
                 <CardContent>
-                  <div className="rounded-md border overflow-hidden">
-                    <ScrollArea className="h-[300px]">
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[500px]">
-                          <thead className="bg-muted/50 sticky top-0 z-10">
-                            <tr>
-                              <th className="h-10 px-4 text-left align-middle font-medium">User</th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">Type</th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">Time</th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">Description</th>
+                  <div className="relative rounded-md border">
+                    <div className="overflow-x-auto" style={{ maxWidth: "100%" }}>
+                      <table className="w-full min-w-[600px]">
+                        <thead className="bg-muted/50 sticky top-0 z-10">
+                          <tr>
+                            <th className="h-10 px-4 text-left align-middle font-medium">User</th>
+                            <th className="h-10 px-4 text-left align-middle font-medium">Type</th>
+                            <th className="h-10 px-4 text-left align-middle font-medium">Time</th>
+                            <th className="h-10 px-4 text-left align-middle font-medium">Description</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {recentEvents.map((event) => (
+                            <tr key={event.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="p-2 align-middle">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8 flex-shrink-0">
+                                    <AvatarImage src={getUserPhotoURL(event.userId)} />
+                                    <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
+                                </div>
+                              </td>
+                              <td className="p-2 align-middle">
+                                <Badge variant="outline" className="whitespace-nowrap">
+                                  {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
+                                </Badge>
+                              </td>
+                              <td className="p-2 align-middle whitespace-nowrap">
+                                {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
+                              </td>
+                              <td className="p-2 align-middle max-w-[200px] truncate">
+                                {capitalizeWords(getEventDescription(event))}
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody>
-                            {recentEvents.map((event) => (
-                              <tr key={event.id} className="border-t border-border hover:bg-muted/30">
-                                <td className="p-2 align-middle">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-8 w-8 flex-shrink-0">
-                                      <AvatarImage src={getUserPhotoURL(event.userId)} />
-                                      <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
-                                  </div>
-                                </td>
-                                <td className="p-2 align-middle">
-                                  <Badge variant="outline" className="whitespace-nowrap">
-                                    {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
-                                  </Badge>
-                                </td>
-                                <td className="p-2 align-middle whitespace-nowrap">
-                                  {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
-                                </td>
-                                <td className="p-2 align-middle max-w-[200px] truncate">
-                                  {capitalizeWords(getEventDescription(event))}
-                                </td>
-                              </tr>
-                            ))}
-                            {recentEvents.length === 0 && (
-                              <tr>
-                                <td colSpan={4} className="h-24 text-center text-muted-foreground">
-                                  <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                                  <p>No Events Found Within The Selected Time Range</p>
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
+                          ))}
+                          {recentEvents.length === 0 && (
+                            <tr>
+                              <td colSpan={4} className="h-24 text-center text-muted-foreground">
+                                <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                                <p>No Events Found Within The Selected Time Range</p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="absolute right-3 bottom-3">
+                      <div className="flex items-center justify-center h-6 w-6 rounded-full bg-muted/80 text-muted-foreground">
+                        <ChevronRight className="h-4 w-4" />
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <CardTitle className="text-lg">Most Active Users</CardTitle>
                   <CardDescription>Top 5 Users With The Most Activities</CardDescription>
                 </CardHeader>
+
                 <CardContent>
-                  <div className="rounded-md border overflow-hidden">
-                    <ScrollArea className="h-[300px]">
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[400px]">
-                          <thead className="bg-muted/50 sticky top-0 z-10">
-                            <tr>
-                              <th className="h-10 px-4 text-left align-middle font-medium">User</th>
-                              <th className="h-10 px-4 text-left align-middle font-medium">Activities</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {topUsers.map((item) => (
-                              <tr key={item.userId} className="border-t border-border hover:bg-muted/30">
-                                <td className="p-2 align-middle">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-8 w-8 flex-shrink-0">
-                                      <AvatarImage src={getUserPhotoURL(item.userId)} />
-                                      <AvatarFallback>{item.user?.displayName?.charAt(0) || "U"}</AvatarFallback>
-                                    </Avatar>
-                                    <div>
-                                      <p className="font-medium">{item.user?.displayName || "Unknown User"}</p>
-                                      <p className="text-xs text-muted-foreground">{item.user?.email}</p>
-                                    </div>
+                  <div className="relative rounded-md border">
+                    <div className="overflow-x-auto" style={{ maxWidth: "100%" }}>
+                      <table className="w-full min-w-[400px]">
+                        <thead className="bg-muted/50 sticky top-0 z-10">
+                          <tr>
+                            <th className="h-10 px-4 text-left align-middle font-medium">User</th>
+                            <th className="h-10 px-4 text-left align-middle font-medium">Activities</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {topUsers.map((item) => (
+                            <tr key={item.userId} className="hover:bg-muted/30 transition-colors">
+                              <td className="p-2 align-middle">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8 flex-shrink-0">
+                                    <AvatarImage src={getUserPhotoURL(item.userId)} />
+                                    <AvatarFallback>{item.user?.displayName?.charAt(0) || "U"}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-medium">{item.user?.displayName || "Unknown User"}</p>
+                                    <p className="text-xs text-muted-foreground">{item.user?.email}</p>
                                   </div>
-                                </td>
-                                <td className="p-2 align-middle">
-                                  <Badge variant="secondary">{item.count} Activities</Badge>
-                                </td>
-                              </tr>
-                            ))}
-                            {topUsers.length === 0 && (
-                              <tr>
-                                <td colSpan={2} className="h-24 text-center text-muted-foreground">
-                                  <User className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                                  <p>No User Data Available</p>
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
+                                </div>
+                              </td>
+                              <td className="p-2 align-middle">
+                                <Badge variant="secondary">{item.count} Activities</Badge>
+                              </td>
+                            </tr>
+                          ))}
+                          {topUsers.length === 0 && (
+                            <tr>
+                              <td colSpan={2} className="h-24 text-center text-muted-foreground">
+                                <User className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                                <p>No User Data Available</p>
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="absolute right-3 bottom-3">
+                      <div className="flex items-center justify-center h-6 w-6 rounded-full bg-muted/80 text-muted-foreground">
+                        <ChevronRight className="h-4 w-4" />
                       </div>
-                    </ScrollArea>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -906,7 +923,7 @@ export default function ProjectDashboardPage() {
 
           {/* Timeline Chart Tab */}
           <TabsContent value="timeline" className="animate-in fade-in-50">
-            <Card className="shadow-sm">
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
               <CardHeader>
                 <CardTitle className="text-lg">Activity Timeline Chart</CardTitle>
                 <CardDescription>Number Of Activities Over Time</CardDescription>
@@ -981,7 +998,7 @@ export default function ProjectDashboardPage() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <CardTitle className="text-lg">Bar Chart Of Activities</CardTitle>
                   <CardDescription>Number Of Activities Over Time</CardDescription>
@@ -1027,7 +1044,7 @@ export default function ProjectDashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <CardTitle className="text-lg">Area Chart</CardTitle>
                   <CardDescription>Activity Trends Over Time</CardDescription>
@@ -1106,7 +1123,7 @@ export default function ProjectDashboardPage() {
           {/* Event Distribution Tab */}
           <TabsContent value="distribution" className="animate-in fade-in-50">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <CardTitle className="text-lg">Event Type Distribution</CardTitle>
                   <CardDescription>Proportion Of Event Types In The Project</CardDescription>
@@ -1143,7 +1160,7 @@ export default function ProjectDashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-sm">
+              <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                 <CardHeader>
                   <CardTitle className="text-lg">User Activity Distribution</CardTitle>
                   <CardDescription>Number Of Activities By Each User</CardDescription>
@@ -1180,66 +1197,70 @@ export default function ProjectDashboardPage() {
 
           {/* Details Tab */}
           <TabsContent value="details" className="animate-in fade-in-50">
-            <Card className="shadow-sm">
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
               <CardHeader>
                 <CardTitle className="text-lg">Event Details</CardTitle>
                 <CardDescription>List Of All Filtered Events</CardDescription>
               </CardHeader>
+
               <CardContent>
-                <div className="rounded-md border overflow-hidden">
-                  <ScrollArea className="h-[400px]">
-                    <div className="overflow-x-auto">
-                      <table className="w-full min-w-[800px]">
-                        <thead className="bg-muted/50 sticky top-0 z-10">
-                          <tr>
-                            <th className="h-10 px-4 text-left align-middle font-medium w-[140px] whitespace-nowrap">
-                              Event Type
-                            </th>
-                            <th className="h-10 px-4 text-left align-middle font-medium w-[180px]">User</th>
-                            <th className="h-10 px-4 text-left align-middle font-medium w-[150px]">Time</th>
-                            <th className="h-10 px-4 text-left align-middle font-medium">Description</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredEvents
-                            .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-                            .slice(0, 50)
-                            .map((event) => (
-                              <tr key={event.id} className="border-t border-border hover:bg-muted/30">
-                                <td className="p-4 align-middle">
-                                  <Badge variant="outline" className="whitespace-nowrap">
-                                    {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
-                                  </Badge>
-                                </td>
-                                <td className="p-4 align-middle">
-                                  <div className="flex items-center gap-2">
-                                    <Avatar className="h-6 w-6 flex-shrink-0">
-                                      <AvatarImage src={getUserPhotoURL(event.userId)} />
-                                      <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
-                                  </div>
-                                </td>
-                                <td className="p-4 align-middle whitespace-nowrap">
-                                  {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
-                                </td>
-                                <td className="p-4 align-middle max-w-[400px] truncate">
-                                  {capitalizeWords(getEventDescription(event))}
-                                </td>
-                              </tr>
-                            ))}
-                          {filteredEvents.length === 0 && (
-                            <tr>
-                              <td colSpan={4} className="h-24 text-center text-muted-foreground">
-                                <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
-                                <p>No Events Match The Filters</p>
+                <div className="relative rounded-md border">
+                  <div className="overflow-x-auto" style={{ maxWidth: "100%" }}>
+                    <table className="w-full min-w-[800px]">
+                      <thead className="bg-muted/50 sticky top-0 z-10">
+                        <tr>
+                          <th className="h-10 px-4 text-left align-middle font-medium w-[140px] whitespace-nowrap">
+                            Event Type
+                          </th>
+                          <th className="h-10 px-4 text-left align-middle font-medium w-[180px]">User</th>
+                          <th className="h-10 px-4 text-left align-middle font-medium w-[150px]">Time</th>
+                          <th className="h-10 px-4 text-left align-middle font-medium">Description</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filteredEvents
+                          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+                          .slice(0, 50)
+                          .map((event) => (
+                            <tr key={event.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="p-4 align-middle">
+                                <Badge variant="outline" className="whitespace-nowrap">
+                                  {EVENT_TYPES[event.type as keyof typeof EVENT_TYPES] || event.type}
+                                </Badge>
+                              </td>
+                              <td className="p-4 align-middle">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-6 w-6 flex-shrink-0">
+                                    <AvatarImage src={getUserPhotoURL(event.userId)} />
+                                    <AvatarFallback>{getUserDisplayName(event.userId).charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="truncate max-w-[100px]">{getUserDisplayName(event.userId)}</span>
+                                </div>
+                              </td>
+                              <td className="p-4 align-middle whitespace-nowrap">
+                                {format(new Date(event.timestamp), "dd/MM/yyyy HH:mm")}
+                              </td>
+                              <td className="p-4 align-middle max-w-[400px] truncate">
+                                {capitalizeWords(getEventDescription(event))}
                               </td>
                             </tr>
-                          )}
-                        </tbody>
-                      </table>
+                          ))}
+                        {filteredEvents.length === 0 && (
+                          <tr>
+                            <td colSpan={4} className="h-24 text-center text-muted-foreground">
+                              <Info className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                              <p>No Events Match The Filters</p>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="absolute right-3 bottom-3">
+                    <div className="flex items-center justify-center h-6 w-6 rounded-full bg-muted/80 text-muted-foreground">
+                      <ChevronRight className="h-4 w-4" />
                     </div>
-                  </ScrollArea>
+                  </div>
                 </div>
                 {filteredEvents.length > 50 && (
                   <div className="text-center text-sm text-muted-foreground mt-4">

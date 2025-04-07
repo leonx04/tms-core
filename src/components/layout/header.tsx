@@ -16,6 +16,7 @@ export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [notificationDropdownOpen, setNotificationDropdownOpen] = useState(false)
   const mobileMenuRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -61,6 +62,37 @@ export default function Header() {
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [mobileMenuOpen])
+
+  // Add a useEffect to handle click outside for NotificationDropdown and other popups
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Close NotificationDropdown if click is outside
+      const notificationDropdown = document.querySelector(".notification-dropdown");
+      if (
+        notificationDropdown &&
+        !notificationDropdown.contains(event.target as Node)
+      ) {
+        // Close NotificationDropdown logic here
+        // Assuming NotificationDropdown has a state to control visibility
+        setNotificationDropdownOpen(false);
+      }
+
+      // Close user menu if click is outside
+      if (
+        userMenuOpen &&
+        !mobileMenuRef.current?.contains(event.target as Node) &&
+        !menuButtonRef.current?.contains(event.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [userMenuOpen]);
 
   // Disable body scrolling when mobile menu is open
   useEffect(() => {
@@ -111,9 +143,8 @@ export default function Header() {
 
   return (
     <header
-      className={`sticky top-0 z-50 transition-all duration-200 ${
-        scrolled ? "bg-background/80 backdrop-blur-md shadow-sm" : "bg-background"
-      }`}
+      className={`sticky top-0 z-50 transition-all duration-200 ${scrolled ? "bg-background/80 backdrop-blur-md shadow-sm" : "bg-background"
+        }`}
     >
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <div className="flex items-center space-x-2">

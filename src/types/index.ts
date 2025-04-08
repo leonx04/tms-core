@@ -227,6 +227,7 @@ export const TASK_STATUS = {
   IN_PROGRESS: "in_progress",
   RESOLVED: "resolved",
   CLOSED: "closed",
+  REOPENED: "reopened",
 }
 
 export const TASK_PRIORITY = {

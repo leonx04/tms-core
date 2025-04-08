@@ -47,7 +47,8 @@ import {
   YAxis,
   Tooltip,
 } from "recharts"
-import type { Project, Task, TaskHistory, Comment, Notification, User as UserType } from "@/types"
+import type { Project, Task, TaskHistory, Comment, User as UserType } from "@/types"
+import { TASK_STATUS } from "@/types"
 
 // Define event types
 const EVENT_TYPES = {
@@ -55,7 +56,6 @@ const EVENT_TYPES = {
   TASK_CREATE: "Task Creation",
   TASK_UPDATE: "Task Update",
   TASK_COMMENT: "Task Comment",
-  NOTIFICATION: "Notification",
 }
 
 // Define time ranges
@@ -73,6 +73,13 @@ const CHART_COLORS = {
   taskCreates: "#82ca9d",
   taskUpdates: "#ffc658",
   comments: "#ff8042",
+  closed: "#8884d8",
+  open: "#82ca9d",
+  new: "#ffc658",
+  inProgress: "#ff8042",
+  resolved: "#8dd1e1",
+  reopened: "#a4de6c",
+  overdue: "#d0ed57",
 }
 
 // Define event data type
@@ -108,9 +115,19 @@ export default function ProjectDashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [taskHistory, setTaskHistory] = useState<TaskHistory[]>([])
   const [comments, setComments] = useState<Comment[]>([])
-  const [notifications, setNotifications] = useState<Notification[]>([])
   const [commits, setCommits] = useState<any[]>([])
   const [activeTab, setActiveTab] = useState("overview")
+  const [taskStats, setTaskStats] = useState({
+    total: 0,
+    closed: 0,
+    open: 0,
+    new: 0,
+    inProgress: 0,
+    resolved: 0,
+    reopened: 0,
+    overdue: 0,
+    byUser: {},
+  })
 
   const { user } = useAuth()
   const params = useParams()
@@ -250,24 +267,6 @@ export default function ProjectDashboardPage() {
               return task && task.projectId === projectId
             })
           setComments(commentsList)
-        }
-
-        // Fetch notifications
-        const notificationsRef = ref(database, "notifications")
-        const notificationsSnapshot = await get(notificationsRef)
-
-        if (notificationsSnapshot.exists()) {
-          const notificationsData = notificationsSnapshot.val()
-          const notificationsList = Object.entries(notificationsData)
-            .map(([id, data]: [string, any]) => ({
-              id,
-              ...data,
-            }))
-            .filter((notification) => {
-              // Filter notifications related to this project
-              return notification.referenceId === projectId || tasksList.some((t) => t.id === notification.referenceId)
-            })
-          setNotifications(notificationsList)
         }
 
         // Simulate commit data (in a real app, this would come from GitHub API or webhook data)
@@ -531,8 +530,6 @@ export default function ProjectDashboardPage() {
         return "Task Updated"
       case "TASK_COMMENT":
         return `Comment: ${event.data.content.substring(0, 30)}${event.data.content.length > 30 ? "..." : ""}`
-      case "NOTIFICATION":
-        return `Notification: ${event.data.message}`
       default:
         return "Unknown Event"
     }
@@ -568,6 +565,54 @@ export default function ProjectDashboardPage() {
     link.click()
     document.body.removeChild(link)
   }
+
+  useEffect(() => {
+    if (!tasks.length) return;
+
+    const filteredTasks = tasks.filter((task) => {
+      const taskDate = new Date(task.createdAt);
+      const isInDateRange = taskDate >= dateRange.from && taskDate <= dateRange.to;
+      const isCorrectUser = !userFilter || task.assignedTo.includes(userFilter);
+      const isCorrectEventType = !eventTypeFilter || task.status === eventTypeFilter;
+
+      return isInDateRange && isCorrectUser && isCorrectEventType;
+    });
+
+    const stats = {
+      total: filteredTasks.length,
+      closed: 0,
+      open: 0,
+      new: 0,
+      inProgress: 0,
+      resolved: 0,
+      reopened: 0,
+      overdue: 0,
+      byUser: {} as Record<string, number>,
+    };
+
+    const now = new Date();
+
+    filteredTasks.forEach((task) => {
+      if (task.status === TASK_STATUS.CLOSED) stats.closed++;
+      else stats.open++;
+
+      if (task.status === TASK_STATUS.TODO) stats.new++;
+      if (task.status === TASK_STATUS.IN_PROGRESS) stats.inProgress++;
+      if (task.status === TASK_STATUS.RESOLVED) stats.resolved++;
+      if (task.status === TASK_STATUS.REOPENED) stats.reopened++;
+
+      if (task.dueDate && new Date(task.dueDate) < now && task.status !== TASK_STATUS.CLOSED) {
+        stats.overdue++;
+      }
+
+      task.assignedTo.forEach((userId) => {
+        if (!stats.byUser[userId]) stats.byUser[userId] = 0;
+        stats.byUser[userId]++;
+      });
+    });
+
+    setTaskStats(stats);
+  }, [tasks, dateRange, userFilter, eventTypeFilter]);
 
   if (loading) {
     return (
@@ -1193,6 +1238,44 @@ export default function ProjectDashboardPage() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Task Status Distribution */}
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+              <CardHeader>
+                <CardTitle className="text-lg">Task Status Distribution</CardTitle>
+                <CardDescription>Proportion Of Tasks By Status</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={Object.entries(taskStats).filter(([key, value]) =>
+                          ["closed", "open", "new", "inProgress", "resolved", "reopened", "overdue"].includes(key) && typeof value === 'number' && value > 0
+                        ).map(([key, value]) => ({
+                          name: key,
+                          value,
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        labelLine={false}
+                        outerRadius={100}
+                        innerRadius={60}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {Object.entries(taskStats).map(([key], index) => (
+                          <Cell key={`cell-${index}`} fill={key in CHART_COLORS ? CHART_COLORS[key as keyof typeof CHART_COLORS] : "#8884d8"} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [value, name]} />
+                      <Legend layout="horizontal" verticalAlign="bottom" align="center" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Details Tab */}

@@ -1276,6 +1276,34 @@ export default function ProjectDashboardPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Task Count by Member */}
+            <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
+              <CardHeader>
+                <CardTitle className="text-lg">Task Count by Member</CardTitle>
+                <CardDescription>Number of Tasks Assigned to Each Member</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={Object.entries(taskStats.byUser).map(([userId, taskCount]) => ({
+                        name: users[userId]?.displayName || "Unknown",
+                        value: taskCount,
+                      }))}
+                      layout="vertical"
+                      margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis type="number" />
+                      <YAxis type="category" dataKey="name" width={150} />
+                      <Tooltip formatter={(value) => [value, "Tasks"]} />
+                      <Bar dataKey="value" fill="#82ca9d" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Details Tab */}

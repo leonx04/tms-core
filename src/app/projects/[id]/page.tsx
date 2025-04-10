@@ -937,7 +937,6 @@ export default function ProjectDetailPage() {
                               <Badge
                                 variant="status"
                                 className={`${getStatusColor(task.status)} whitespace-nowrap`}
-                                animation={task.status === "todo" || task.status === "in_progress" ? "pulse" : "fade"}
                               >
                                 {getStatusLabel(task.status)}
                               </Badge>
@@ -1070,9 +1069,7 @@ export default function ProjectDetailPage() {
                           </h3>
                           <Badge
                             variant="status"
-                            className={`${getStatusColor(task.status)} whitespace-nowrap flex-shrink-0`}
-                            animation={task.status === "todo" || task.status === "in_progress" ? "pulse" : "fade"}
-                          >
+                            className={`${getStatusColor(task.status)} whitespace-nowrap flex-shrink-0`}                          >
                             {getStatusLabel(task.status)}
                           </Badge>
                         </div>
@@ -1090,7 +1087,6 @@ export default function ProjectDetailPage() {
                           <Badge
                             variant="priority"
                             className={`${getPriorityColor(task.priority)} whitespace-nowrap`}
-                            animation={task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"}
                           >
                             {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
                           </Badge>

@@ -58,6 +58,7 @@ import {
   ExternalLink,
   Download,
   RefreshCw,
+  Info,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -1044,9 +1045,11 @@ export default function TaskDetailPage() {
         <Card className="mb-8 shadow-sm border-border animate-fadeIn overflow-hidden">
           <CardHeader className="bg-muted/50 border-b border-border p-4 md:p-6 space-y-4">
             <div className="flex flex-col justify-between gap-4 items-start md:flex-row md:items-center">
-              <CardTitle className="text-xl break-words font-bold md:text-2xl">{task.title}</CardTitle>
+              <CardTitle className="text-xl break-words font-bold md:text-2xl max-w-[calc(100%-2rem)]">
+                {task.title}
+              </CardTitle>
 
-              <div className="flex flex-wrap items-center self-start gap-2">
+              <div className="flex flex-wrap items-center gap-2 self-start md:self-center shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1089,9 +1092,6 @@ export default function TaskDetailPage() {
               <Badge
                 variant="status"
                 className={getStatusColor(task.status)}
-                animation={
-                  task.status === TASK_STATUS.TODO || task.status === TASK_STATUS.IN_PROGRESS ? "pulse" : "fade"
-                }
               >
                 {getStatusLabel(task.status)}
               </Badge>
@@ -1124,17 +1124,15 @@ export default function TaskDetailPage() {
               {/* Improved TabsList with better scrolling behavior */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${
-                    isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
-                  } bg-muted/50 p-3 rounded-lg`}
+                  className={`w-full flex ${isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
+                    } bg-muted/50 p-3 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${
-                        isMobile ? "flex-shrink-0 mx-0.1" : ""
-                      } text-sm whitespace-nowrap px-3 py-1.5`}
+                      className={`flex-1 min-w-[100px] ${isMobile ? "flex-shrink-0 mx-0.1" : ""
+                        } text-sm whitespace-nowrap px-3 py-1.5`}
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1152,18 +1150,29 @@ export default function TaskDetailPage() {
 
               <CardContent className="p-0">
                 <TabsContent value="details" className="animate-in fade-in-50 p-4 md:p-6">
-                  <div className="dark:prose-invert max-w-none mb-6 prose">
-                    {task.description ? (
+                  {/* Enhanced description section with better visibility */}
+                  {task.description ? (
+                    <div className="mb-6 bg-muted/30 p-4 rounded-lg border border-border">
+                      <div className="flex items-center mb-2">
+                        <Info className="h-4 w-4 text-primary mr-2" />
+                        <h3 className="font-medium text-primary">Description</h3>
+                      </div>
                       <div
-                        className="break-words"
+                        className="dark:prose-invert max-w-none prose break-words"
                         dangerouslySetInnerHTML={{
                           __html: formatTextWithLinks(task.description, projectData?.githubRepo),
                         }}
                       />
-                    ) : (
+                    </div>
+                  ) : (
+                    <div className="mb-6 bg-muted/30 p-4 rounded-lg border border-border">
+                      <div className="flex items-center mb-2">
+                        <Info className="h-4 w-4 text-muted-foreground mr-2" />
+                        <h3 className="font-medium text-muted-foreground">Description</h3>
+                      </div>
                       <p className="text-muted-foreground italic">No description provided</p>
-                    )}
-                  </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2">
                     <div className="flex items-center">
@@ -1597,7 +1606,7 @@ export default function TaskDetailPage() {
                                       className={getStatusColor(childTask.status)}
                                       animation={
                                         childTask.status === TASK_STATUS.TODO ||
-                                        childTask.status === TASK_STATUS.IN_PROGRESS
+                                          childTask.status === TASK_STATUS.IN_PROGRESS
                                           ? "pulse"
                                           : "fade"
                                       }
@@ -2012,4 +2021,3 @@ export default function TaskDetailPage() {
     </div>
   )
 }
-

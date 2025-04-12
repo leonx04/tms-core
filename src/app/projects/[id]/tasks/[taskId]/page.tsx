@@ -1111,7 +1111,6 @@ export default function TaskDetailPage() {
               <Badge
                 variant="priority"
                 className={getPriorityColor(task.priority)}
-                animation={task.priority === "high" || task.priority === "critical" ? "pulse" : "fade"}
               >
                 {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
               </Badge>
@@ -1606,12 +1605,6 @@ export default function TaskDetailPage() {
                                         <Badge
                                           variant="status"
                                           className={getStatusColor(childTask.status)}
-                                          animation={
-                                            childTask.status === TASK_STATUS.TODO ||
-                                              childTask.status === TASK_STATUS.IN_PROGRESS
-                                              ? "pulse"
-                                              : "fade"
-                                          }
                                         >
                                           {getStatusLabel(childTask.status)}
                                         </Badge>

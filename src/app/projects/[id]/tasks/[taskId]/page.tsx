@@ -82,6 +82,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Progress } from "@/components/ui/progress"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
@@ -160,6 +169,12 @@ export default function TaskDetailPage() {
   const totalCommentPages = Math.ceil(comments.length / commentsPerPage)
   const paginatedComments = comments.slice(0, commentsPage * commentsPerPage)
   const hasMoreComments = commentsPage < totalCommentPages
+
+  // Subtask pagination
+  const [subtasksPage, setSubtasksPage] = useState(1)
+  const subtasksPerPage = 5
+  const totalSubtaskPages = Math.ceil(childTasks.length / subtasksPerPage)
+  const paginatedSubtasks = childTasks.slice((subtasksPage - 1) * subtasksPerPage, subtasksPage * subtasksPerPage)
 
   // Check if we're on a mobile device
   const isMobile = useMediaQuery("(max-width: 640px)")
@@ -1089,10 +1104,7 @@ export default function TaskDetailPage() {
                 {task.type.charAt(0).toUpperCase() + task.type.slice(1)}
               </Badge>
 
-              <Badge
-                variant="status"
-                className={getStatusColor(task.status)}
-              >
+              <Badge variant="status" className={getStatusColor(task.status)}>
                 {getStatusLabel(task.status)}
               </Badge>
 
@@ -1238,12 +1250,8 @@ export default function TaskDetailPage() {
                       <div className="col-span-1 flex items-center sm:col-span-2">
                         <Clock className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
                         <span className="text-muted-foreground text-sm">Progress:</span>
-                        <div className="bg-muted h-2.5 rounded-full w-full dark:bg-muted max-w-xs ml-2 overflow-hidden">
-                          <div
-                            className="bg-primary h-2.5 rounded-full transition-all duration-500 ease-in-out"
-                            style={{ width: `${task.percentDone}%` }}
-                            title={`${task.percentDone}% complete`}
-                          ></div>
+                        <div className="ml-2 w-full max-w-xs">
+                          <Progress value={task.percentDone} className="h-2.5" />
                         </div>
                         <span className="text-xs ml-2">{task.percentDone}%</span>
                       </div>
@@ -1549,14 +1557,6 @@ export default function TaskDetailPage() {
                       <h3 className="font-medium">Subtasks ({childTasks.length})</h3>
                       <div className="flex items-center gap-2">
                         <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 rounded-lg"
-                          onClick={() => setShowSubtaskDialog(true)}
-                        >
-                          <Plus className="h-4 w-4 mr-2" /> Add Subtask
-                        </Button>
-                        <Button
                           variant="ghost"
                           size="sm"
                           className="h-7 p-0 rounded-full w-7"
@@ -1569,98 +1569,132 @@ export default function TaskDetailPage() {
                     </div>
 
                     {showChildTasks && (
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[700px]">
-                          <thead>
-                            <tr className="border-b border-border">
-                              <th className="text-left text-sm font-medium px-4 py-2 w-[40%]">Title</th>
-                              <th className="text-left text-sm font-medium px-4 py-2 w-[20%]">Status</th>
-                              <th className="text-left text-sm font-medium px-4 py-2 w-[25%]">Assigned To</th>
-                              <th className="text-left text-sm font-medium px-4 py-2 w-[15%]">Progress</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {childTasks.map((childTask) => {
-                              // Convert child task assignees to user objects for AssigneeGroup
-                              const childTaskUsers = childTask.assignedTo
-                                ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
-                                : []
-
-                              return (
-                                <tr
-                                  key={childTask.id}
-                                  className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
-                                >
-                                  <td className="px-4 py-2">
-                                    <Link
-                                      href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                      className="text-primary hover:underline truncate block max-w-full"
-                                      title={childTask.title}
-                                    >
-                                      {childTask.title}
-                                    </Link>
-                                  </td>
-                                  <td className="px-4 py-2 whitespace-nowrap">
-                                    <Badge
-                                      variant="status"
-                                      className={getStatusColor(childTask.status)}
-                                      animation={
-                                        childTask.status === TASK_STATUS.TODO ||
-                                          childTask.status === TASK_STATUS.IN_PROGRESS
-                                          ? "pulse"
-                                          : "fade"
-                                      }
-                                    >
-                                      {getStatusLabel(childTask.status)}
-                                    </Badge>
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
-                                      <div className="flex items-center">
-                                        <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
-
-                                        <TooltipProvider>
-                                          <Tooltip>
-                                            <TooltipTrigger asChild>
-                                              <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
-                                                {childTask.assignedTo
-                                                  .map((id) => users[id]?.displayName || "Unknown")
-                                                  .join(", ")}
-                                              </span>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                              <p>
-                                                {childTask.assignedTo
-                                                  .map((id) => users[id]?.displayName || "Unknown")
-                                                  .join(", ")}
-                                              </p>
-                                            </TooltipContent>
-                                          </Tooltip>
-                                        </TooltipProvider>
-                                      </div>
-                                    ) : (
-                                      <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    {childTask.percentDone !== undefined && (
-                                      <div className="flex items-center gap-2">
-                                        <div className="bg-muted h-2 rounded-full w-full max-w-24 overflow-hidden">
-                                          <div
-                                            className="bg-primary h-2 rounded-full transition-all duration-500 ease-in-out"
-                                            style={{ width: `${childTask.percentDone}%` }}
-                                          ></div>
-                                        </div>
-                                        <span className="text-xs whitespace-nowrap">{childTask.percentDone}%</span>
-                                      </div>
-                                    )}
-                                  </td>
+                      <>
+                        <ScrollArea className="h-[400px]">
+                          <div className="overflow-x-auto">
+                            <table className="w-full min-w-[700px]">
+                              <thead>
+                                <tr className="border-b border-border">
+                                  <th className="text-left text-sm font-medium px-4 py-2 w-[40%]">Title</th>
+                                  <th className="text-left text-sm font-medium px-4 py-2 w-[20%]">Status</th>
+                                  <th className="text-left text-sm font-medium px-4 py-2 w-[25%]">Assigned To</th>
+                                  <th className="text-left text-sm font-medium px-4 py-2 w-[15%]">Progress</th>
                                 </tr>
-                              )
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                              </thead>
+                              <tbody>
+                                {paginatedSubtasks.map((childTask) => {
+                                  // Convert child task assignees to user objects for AssigneeGroup
+                                  const childTaskUsers = childTask.assignedTo
+                                    ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
+                                    : []
+
+                                  return (
+                                    <tr
+                                      key={childTask.id}
+                                      className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
+                                    >
+                                      <td className="px-4 py-2">
+                                        <Link
+                                          href={`/projects/${projectId}/tasks/${childTask.id}`}
+                                          className="text-primary hover:underline truncate block max-w-full"
+                                          title={childTask.title}
+                                        >
+                                          {childTask.title}
+                                        </Link>
+                                      </td>
+                                      <td className="px-4 py-2 whitespace-nowrap">
+                                        <Badge
+                                          variant="status"
+                                          className={getStatusColor(childTask.status)}
+                                          animation={
+                                            childTask.status === TASK_STATUS.TODO ||
+                                              childTask.status === TASK_STATUS.IN_PROGRESS
+                                              ? "pulse"
+                                              : "fade"
+                                          }
+                                        >
+                                          {getStatusLabel(childTask.status)}
+                                        </Badge>
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
+                                          <div className="flex items-center">
+                                            <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
+
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
+                                                    {childTask.assignedTo
+                                                      .map((id) => users[id]?.displayName || "Unknown")
+                                                      .join(", ")}
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>
+                                                    {childTask.assignedTo
+                                                      .map((id) => users[id]?.displayName || "Unknown")
+                                                      .join(", ")}
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </div>
+                                        ) : (
+                                          <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        {childTask.percentDone !== undefined && (
+                                          <div className="flex items-center gap-2">
+                                            <Progress value={childTask.percentDone} className="h-2 w-24" />
+                                            <span className="text-xs whitespace-nowrap">{childTask.percentDone}%</span>
+                                          </div>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </ScrollArea>
+
+                        {childTasks.length > subtasksPerPage && (
+                          <div className="p-2 border-t border-border">
+                            <Pagination>
+                              <PaginationContent>
+                                <PaginationItem>
+                                  <PaginationPrevious
+                                    onClick={() => setSubtasksPage((prev) => Math.max(prev - 1, 1))}
+                                    className={subtasksPage === 1 ? "pointer-events-none opacity-50" : ""}
+                                  />
+                                </PaginationItem>
+
+                                {Array.from({ length: totalSubtaskPages }).map((_, i) => (
+                                  <PaginationItem key={i}>
+                                    <PaginationLink
+                                      isActive={subtasksPage === i + 1}
+                                      onClick={() => setSubtasksPage(i + 1)}
+                                    >
+                                      {i + 1}
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                ))}
+
+                                <PaginationItem>
+                                  <PaginationNext
+                                    onClick={() => setSubtasksPage((prev) => Math.min(prev + 1, totalSubtaskPages))}
+                                    className={
+                                      subtasksPage === totalSubtaskPages ? "pointer-events-none opacity-50" : ""
+                                    }
+                                  />
+                                </PaginationItem>
+                              </PaginationContent>
+                            </Pagination>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </TabsContent>

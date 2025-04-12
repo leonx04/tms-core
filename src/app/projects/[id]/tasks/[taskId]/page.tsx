@@ -59,6 +59,9 @@ import {
   Download,
   RefreshCw,
   Info,
+  Check,
+  Filter,
+  X,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -91,6 +94,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Separator } from "@/components/ui/separator"
 
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
@@ -163,6 +168,16 @@ export default function TaskDetailPage() {
   const [subtaskCommitId, setSubtaskCommitId] = useState<string>("")
   const [subtaskMedia, setSubtaskMedia] = useState<any[]>([])
 
+  // Subtask filtering state
+  const [subtaskFilters, setSubtaskFilters] = useState({
+    status: [] as string[],
+    type: [] as string[],
+    priority: [] as string[],
+    assignee: [] as string[],
+  })
+  const [showFilters, setShowFilters] = useState(false)
+  const [filteredChildTasks, setFilteredChildTasks] = useState<Task[]>([])
+
   // Comment pagination
   const [commentsPage, setCommentsPage] = useState(1)
   const commentsPerPage = 10
@@ -173,8 +188,11 @@ export default function TaskDetailPage() {
   // Subtask pagination
   const [subtasksPage, setSubtasksPage] = useState(1)
   const subtasksPerPage = 5
-  const totalSubtaskPages = Math.ceil(childTasks.length / subtasksPerPage)
-  const paginatedSubtasks = childTasks.slice((subtasksPage - 1) * subtasksPerPage, subtasksPage * subtasksPerPage)
+  const totalSubtaskPages = Math.ceil(filteredChildTasks.length / subtasksPerPage)
+  const paginatedSubtasks = filteredChildTasks.slice(
+    (subtasksPage - 1) * subtasksPerPage,
+    subtasksPage * subtasksPerPage,
+  )
 
   // Check if we're on a mobile device
   const isMobile = useMediaQuery("(max-width: 640px)")
@@ -463,6 +481,45 @@ export default function TaskDetailPage() {
       setLoading(false)
     }
   }, [user, projectId, taskId, router, toast])
+
+  // Filter subtasks when filters or childTasks change
+  useEffect(() => {
+    const filtered = childTasks.filter((task) => {
+      // Status filter
+      if (subtaskFilters.status.length > 0 && !subtaskFilters.status.includes(task.status)) {
+        return false
+      }
+
+      // Type filter
+      if (subtaskFilters.type.length > 0 && !subtaskFilters.type.includes(task.type)) {
+        return false
+      }
+
+      // Priority filter
+      if (subtaskFilters.priority.length > 0 && !subtaskFilters.priority.includes(task.priority)) {
+        return false
+      }
+
+      // Assignee filter
+      if (subtaskFilters.assignee.length > 0) {
+        if (!task.assignedTo || task.assignedTo.length === 0) {
+          return false
+        }
+
+        const hasMatchingAssignee = task.assignedTo.some((userId) => subtaskFilters.assignee.includes(userId))
+
+        if (!hasMatchingAssignee) {
+          return false
+        }
+      }
+
+      return true
+    })
+
+    setFilteredChildTasks(filtered)
+    // Reset to first page when filters change
+    setSubtasksPage(1)
+  }, [childTasks, subtaskFilters])
 
   useEffect(() => {
     fetchTaskData()
@@ -909,6 +966,59 @@ export default function TaskDetailPage() {
     }
   }
 
+  // Toggle filter for a specific category and value
+  const toggleFilter = (category: "status" | "type" | "priority" | "assignee", value: string) => {
+    setSubtaskFilters((prev) => {
+      const currentFilters = [...prev[category]]
+      const index = currentFilters.indexOf(value)
+
+      if (index === -1) {
+        // Add filter
+        return {
+          ...prev,
+          [category]: [...currentFilters, value],
+        }
+      } else {
+        // Remove filter
+        currentFilters.splice(index, 1)
+        return {
+          ...prev,
+          [category]: currentFilters,
+        }
+      }
+    })
+  }
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSubtaskFilters({
+      status: [],
+      type: [],
+      priority: [],
+      assignee: [],
+    })
+  }
+
+  // Check if any filters are active
+  const hasActiveFilters = () => {
+    return (
+      subtaskFilters.status.length > 0 ||
+      subtaskFilters.type.length > 0 ||
+      subtaskFilters.priority.length > 0 ||
+      subtaskFilters.assignee.length > 0
+    )
+  }
+
+  // Get count of active filters
+  const getActiveFilterCount = () => {
+    return (
+      subtaskFilters.status.length +
+      subtaskFilters.type.length +
+      subtaskFilters.priority.length +
+      subtaskFilters.assignee.length
+    )
+  }
+
   // Convert users object to array for AssigneeGroup component
   const getAssigneeUsers = () => {
     if (!task?.assignedTo) return []
@@ -1108,10 +1218,7 @@ export default function TaskDetailPage() {
                 {getStatusLabel(task.status)}
               </Badge>
 
-              <Badge
-                variant="priority"
-                className={getPriorityColor(task.priority)}
-              >
+              <Badge variant="priority" className={getPriorityColor(task.priority)}>
                 {task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}
               </Badge>
             </div>
@@ -1553,8 +1660,213 @@ export default function TaskDetailPage() {
                 <TabsContent value="subtasks" className="animate-in fade-in-50 p-4 md:p-6">
                   <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
                     <div className="bg-muted/50 p-3 border-b border-border flex justify-between items-center">
-                      <h3 className="font-medium">Subtasks ({childTasks.length})</h3>
                       <div className="flex items-center gap-2">
+                        <h3 className="font-medium">
+                          Subtasks ({filteredChildTasks.length}
+                          {filteredChildTasks.length !== childTasks.length && ` of ${childTasks.length}`})
+                        </h3>
+                        {hasActiveFilters() && (
+                          <Badge variant="outline" className="gap-1 px-1.5 py-0.5">
+                            <span>{getActiveFilterCount()}</span>
+                            <button
+                              onClick={clearAllFilters}
+                              className="ml-1 text-muted-foreground hover:text-foreground"
+                              aria-label="Clear all filters"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`h-7 px-2 ${hasActiveFilters() ? "border-primary text-primary" : ""}`}
+                            >
+                              <Filter className="h-3.5 w-3.5 mr-1" />
+                              Filter
+                              {getActiveFilterCount() > 0 && (
+                                <span className="ml-1 text-xs bg-primary text-primary-foreground rounded-full w-4 h-4 flex items-center justify-center">
+                                  {getActiveFilterCount()}
+                                </span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 p-3" align="end">
+                            <div className="space-y-4">
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-sm font-medium">Status</h4>
+                                  {subtaskFilters.status.length > 0 && (
+                                    <button
+                                      onClick={() => setSubtaskFilters((prev) => ({ ...prev, status: [] }))}
+                                      className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                      Clear
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {Object.values(TASK_STATUS).map((status) => (
+                                    <button
+                                      key={status}
+                                      onClick={() => toggleFilter("status", status)}
+                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.status.includes(status)
+                                          ? "bg-primary/10 text-primary"
+                                          : "hover:bg-muted"
+                                        }`}
+                                    >
+                                      <span className="flex items-center">
+                                        <Badge
+                                          variant="status"
+                                          className={`${getStatusColor(status)} mr-1.5 h-2 w-2 p-0 rounded-full`}
+                                        />
+                                        {getStatusLabel(status)}
+                                      </span>
+                                      {subtaskFilters.status.includes(status) && <Check className="h-3 w-3" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-sm font-medium">Type</h4>
+                                  {subtaskFilters.type.length > 0 && (
+                                    <button
+                                      onClick={() => setSubtaskFilters((prev) => ({ ...prev, type: [] }))}
+                                      className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                      Clear
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {Object.values(TASK_TYPE).map((type) => (
+                                    <button
+                                      key={type}
+                                      onClick={() => toggleFilter("type", type)}
+                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.type.includes(type)
+                                          ? "bg-primary/10 text-primary"
+                                          : "hover:bg-muted"
+                                        }`}
+                                    >
+                                      <span className="flex items-center">
+                                        <Badge
+                                          variant="type"
+                                          className={`${getTypeColor(type)} mr-1.5 h-2 w-2 p-0 rounded-full`}
+                                        />
+                                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                                      </span>
+                                      {subtaskFilters.type.includes(type) && <Check className="h-3 w-3" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              <Separator />
+
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-sm font-medium">Priority</h4>
+                                  {subtaskFilters.priority.length > 0 && (
+                                    <button
+                                      onClick={() => setSubtaskFilters((prev) => ({ ...prev, priority: [] }))}
+                                      className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                      Clear
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {Object.values(TASK_PRIORITY).map((priority) => (
+                                    <button
+                                      key={priority}
+                                      onClick={() => toggleFilter("priority", priority)}
+                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.priority.includes(priority)
+                                          ? "bg-primary/10 text-primary"
+                                          : "hover:bg-muted"
+                                        }`}
+                                    >
+                                      <span className="flex items-center">
+                                        <Badge
+                                          variant="priority"
+                                          className={`${getPriorityColor(priority)} mr-1.5 h-2 w-2 p-0 rounded-full`}
+                                        />
+                                        {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                                      </span>
+                                      {subtaskFilters.priority.includes(priority) && <Check className="h-3 w-3" />}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {Object.keys(users).length > 0 && (
+                                <>
+                                  <Separator />
+
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="text-sm font-medium">Assignee</h4>
+                                      {subtaskFilters.assignee.length > 0 && (
+                                        <button
+                                          onClick={() => setSubtaskFilters((prev) => ({ ...prev, assignee: [] }))}
+                                          className="text-xs text-muted-foreground hover:text-foreground"
+                                        >
+                                          Clear
+                                        </button>
+                                      )}
+                                    </div>
+                                    <div className="max-h-40 overflow-y-auto pr-1 space-y-1">
+                                      {Object.entries(users).map(([userId, userData]) => (
+                                        <button
+                                          key={userId}
+                                          onClick={() => toggleFilter("assignee", userId)}
+                                          className={`flex items-center justify-between px-2 py-1 text-xs rounded w-full ${subtaskFilters.assignee.includes(userId)
+                                              ? "bg-primary/10 text-primary"
+                                              : "hover:bg-muted"
+                                            }`}
+                                        >
+                                          <span className="flex items-center">
+                                            <Avatar className="h-5 w-5 mr-1.5">
+                                              <AvatarImage src={userData.photoURL || "/placeholder.svg"} />
+                                              <AvatarFallback className="text-[10px]">
+                                                {userData.displayName?.charAt(0) || "?"}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                            <span className="truncate">{userData.displayName}</span>
+                                          </span>
+                                          {subtaskFilters.assignee.includes(userId) && (
+                                            <Check className="h-3 w-3 flex-shrink-0" />
+                                          )}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
+
+                              {hasActiveFilters() && (
+                                <div className="pt-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full text-xs h-8"
+                                    onClick={clearAllFilters}
+                                  >
+                                    Clear All Filters
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+
                         <Button
                           variant="ghost"
                           size="sm"
@@ -1602,10 +1914,7 @@ export default function TaskDetailPage() {
                                         </Link>
                                       </td>
                                       <td className="px-4 py-2 whitespace-nowrap">
-                                        <Badge
-                                          variant="status"
-                                          className={getStatusColor(childTask.status)}
-                                        >
+                                        <Badge variant="status" className={getStatusColor(childTask.status)}>
                                           {getStatusLabel(childTask.status)}
                                         </Badge>
                                       </td>
@@ -1688,6 +1997,26 @@ export default function TaskDetailPage() {
                           </div>
                         )}
                       </>
+                    )}
+                    {showChildTasks && filteredChildTasks.length === 0 && (
+                      <div className="p-8 text-center">
+                        {childTasks.length > 0 ? (
+                          <>
+                            <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                            <h3 className="text-lg font-medium mb-1">No matching subtasks</h3>
+                            <p className="text-muted-foreground mb-4">No subtasks match your current filters</p>
+                            <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                              Clear All Filters
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                            <h3 className="text-lg font-medium mb-1">No subtasks yet</h3>
+                            <p className="text-muted-foreground">Create subtasks to break down this task</p>
+                          </>
+                        )}
+                      </div>
                     )}
                   </div>
                 </TabsContent>

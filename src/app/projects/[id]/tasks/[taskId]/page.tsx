@@ -25,6 +25,7 @@ import { database } from "@/config/firebase"
 import { formatTextWithLinks } from "@/config/format-text-with-links"
 import { useAuth } from "@/contexts/auth-context"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useToast } from "@/hooks/use-toast"
 import type { Comment, User as FirebaseUser, Task, TaskHistory } from "@/types"
 import { TASK_PRIORITY, TASK_TYPE } from "@/types"
@@ -62,6 +63,7 @@ import {
   Check,
   Filter,
   X,
+  UserCircle,
 } from "lucide-react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -96,6 +98,7 @@ import {
 } from "@/components/ui/pagination"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
 
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
@@ -197,6 +200,7 @@ export default function TaskDetailPage() {
   // Check if we're on a mobile device
   const isMobile = useMediaQuery("(max-width: 640px)")
   const isTablet = useMediaQuery("(max-width: 1024px)")
+  const isMobileDevice = useIsMobile()
 
   // Calculate completion percentage based on child tasks
   const calculatePercentDone = (tasks: Task[]) => {
@@ -502,14 +506,31 @@ export default function TaskDetailPage() {
 
       // Assignee filter
       if (subtaskFilters.assignee.length > 0) {
-        if (!task.assignedTo || task.assignedTo.length === 0) {
-          return false
-        }
+        // Special case for "me" filter
+        if (subtaskFilters.assignee.includes("me")) {
+          if (!task.assignedTo || !user) return false
 
-        const hasMatchingAssignee = task.assignedTo.some((userId) => subtaskFilters.assignee.includes(userId))
+          // If "me" is selected, check if current user is assigned
+          const isCurrentUserAssigned = task.assignedTo.includes(user.uid)
 
-        if (!hasMatchingAssignee) {
-          return false
+          // If other assignees are also selected, check those too
+          const otherAssignees = subtaskFilters.assignee.filter((id) => id !== "me")
+          const hasOtherMatchingAssignee =
+            otherAssignees.length > 0 ? task.assignedTo.some((userId) => otherAssignees.includes(userId)) : true
+
+          // Return true only if current user is assigned AND (no other assignees selected OR other matching assignees exist)
+          if (!isCurrentUserAssigned) return false
+          if (otherAssignees.length > 0 && !hasOtherMatchingAssignee) return false
+        } else {
+          // Regular assignee filtering (no "me" selected)
+          if (!task.assignedTo || task.assignedTo.length === 0) {
+            return false
+          }
+
+          const hasMatchingAssignee = task.assignedTo.some((userId) => subtaskFilters.assignee.includes(userId))
+          if (!hasMatchingAssignee) {
+            return false
+          }
         }
       }
 
@@ -519,7 +540,7 @@ export default function TaskDetailPage() {
     setFilteredChildTasks(filtered)
     // Reset to first page when filters change
     setSubtasksPage(1)
-  }, [childTasks, subtaskFilters])
+  }, [childTasks, subtaskFilters, user])
 
   useEffect(() => {
     fetchTaskData()
@@ -1242,17 +1263,15 @@ export default function TaskDetailPage() {
               {/* Improved TabsList with better scrolling behavior */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${
-                    isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
-                  } bg-muted/50 p-3 rounded-lg`}
+                  className={`w-full flex ${isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
+                    } bg-muted/50 p-3 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${
-                        isMobile ? "flex-shrink-0 mx-0.1" : ""
-                      } text-sm whitespace-nowrap px-3 py-1.5`}
+                      className={`flex-1 min-w-[100px] ${isMobile ? "flex-shrink-0 mx-0.1" : ""
+                        } text-sm whitespace-nowrap px-3 py-1.5`}
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1698,178 +1717,192 @@ export default function TaskDetailPage() {
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-72 p-3" align="end">
-                            <div className="space-y-4">
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="text-sm font-medium">Status</h4>
-                                  {subtaskFilters.status.length > 0 && (
-                                    <button
-                                      onClick={() => setSubtaskFilters((prev) => ({ ...prev, status: [] }))}
-                                      className="text-xs text-muted-foreground hover:text-foreground"
-                                    >
-                                      Clear
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="grid grid-cols-2 gap-1">
-                                  {Object.values(TASK_STATUS).map((status) => (
-                                    <button
-                                      key={status}
-                                      onClick={() => toggleFilter("status", status)}
-                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${
-                                        subtaskFilters.status.includes(status)
-                                          ? "bg-primary/10 text-primary"
-                                          : "hover:bg-muted"
-                                      }`}
-                                    >
-                                      <span className="flex items-center">
-                                        <Badge
-                                          variant="status"
-                                          className={`${getStatusColor(status)} mr-1.5 h-2 w-2 p-0 rounded-full`}
-                                        />
-                                        {getStatusLabel(status)}
-                                      </span>
-                                      {subtaskFilters.status.includes(status) && <Check className="h-3 w-3" />}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <Separator />
-
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="text-sm font-medium">Type</h4>
-                                  {subtaskFilters.type.length > 0 && (
-                                    <button
-                                      onClick={() => setSubtaskFilters((prev) => ({ ...prev, type: [] }))}
-                                      className="text-xs text-muted-foreground hover:text-foreground"
-                                    >
-                                      Clear
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="grid grid-cols-2 gap-1">
-                                  {Object.values(TASK_TYPE).map((type) => (
-                                    <button
-                                      key={type}
-                                      onClick={() => toggleFilter("type", type)}
-                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${
-                                        subtaskFilters.type.includes(type)
-                                          ? "bg-primary/10 text-primary"
-                                          : "hover:bg-muted"
-                                      }`}
-                                    >
-                                      <span className="flex items-center">
-                                        <Badge
-                                          variant="type"
-                                          className={`${getTypeColor(type)} mr-1.5 h-2 w-2 p-0 rounded-full`}
-                                        />
-                                        {type.charAt(0).toUpperCase() + type.slice(1)}
-                                      </span>
-                                      {subtaskFilters.type.includes(type) && <Check className="h-3 w-3" />}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              <Separator />
-
-                              <div>
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="text-sm font-medium">Priority</h4>
-                                  {subtaskFilters.priority.length > 0 && (
-                                    <button
-                                      onClick={() => setSubtaskFilters((prev) => ({ ...prev, priority: [] }))}
-                                      className="text-xs text-muted-foreground hover:text-foreground"
-                                    >
-                                      Clear
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="grid grid-cols-2 gap-1">
-                                  {Object.values(TASK_PRIORITY).map((priority) => (
-                                    <button
-                                      key={priority}
-                                      onClick={() => toggleFilter("priority", priority)}
-                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${
-                                        subtaskFilters.priority.includes(priority)
-                                          ? "bg-primary/10 text-primary"
-                                          : "hover:bg-muted"
-                                      }`}
-                                    >
-                                      <span className="flex items-center">
-                                        <Badge
-                                          variant="priority"
-                                          className={`${getPriorityColor(priority)} mr-1.5 h-2 w-2 p-0 rounded-full`}
-                                        />
-                                        {priority.charAt(0).toUpperCase() + priority.slice(1)}
-                                      </span>
-                                      {subtaskFilters.priority.includes(priority) && <Check className="h-3 w-3" />}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {Object.keys(users).length > 0 && (
-                                <>
-                                  <Separator />
-
-                                  <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                      <h4 className="text-sm font-medium">Assignee</h4>
-                                      {subtaskFilters.assignee.length > 0 && (
-                                        <button
-                                          onClick={() => setSubtaskFilters((prev) => ({ ...prev, assignee: [] }))}
-                                          className="text-xs text-muted-foreground hover:text-foreground"
-                                        >
-                                          Clear
-                                        </button>
-                                      )}
-                                    </div>
-                                    <div className="max-h-40 overflow-y-auto pr-1 space-y-1">
-                                      {Object.entries(users).map(([userId, userData]) => (
-                                        <button
-                                          key={userId}
-                                          onClick={() => toggleFilter("assignee", userId)}
-                                          className={`flex items-center justify-between px-2 py-1 text-xs rounded w-full ${
-                                            subtaskFilters.assignee.includes(userId)
-                                              ? "bg-primary/10 text-primary"
-                                              : "hover:bg-muted"
-                                          }`}
-                                        >
-                                          <span className="flex items-center">
-                                            <Avatar className="h-5 w-5 mr-1.5">
-                                              <AvatarImage src={userData.photoURL || "/placeholder.svg"} />
-                                              <AvatarFallback className="text-[10px]">
-                                                {userData.displayName?.charAt(0) || "?"}
-                                              </AvatarFallback>
-                                            </Avatar>
-                                            <span className="truncate">{userData.displayName}</span>
-                                          </span>
-                                          {subtaskFilters.assignee.includes(userId) && (
-                                            <Check className="h-3 w-3 flex-shrink-0" />
-                                          )}
-                                        </button>
-                                      ))}
-                                    </div>
+                            <ScrollArea className="max-h-[70vh] pr-3">
+                              <div className="space-y-4">
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-medium">Status</h4>
+                                    {subtaskFilters.status.length > 0 && (
+                                      <button
+                                        onClick={() => setSubtaskFilters((prev) => ({ ...prev, status: [] }))}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                      >
+                                        Clear
+                                      </button>
+                                    )}
                                   </div>
-                                </>
-                              )}
-
-                              {hasActiveFilters() && (
-                                <div className="pt-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full text-xs h-8"
-                                    onClick={clearAllFilters}
-                                  >
-                                    Clear All Filters
-                                  </Button>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {Object.values(TASK_STATUS).map((status) => (
+                                      <button
+                                        key={status}
+                                        onClick={() => toggleFilter("status", status)}
+                                        className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.status.includes(status)
+                                          ? "bg-primary/10 text-primary"
+                                          : "hover:bg-muted"
+                                          }`}
+                                      >
+                                        <span className="flex items-center">
+                                          <Badge
+                                            variant="status"
+                                            className={`${getStatusColor(status)} mr-1.5 h-2 w-2 p-0 rounded-full`}
+                                          />
+                                          {getStatusLabel(status)}
+                                        </span>
+                                        {subtaskFilters.status.includes(status) && <Check className="h-3 w-3" />}
+                                      </button>
+                                    ))}
+                                  </div>
                                 </div>
-                              )}
-                            </div>
+
+                                <Separator />
+
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-medium">Type</h4>
+                                    {subtaskFilters.type.length > 0 && (
+                                      <button
+                                        onClick={() => setSubtaskFilters((prev) => ({ ...prev, type: [] }))}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                      >
+                                        Clear
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {Object.values(TASK_TYPE).map((type) => (
+                                      <button
+                                        key={type}
+                                        onClick={() => toggleFilter("type", type)}
+                                        className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.type.includes(type)
+                                          ? "bg-primary/10 text-primary"
+                                          : "hover:bg-muted"
+                                          }`}
+                                      >
+                                        <span className="flex items-center">
+                                          <Badge
+                                            variant="type"
+                                            className={`${getTypeColor(type)} mr-1.5 h-2 w-2 p-0 rounded-full`}
+                                          />
+                                          {type.charAt(0).toUpperCase() + type.slice(1)}
+                                        </span>
+                                        {subtaskFilters.type.includes(type) && <Check className="h-3 w-3" />}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <Separator />
+
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-medium">Priority</h4>
+                                    {subtaskFilters.priority.length > 0 && (
+                                      <button
+                                        onClick={() => setSubtaskFilters((prev) => ({ ...prev, priority: [] }))}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                      >
+                                        Clear
+                                      </button>
+                                    )}
+                                  </div>
+                                  <div className="grid grid-cols-2 gap-1">
+                                    {Object.values(TASK_PRIORITY).map((priority) => (
+                                      <button
+                                        key={priority}
+                                        onClick={() => toggleFilter("priority", priority)}
+                                        className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.priority.includes(priority)
+                                          ? "bg-primary/10 text-primary"
+                                          : "hover:bg-muted"
+                                          }`}
+                                      >
+                                        <span className="flex items-center">
+                                          <Badge
+                                            variant="priority"
+                                            className={`${getPriorityColor(priority)} mr-1.5 h-2 w-2 p-0 rounded-full`}
+                                          />
+                                          {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                                        </span>
+                                        {subtaskFilters.priority.includes(priority) && <Check className="h-3 w-3" />}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <Separator />
+
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-sm font-medium">Assignee</h4>
+                                    {subtaskFilters.assignee.length > 0 && (
+                                      <button
+                                        onClick={() => setSubtaskFilters((prev) => ({ ...prev, assignee: [] }))}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                      >
+                                        Clear
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Add "Me" option at the top of assignee list */}
+                                  {user && (
+                                    <button
+                                      onClick={() => toggleFilter("assignee", "me")}
+                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded w-full mb-2 ${subtaskFilters.assignee.includes("me")
+                                        ? "bg-primary/10 text-primary"
+                                        : "hover:bg-muted"
+                                        }`}
+                                    >
+                                      <span className="flex items-center">
+                                        <UserCircle className="h-4 w-4 mr-1.5 text-primary" />
+                                        <span className="font-medium">Me</span>
+                                      </span>
+                                      {subtaskFilters.assignee.includes("me") && (
+                                        <Check className="h-3 w-3 flex-shrink-0" />
+                                      )}
+                                    </button>
+                                  )}
+
+                                  <div className="max-h-40 overflow-y-auto pr-1 space-y-1">
+                                    {Object.entries(users).map(([userId, userData]) => (
+                                      <button
+                                        key={userId}
+                                        onClick={() => toggleFilter("assignee", userId)}
+                                        className={`flex items-center justify-between px-2 py-1 text-xs rounded w-full ${subtaskFilters.assignee.includes(userId)
+                                          ? "bg-primary/10 text-primary"
+                                          : "hover:bg-muted"
+                                          }`}
+                                      >
+                                        <span className="flex items-center">
+                                          <Avatar className="h-5 w-5 mr-1.5">
+                                            <AvatarImage src={userData.photoURL || "/placeholder.svg"} />
+                                            <AvatarFallback className="text-[10px]">
+                                              {userData.displayName?.charAt(0) || "?"}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <span className="truncate">{userData.displayName}</span>
+                                        </span>
+                                        {subtaskFilters.assignee.includes(userId) && (
+                                          <Check className="h-3 w-3 flex-shrink-0" />
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {hasActiveFilters() && (
+                                  <div className="pt-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="w-full text-xs h-8"
+                                      onClick={clearAllFilters}
+                                    >
+                                      Clear All Filters
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </ScrollArea>
                           </PopoverContent>
                         </Popover>
 
@@ -1887,115 +1920,111 @@ export default function TaskDetailPage() {
 
                     {showChildTasks && (
                       <>
-                        <ScrollArea className="h-[400px]">
-                          <div className="overflow-x-auto">
-                            <table className="w-full min-w-[700px]">
-                              <thead>
-                                <tr className="border-b border-border">
-                                  <th className="text-left text-sm font-medium px-4 py-2 w-[40%]">Title</th>
-                                  <th className="text-left text-sm font-medium px-4 py-2 w-[20%]">Status</th>
-                                  <th className="text-left text-sm font-medium px-4 py-2 w-[25%]">Assigned To</th>
-                                  <th className="text-left text-sm font-medium px-4 py-2 w-[15%]">Progress</th>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[700px]">
+                            <thead>
+                              <tr className="border-b border-border">
+                                <th className="text-left text-sm font-medium px-4 py-2 w-[40%]">Title</th>
+                                <th className="text-left text-sm font-medium px-4 py-2 w-[20%]">Status</th>
+                                <th className="text-left text-sm font-medium px-4 py-2 w-[25%]">Assigned To</th>
+                                <th className="text-left text-sm font-medium px-4 py-2 w-[15%]">Progress</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paginatedSubtasks.length > 0 ? (
+                                paginatedSubtasks.map((childTask) => {
+                                  // Convert child task assignees to user objects for AssigneeGroup
+                                  const childTaskUsers = childTask.assignedTo
+                                    ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
+                                    : []
+
+                                  return (
+                                    <tr
+                                      key={childTask.id}
+                                      className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
+                                    >
+                                      <td className="px-4 py-2">
+                                        <Link
+                                          href={`/projects/${projectId}/tasks/${childTask.id}`}
+                                          className="text-primary hover:underline truncate block max-w-full"
+                                          title={childTask.title}
+                                        >
+                                          {childTask.title}
+                                        </Link>
+                                      </td>
+                                      <td className="px-4 py-2 whitespace-nowrap">
+                                        <Badge variant="status" className={getStatusColor(childTask.status)}>
+                                          {getStatusLabel(childTask.status)}
+                                        </Badge>
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
+                                          <div className="flex items-center">
+                                            <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
+
+                                            <TooltipProvider>
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
+                                                    {childTask.assignedTo
+                                                      .map((id) => users[id]?.displayName || "Unknown")
+                                                      .join(", ")}
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p>
+                                                    {childTask.assignedTo
+                                                      .map((id) => users[id]?.displayName || "Unknown")
+                                                      .join(", ")}
+                                                  </p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            </TooltipProvider>
+                                          </div>
+                                        ) : (
+                                          <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-2">
+                                        {childTask.percentDone !== undefined && (
+                                          <div className="flex items-center gap-2">
+                                            <Progress value={childTask.percentDone} className="h-2 w-24" />
+                                            <span className="text-xs whitespace-nowrap">{childTask.percentDone}%</span>
+                                          </div>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  )
+                                })
+                              ) : (
+                                <tr>
+                                  <td colSpan={4} className="px-4 py-8 text-center">
+                                    {childTasks.length > 0 ? (
+                                      <>
+                                        <Filter className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                        <h3 className="text-base font-medium mb-1">No matching subtasks</h3>
+                                        <p className="text-muted-foreground text-sm mb-3">
+                                          No subtasks match your current filters
+                                        </p>
+                                        <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                                          Clear All Filters
+                                        </Button>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                        <h3 className="text-base font-medium mb-1">No subtasks yet</h3>
+                                        <p className="text-muted-foreground text-sm">
+                                          Create subtasks to break down this task
+                                        </p>
+                                      </>
+                                    )}
+                                  </td>
                                 </tr>
-                              </thead>
-                              <tbody>
-                                {paginatedSubtasks.length > 0 ? (
-                                  paginatedSubtasks.map((childTask) => {
-                                    // Convert child task assignees to user objects for AssigneeGroup
-                                    const childTaskUsers = childTask.assignedTo
-                                      ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
-                                      : []
-
-                                    return (
-                                      <tr
-                                        key={childTask.id}
-                                        className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
-                                      >
-                                        <td className="px-4 py-2">
-                                          <Link
-                                            href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                            className="text-primary hover:underline truncate block max-w-full"
-                                            title={childTask.title}
-                                          >
-                                            {childTask.title}
-                                          </Link>
-                                        </td>
-                                        <td className="px-4 py-2 whitespace-nowrap">
-                                          <Badge variant="status" className={getStatusColor(childTask.status)}>
-                                            {getStatusLabel(childTask.status)}
-                                          </Badge>
-                                        </td>
-                                        <td className="px-4 py-2">
-                                          {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
-                                            <div className="flex items-center">
-                                              <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
-
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
-                                                      {childTask.assignedTo
-                                                        .map((id) => users[id]?.displayName || "Unknown")
-                                                        .join(", ")}
-                                                    </span>
-                                                  </TooltipTrigger>
-                                                  <TooltipContent>
-                                                    <p>
-                                                      {childTask.assignedTo
-                                                        .map((id) => users[id]?.displayName || "Unknown")
-                                                        .join(", ")}
-                                                    </p>
-                                                  </TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            </div>
-                                          ) : (
-                                            <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                                          )}
-                                        </td>
-                                        <td className="px-4 py-2">
-                                          {childTask.percentDone !== undefined && (
-                                            <div className="flex items-center gap-2">
-                                              <Progress value={childTask.percentDone} className="h-2 w-24" />
-                                              <span className="text-xs whitespace-nowrap">
-                                                {childTask.percentDone}%
-                                              </span>
-                                            </div>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    )
-                                  })
-                                ) : (
-                                  <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center">
-                                      {childTasks.length > 0 ? (
-                                        <>
-                                          <Filter className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                                          <h3 className="text-base font-medium mb-1">No matching subtasks</h3>
-                                          <p className="text-muted-foreground text-sm mb-3">
-                                            No subtasks match your current filters
-                                          </p>
-                                          <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                                            Clear All Filters
-                                          </Button>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                                          <h3 className="text-base font-medium mb-1">No subtasks yet</h3>
-                                          <p className="text-muted-foreground text-sm">
-                                            Create subtasks to break down this task
-                                          </p>
-                                        </>
-                                      )}
-                                    </td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
-                        </ScrollArea>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
 
                         {filteredChildTasks.length > 5 && (
                           <div className="p-2 border-t border-border">
@@ -2182,19 +2211,17 @@ export default function TaskDetailPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {Object.entries(users).map(([userId, userData]: [string, any]) => (
                     <div key={userId} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
+                      <Checkbox
                         id={`subtask-member-${userId}`}
                         checked={subtaskAssignedTo.includes(userId)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
+                        onCheckedChange={(checked) => {
+                          if (checked) {
                             setSubtaskAssignedTo([...subtaskAssignedTo, userId])
                           } else {
                             setSubtaskAssignedTo(subtaskAssignedTo.filter((id) => id !== userId))
                           }
                         }}
                         disabled={isCreatingSubtask}
-                        className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                       />
                       <label htmlFor={`subtask-member-${userId}`} className="text-sm truncate">
                         {userData.displayName || userData.email}

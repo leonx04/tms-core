@@ -1242,15 +1242,17 @@ export default function TaskDetailPage() {
               {/* Improved TabsList with better scrolling behavior */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
-                    } bg-muted/50 p-3 rounded-lg`}
+                  className={`w-full flex ${
+                    isMobile ? "overflow-x-auto overflow-y-hidden scrollbar-hide" : ""
+                  } bg-muted/50 p-3 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${isMobile ? "flex-shrink-0 mx-0.1" : ""
-                        } text-sm whitespace-nowrap px-3 py-1.5`}
+                      className={`flex-1 min-w-[100px] ${
+                        isMobile ? "flex-shrink-0 mx-0.1" : ""
+                      } text-sm whitespace-nowrap px-3 py-1.5`}
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1714,10 +1716,11 @@ export default function TaskDetailPage() {
                                     <button
                                       key={status}
                                       onClick={() => toggleFilter("status", status)}
-                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.status.includes(status)
+                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${
+                                        subtaskFilters.status.includes(status)
                                           ? "bg-primary/10 text-primary"
                                           : "hover:bg-muted"
-                                        }`}
+                                      }`}
                                     >
                                       <span className="flex items-center">
                                         <Badge
@@ -1751,10 +1754,11 @@ export default function TaskDetailPage() {
                                     <button
                                       key={type}
                                       onClick={() => toggleFilter("type", type)}
-                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.type.includes(type)
+                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${
+                                        subtaskFilters.type.includes(type)
                                           ? "bg-primary/10 text-primary"
                                           : "hover:bg-muted"
-                                        }`}
+                                      }`}
                                     >
                                       <span className="flex items-center">
                                         <Badge
@@ -1788,10 +1792,11 @@ export default function TaskDetailPage() {
                                     <button
                                       key={priority}
                                       onClick={() => toggleFilter("priority", priority)}
-                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${subtaskFilters.priority.includes(priority)
+                                      className={`flex items-center justify-between px-2 py-1 text-xs rounded ${
+                                        subtaskFilters.priority.includes(priority)
                                           ? "bg-primary/10 text-primary"
                                           : "hover:bg-muted"
-                                        }`}
+                                      }`}
                                     >
                                       <span className="flex items-center">
                                         <Badge
@@ -1827,10 +1832,11 @@ export default function TaskDetailPage() {
                                         <button
                                           key={userId}
                                           onClick={() => toggleFilter("assignee", userId)}
-                                          className={`flex items-center justify-between px-2 py-1 text-xs rounded w-full ${subtaskFilters.assignee.includes(userId)
+                                          className={`flex items-center justify-between px-2 py-1 text-xs rounded w-full ${
+                                            subtaskFilters.assignee.includes(userId)
                                               ? "bg-primary/10 text-primary"
                                               : "hover:bg-muted"
-                                            }`}
+                                          }`}
                                         >
                                           <span className="flex items-center">
                                             <Avatar className="h-5 w-5 mr-1.5">
@@ -1893,76 +1899,105 @@ export default function TaskDetailPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {paginatedSubtasks.map((childTask) => {
-                                  // Convert child task assignees to user objects for AssigneeGroup
-                                  const childTaskUsers = childTask.assignedTo
-                                    ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
-                                    : []
+                                {paginatedSubtasks.length > 0 ? (
+                                  paginatedSubtasks.map((childTask) => {
+                                    // Convert child task assignees to user objects for AssigneeGroup
+                                    const childTaskUsers = childTask.assignedTo
+                                      ? childTask.assignedTo.filter((id) => users[id]).map((id) => users[id])
+                                      : []
 
-                                  return (
-                                    <tr
-                                      key={childTask.id}
-                                      className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
-                                    >
-                                      <td className="px-4 py-2">
-                                        <Link
-                                          href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                          className="text-primary hover:underline truncate block max-w-full"
-                                          title={childTask.title}
-                                        >
-                                          {childTask.title}
-                                        </Link>
-                                      </td>
-                                      <td className="px-4 py-2 whitespace-nowrap">
-                                        <Badge variant="status" className={getStatusColor(childTask.status)}>
-                                          {getStatusLabel(childTask.status)}
-                                        </Badge>
-                                      </td>
-                                      <td className="px-4 py-2">
-                                        {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
-                                          <div className="flex items-center">
-                                            <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
+                                    return (
+                                      <tr
+                                        key={childTask.id}
+                                        className="border-b border-border hover:bg-muted/70 last:border-0 transition-colors h-14"
+                                      >
+                                        <td className="px-4 py-2">
+                                          <Link
+                                            href={`/projects/${projectId}/tasks/${childTask.id}`}
+                                            className="text-primary hover:underline truncate block max-w-full"
+                                            title={childTask.title}
+                                          >
+                                            {childTask.title}
+                                          </Link>
+                                        </td>
+                                        <td className="px-4 py-2 whitespace-nowrap">
+                                          <Badge variant="status" className={getStatusColor(childTask.status)}>
+                                            {getStatusLabel(childTask.status)}
+                                          </Badge>
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          {childTask.assignedTo && childTask.assignedTo.length > 0 ? (
+                                            <div className="flex items-center">
+                                              <AssigneeGroup users={childTaskUsers} size="sm" maxVisible={2} />
 
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
-                                                    {childTask.assignedTo
-                                                      .map((id) => users[id]?.displayName || "Unknown")
-                                                      .join(", ")}
-                                                  </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                  <p>
-                                                    {childTask.assignedTo
-                                                      .map((id) => users[id]?.displayName || "Unknown")
-                                                      .join(", ")}
-                                                  </p>
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                          </div>
-                                        ) : (
-                                          <span className="text-muted-foreground text-sm italic">Unassigned</span>
-                                        )}
-                                      </td>
-                                      <td className="px-4 py-2">
-                                        {childTask.percentDone !== undefined && (
-                                          <div className="flex items-center gap-2">
-                                            <Progress value={childTask.percentDone} className="h-2 w-24" />
-                                            <span className="text-xs whitespace-nowrap">{childTask.percentDone}%</span>
-                                          </div>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  )
-                                })}
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <span className="ml-2 text-sm text-muted-foreground truncate max-w-[120px] inline-block">
+                                                      {childTask.assignedTo
+                                                        .map((id) => users[id]?.displayName || "Unknown")
+                                                        .join(", ")}
+                                                    </span>
+                                                  </TooltipTrigger>
+                                                  <TooltipContent>
+                                                    <p>
+                                                      {childTask.assignedTo
+                                                        .map((id) => users[id]?.displayName || "Unknown")
+                                                        .join(", ")}
+                                                    </p>
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            </div>
+                                          ) : (
+                                            <span className="text-muted-foreground text-sm italic">Unassigned</span>
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          {childTask.percentDone !== undefined && (
+                                            <div className="flex items-center gap-2">
+                                              <Progress value={childTask.percentDone} className="h-2 w-24" />
+                                              <span className="text-xs whitespace-nowrap">
+                                                {childTask.percentDone}%
+                                              </span>
+                                            </div>
+                                          )}
+                                        </td>
+                                      </tr>
+                                    )
+                                  })
+                                ) : (
+                                  <tr>
+                                    <td colSpan={4} className="px-4 py-8 text-center">
+                                      {childTasks.length > 0 ? (
+                                        <>
+                                          <Filter className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                          <h3 className="text-base font-medium mb-1">No matching subtasks</h3>
+                                          <p className="text-muted-foreground text-sm mb-3">
+                                            No subtasks match your current filters
+                                          </p>
+                                          <Button variant="outline" size="sm" onClick={clearAllFilters}>
+                                            Clear All Filters
+                                          </Button>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FileText className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                                          <h3 className="text-base font-medium mb-1">No subtasks yet</h3>
+                                          <p className="text-muted-foreground text-sm">
+                                            Create subtasks to break down this task
+                                          </p>
+                                        </>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
                               </tbody>
                             </table>
                           </div>
                         </ScrollArea>
 
-                        {childTasks.length > subtasksPerPage && (
+                        {filteredChildTasks.length > 5 && (
                           <div className="p-2 border-t border-border">
                             <Pagination>
                               <PaginationContent>
@@ -1997,26 +2032,6 @@ export default function TaskDetailPage() {
                           </div>
                         )}
                       </>
-                    )}
-                    {showChildTasks && filteredChildTasks.length === 0 && (
-                      <div className="p-8 text-center">
-                        {childTasks.length > 0 ? (
-                          <>
-                            <Filter className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                            <h3 className="text-lg font-medium mb-1">No matching subtasks</h3>
-                            <p className="text-muted-foreground mb-4">No subtasks match your current filters</p>
-                            <Button variant="outline" size="sm" onClick={clearAllFilters}>
-                              Clear All Filters
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                            <h3 className="text-lg font-medium mb-1">No subtasks yet</h3>
-                            <p className="text-muted-foreground">Create subtasks to break down this task</p>
-                          </>
-                        )}
-                      </div>
                     )}
                   </div>
                 </TabsContent>

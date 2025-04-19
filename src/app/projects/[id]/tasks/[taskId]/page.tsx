@@ -124,6 +124,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 
+// Custom utility class for extra small screens (below 480px)
+const xsScreenClass = "max-[480px]:";
+
 // Extract commit ID from input string.
 // If input contains a commit URL, extract the ID. Otherwise, check if the input is a valid commit ID (7-40 hex chars).
 const extractCommitId = (input: string): string => {
@@ -1284,9 +1287,9 @@ export default function TaskDetailPage() {
   }
 
   return (
-    <div className="bg-background min-h-screen">
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+    <div className="bg-background min-h-screen overflow-x-hidden">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
           {parentTask ? (
             <Link
               href={`/projects/${projectId}/tasks/${parentTask.id}`}
@@ -1315,13 +1318,13 @@ export default function TaskDetailPage() {
         </div>
 
         <Card className="mb-8 shadow-sm border-border animate-fadeIn overflow-hidden">
-          <CardHeader className="bg-muted/50 border-b border-border p-4 md:p-6 space-y-4">
-            <div className="flex flex-col justify-between gap-4 items-start md:flex-row md:items-center">
-              <CardTitle className="text-xl break-words font-bold md:text-2xl max-w-[calc(100%-2rem)]">
+          <CardHeader className="bg-muted/50 border-b border-border p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
+            <div className="flex flex-col justify-between gap-3 sm:gap-4 items-start md:flex-row md:items-center">
+              <CardTitle className="text-lg sm:text-xl break-words font-bold md:text-2xl max-w-full">
                 {task.title}
               </CardTitle>
 
-              <div className="flex flex-wrap items-center gap-2 self-start md:self-center shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 self-start md:self-center shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
@@ -1408,19 +1411,13 @@ export default function TaskDetailPage() {
               {/* Improved TabsList with better scrolling behavior */}
               <div className="relative mb-4">
                 <TabsList
-                  className={`w-full flex ${
-                    isMobile
-                      ? "overflow-x-auto overflow-y-hidden scrollbar-hide"
-                      : ""
-                  } bg-muted/50 p-3 rounded-lg`}
+                  className={`w-full flex overflow-x-auto overflow-y-hidden scrollbar-hide bg-muted/50 p-2 sm:p-3 rounded-lg`}
                 >
                   {tabItems.map((tab) => (
                     <TabsTrigger
                       key={tab.id}
                       value={tab.id}
-                      className={`flex-1 min-w-[100px] ${
-                        isMobile ? "flex-shrink-0 mx-0.1" : ""
-                      } text-sm whitespace-nowrap px-3 py-1.5`}
+                      className={`flex-shrink-0 min-w-[90px] sm:min-w-[100px] text-xs sm:text-sm whitespace-nowrap px-2 sm:px-3 py-1.5`}
                     >
                       {tab.label}
                     </TabsTrigger>
@@ -1439,11 +1436,11 @@ export default function TaskDetailPage() {
               <CardContent className="p-0">
                 <TabsContent
                   value="details"
-                  className="animate-in fade-in-50 p-4 md:p-6"
+                  className="animate-in fade-in-50 p-3 sm:p-4 md:p-6"
                 >
                   {/* Enhanced description section with better visibility */}
                   {task.description ? (
-                    <div className="mb-6 bg-muted/30 p-4 rounded-lg border border-border">
+                    <div className="mb-4 sm:mb-6 bg-muted/30 p-3 sm:p-4 rounded-lg border border-border">
                       <div className="flex items-center mb-2">
                         <Info className="h-4 w-4 text-primary mr-2" />
                         <h3 className="font-medium text-primary">
@@ -1461,7 +1458,7 @@ export default function TaskDetailPage() {
                       />
                     </div>
                   ) : (
-                    <div className="mb-6 bg-muted/30 p-4 rounded-lg border border-border">
+                    <div className="mb-4 sm:mb-6 bg-muted/30 p-3 sm:p-4 rounded-lg border border-border">
                       <div className="flex items-center mb-2">
                         <Info className="h-4 w-4 text-muted-foreground mr-2" />
                         <h3 className="font-medium text-muted-foreground">
@@ -1474,7 +1471,7 @@ export default function TaskDetailPage() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-4 sm:mb-6 sm:grid-cols-2">
                     <div className="flex items-center">
                       <User className="flex-shrink-0 h-4 text-muted-foreground w-4 mr-2" />
                       <span className="text-muted-foreground text-sm">
@@ -1608,7 +1605,7 @@ export default function TaskDetailPage() {
                         <span className="text-muted-foreground text-sm mr-2">
                           Commit:
                         </span>
-                        <div className="max-w-[300px] truncate">
+                        <div className="max-w-[300px] overflow-hidden text-ellipsis">
                           <CommitLink
                             url={`https://github.com/${getRepoSlug(
                               projectData.githubRepo
@@ -1624,7 +1621,7 @@ export default function TaskDetailPage() {
                       <h3 className="text-sm font-medium mb-2">
                         Link a commit when resolving
                       </h3>
-                      <div className="flex flex-col gap-2 sm:flex-row">
+                      <div className="flex flex-col gap-2 sm:flex-row items-stretch">
                         <input
                           type="text"
                           placeholder="Enter commit ID or URL"
@@ -1652,7 +1649,7 @@ export default function TaskDetailPage() {
                         <h3 className="text-sm font-medium mb-3">
                           Media Attachments
                         </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3">
                           {task.mediaAttachments.map((media, index) => (
                             <div
                               key={index}
@@ -1698,10 +1695,10 @@ export default function TaskDetailPage() {
 
                 <TabsContent
                   value="comments"
-                  className="animate-in fade-in-50 p-4 md:p-6"
+                  className="animate-in fade-in-50 p-3 sm:p-4 md:p-6"
                 >
                   <div className="bg-card border border-border rounded-lg shadow-sm mb-6 overflow-hidden">
-                    <div className="p-4">
+                    <div className="p-3 sm:p-4">
                       <form onSubmit={handleCommentSubmit}>
                         <textarea
                           ref={commentInputRef}
@@ -1729,7 +1726,7 @@ export default function TaskDetailPage() {
                           </div>
                         )}
 
-                        <div className="flex justify-between mt-2">
+                        <div className="flex flex-col xs:flex-row justify-between items-stretch xs:items-center gap-2 xs:gap-0 mt-2">
                           <div>
                             {cloudinaryConfigExists && (
                               <CommentMediaUploader
@@ -1777,14 +1774,15 @@ export default function TaskDetailPage() {
                           key={comment.id}
                           className="bg-card border border-border rounded-lg shadow-sm animate-fadeIn overflow-hidden"
                         >
-                          <div className="p-4">
+                          <div className="p-3 sm:p-4">
                             <div className="flex justify-between items-start mb-3">
                               <div className="flex items-center">
                                 <Avatar className="h-9 w-9 mr-3">
                                   <AvatarImage
                                     src={
                                       users[comment.userId]?.photoURL ||
-                                      undefined
+                                      undefined ||
+                                      "/placeholder.svg"
                                     }
                                     alt={
                                       users[comment.userId]?.displayName ||
@@ -1809,7 +1807,7 @@ export default function TaskDetailPage() {
                                 </div>
                               </div>
                             </div>
-                            <div className="dark:prose-invert max-w-none pl-12 prose">
+                            <div className="dark:prose-invert max-w-none pl-12 prose break-words">
                               <div
                                 dangerouslySetInnerHTML={{
                                   __html: formatTextWithLinks(
@@ -1865,7 +1863,7 @@ export default function TaskDetailPage() {
 
                 <TabsContent
                   value="history"
-                  className="animate-in fade-in-50 p-4 md:p-6"
+                  className="animate-in fade-in-50 p-3 sm:p-4 md:p-6"
                 >
                   {history.length === 0 ? (
                     <div className="bg-card border border-border rounded-lg shadow-sm text-center py-12">
@@ -1951,7 +1949,7 @@ export default function TaskDetailPage() {
 
                 <TabsContent
                   value="subtasks"
-                  className="animate-in fade-in-50 p-4 md:p-6"
+                  className="animate-in fade-in-50 p-3 sm:p-4 md:p-6"
                 >
                   <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
                     <div className="bg-muted/50 p-3 border-b border-border flex justify-between items-center">
@@ -2230,6 +2228,7 @@ export default function TaskDetailPage() {
                                               <AvatarImage
                                                 src={
                                                   userData.photoURL ||
+                                                  "/placeholder.svg" ||
                                                   "/placeholder.svg"
                                                 }
                                               />
@@ -2291,7 +2290,7 @@ export default function TaskDetailPage() {
 
                     {showChildTasks && (
                       <>
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                           <table className="w-full min-w-[700px]">
                             <thead>
                               <tr className="border-b border-border">
@@ -2327,7 +2326,7 @@ export default function TaskDetailPage() {
                                       <td className="px-4 py-2">
                                         <Link
                                           href={`/projects/${projectId}/tasks/${childTask.id}`}
-                                          className="text-primary hover:underline truncate block max-w-full"
+                                          className="text-primary hover:underline truncate block max-w-[250px]"
                                           title={childTask.title}
                                         >
                                           {childTask.title}
@@ -2504,7 +2503,7 @@ export default function TaskDetailPage() {
 
                 <TabsContent
                   value="media"
-                  className="animate-in fade-in-50 p-4 md:p-6"
+                  className="animate-in fade-in-50 p-3 sm:p-4 md:p-6"
                 >
                   <TaskMediaSection projectId={projectId} taskId={taskId} />
                 </TabsContent>
@@ -2525,8 +2524,11 @@ export default function TaskDetailPage() {
                 {getStatusChangeMessage()}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPendingStatusChange(null)}>
+            <AlertDialogFooter className="flex-col xs:flex-row space-y-2 xs:space-y-0">
+              <AlertDialogCancel
+                onClick={() => setPendingStatusChange(null)}
+                className="mt-0"
+              >
                 Cancel
               </AlertDialogCancel>
               <AlertDialogAction
@@ -2550,7 +2552,7 @@ export default function TaskDetailPage() {
 
         {/* Create Subtask Dialog */}
         <Dialog open={showSubtaskDialog} onOpenChange={setShowSubtaskDialog}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Create Subtask</DialogTitle>
               <DialogDescription>
@@ -2594,7 +2596,7 @@ export default function TaskDetailPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
                 <div className="space-y-4">
                   <label
                     htmlFor="subtaskType"
@@ -2811,7 +2813,7 @@ export default function TaskDetailPage() {
                       <h4 className="text-sm font-medium mb-2">
                         Uploaded Media ({subtaskMedia.length})
                       </h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-2">
                         {subtaskMedia.map((media, index) => (
                           <div
                             key={index}
@@ -2826,7 +2828,7 @@ export default function TaskDetailPage() {
                                 />
                               ) : (
                                 <div className="flex items-center justify-center h-full">
-                                  <span className="text-xs text-muted-foreground">
+                                  <span className="text-xs text-muted-foreground truncate max-w-full px-2">
                                     {media.resourceType}
                                   </span>
                                 </div>
@@ -2851,7 +2853,7 @@ export default function TaskDetailPage() {
                 </div>
               )}
 
-              <DialogFooter className="flex justify-end space-x-4 pt-4">
+              <DialogFooter className="flex flex-col xs:flex-row justify-end xs:space-x-4 space-y-2 xs:space-y-0 pt-4">
                 <Button
                   type="button"
                   variant="outline"
@@ -2934,20 +2936,25 @@ export default function TaskDetailPage() {
                   </div>
                 )}
 
-                <div className="mt-4 flex justify-between items-center">
-                  <div>
+                <div className="mt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+                  <div className="w-full sm:max-w-[70%]">
                     <p className="text-sm font-medium truncate">
                       {selectedMedia.publicId}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground truncate">
                       {selectedMedia.resourceType}/{selectedMedia.format}
                       {selectedMedia.width &&
                         selectedMedia.height &&
                         ` • ${selectedMedia.width}×${selectedMedia.height}`}
                     </p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" asChild>
+                  <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="flex-1 sm:flex-initial"
+                    >
                       <a
                         href={selectedMedia.url}
                         target="_blank"
@@ -2957,7 +2964,12 @@ export default function TaskDetailPage() {
                         Open
                       </a>
                     </Button>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="flex-1 sm:flex-initial"
+                    >
                       <a href={selectedMedia.url} download>
                         <Download className="h-4 w-4 mr-2" />
                         Download

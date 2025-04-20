@@ -89,7 +89,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { MediaUploader } from "@/components/cloudinary/media-uploader";
-import { TaskMediaSection } from "@/components/task/task-media-section";
 import { CommentMediaUploader } from "@/components/comment/comment-media-uploader";
 import { getCloudinaryConfigByProjectId } from "@/services/cloudinary-service";
 import Image from "next/image";
@@ -123,6 +122,7 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TaskMediaSection } from "@/components/cloudinary/task-media-section";
 
 // Custom utility class for extra small screens (below 480px)
 const xsScreenClass = "max-[480px]:";
@@ -149,6 +149,26 @@ const extractCommitId = (input: string): string => {
 const getRepoSlug = (repo: string): string => {
   if (!repo) return "";
   return repo.replace(/^(https?:\/\/github\.com\/)/i, "");
+};
+
+// Add a utility function to truncate long text
+const truncateText = (text: string, maxLength = 20) => {
+  if (!text) return "";
+  if (text.length <= maxLength) return text;
+
+  // For filenames with extensions, preserve the extension
+  const lastDotIndex = text.lastIndexOf(".");
+  if (lastDotIndex > 0) {
+    const name = text.substring(0, lastDotIndex);
+    const extension = text.substring(lastDotIndex);
+
+    if (name.length <= maxLength - 3) return text;
+
+    return `${name.substring(0, maxLength - 3)}...${extension}`;
+  }
+
+  // For URLs or text without extensions
+  return `${text.substring(0, maxLength)}...`;
 };
 
 export default function TaskDetailPage() {
@@ -1782,6 +1802,8 @@ export default function TaskDetailPage() {
                                     src={
                                       users[comment.userId]?.photoURL ||
                                       undefined ||
+                                      "/placeholder.svg" ||
+                                      "/placeholder.svg" ||
                                       "/placeholder.svg"
                                     }
                                     alt={
@@ -2229,6 +2251,8 @@ export default function TaskDetailPage() {
                                                 src={
                                                   userData.photoURL ||
                                                   "/placeholder.svg" ||
+                                                  "/placeholder.svg" ||
+                                                  "/placeholder.svg" ||
                                                   "/placeholder.svg"
                                                 }
                                               />
@@ -2552,7 +2576,7 @@ export default function TaskDetailPage() {
 
         {/* Create Subtask Dialog */}
         <Dialog open={showSubtaskDialog} onOpenChange={setShowSubtaskDialog}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+          <DialogContent className="w-full max-w-lg sm:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Create Subtask</DialogTitle>
               <DialogDescription>
@@ -2946,6 +2970,12 @@ export default function TaskDetailPage() {
                       {selectedMedia.width &&
                         selectedMedia.height &&
                         ` • ${selectedMedia.width}×${selectedMedia.height}`}
+                    </p>
+                    <p
+                      className="text-xs text-muted-foreground truncate max-w-full overflow-hidden text-ellipsis"
+                      title={selectedMedia.url}
+                    >
+                      {truncateText(selectedMedia.url, 40)}
                     </p>
                   </div>
                   <div className="flex gap-2 shrink-0 w-full sm:w-auto">

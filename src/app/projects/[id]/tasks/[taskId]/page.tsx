@@ -470,6 +470,9 @@ export default function TaskDetailPage() {
             }
           }
         }
+      } else {
+        // Initialize comments as an empty array if none exist
+        setComments([]);
       }
 
       // Fetch task history
@@ -509,6 +512,9 @@ export default function TaskDetailPage() {
             }
           }
         }
+      } else {
+        // Initialize history as an empty array if none exists
+        setHistory([]);
       }
 
       // Fetch parent task if exists
@@ -563,6 +569,9 @@ export default function TaskDetailPage() {
             });
           }
         }
+      } else {
+        // Initialize childTasks as an empty array if none exist
+        setChildTasks([]);
       }
 
       setUsers(usersData);
@@ -580,6 +589,11 @@ export default function TaskDetailPage() {
 
   // Filter subtasks when filters or childTasks change
   useEffect(() => {
+    if (!childTasks) {
+      setFilteredChildTasks([]);
+      return;
+    }
+
     const filtered = childTasks.filter((task) => {
       // Status filter
       if (
@@ -1183,7 +1197,7 @@ export default function TaskDetailPage() {
 
   // Convert users object to array for AssigneeGroup component
   const getAssigneeUsers = () => {
-    if (!task?.assignedTo) return [];
+    if (!task || !task.assignedTo) return [];
     return task.assignedTo.filter((id) => users[id]).map((id) => users[id]);
   };
 
@@ -1294,11 +1308,11 @@ export default function TaskDetailPage() {
   // Determine which tabs to show
   const tabItems = [
     { id: "details", label: "Details" },
-    { id: "comments", label: `Comments (${comments.length})` },
-    { id: "history", label: `History (${history.length})` },
+    { id: "comments", label: `Comments (${comments ? comments.length : 0})` },
+    { id: "history", label: `History (${history ? history.length : 0})` },
   ];
 
-  if (childTasks.length > 0) {
+  if (childTasks && childTasks.length > 0) {
     tabItems.push({ id: "subtasks", label: `Subtasks (${childTasks.length})` });
   }
 
@@ -1804,6 +1818,8 @@ export default function TaskDetailPage() {
                                       undefined ||
                                       "/placeholder.svg" ||
                                       "/placeholder.svg" ||
+                                      "/placeholder.svg" ||
+                                      "/placeholder.svg" ||
                                       "/placeholder.svg"
                                     }
                                     alt={
@@ -1846,6 +1862,15 @@ export default function TaskDetailPage() {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-block group"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setSelectedMedia({
+                                        url: comment.mediaUrl,
+                                        resourceType: "image",
+                                        publicId: "Comment attachment",
+                                      });
+                                      setShowMediaPreview(true);
+                                    }}
                                   >
                                     <div className="relative">
                                       <img
@@ -1928,22 +1953,27 @@ export default function TaskDetailPage() {
                                       {users[entry.userId]?.displayName ||
                                         "Unknown user"}
                                     </span>{" "}
-                                    {entry.changes.map((change, index) => (
-                                      <span
-                                        key={index}
-                                        className="inline-block"
-                                      >
-                                        {index > 0 && ", "}
-                                        changed {change.field} from{" "}
-                                        <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
-                                          {change.oldValue || "none"}
-                                        </span>{" "}
-                                        to{" "}
-                                        <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
-                                          {change.newValue}
+                                    {entry.changes &&
+                                    entry.changes.length > 0 ? (
+                                      entry.changes.map((change, index) => (
+                                        <span
+                                          key={index}
+                                          className="inline-block"
+                                        >
+                                          {index > 0 && ", "}
+                                          changed {change.field} from{" "}
+                                          <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
+                                            {change.oldValue || "none"}
+                                          </span>{" "}
+                                          to{" "}
+                                          <span className="bg-muted rounded text-xs font-mono px-1.5 py-0.5">
+                                            {change.newValue}
+                                          </span>
                                         </span>
-                                      </span>
-                                    ))}
+                                      ))
+                                    ) : (
+                                      <span>made changes</span>
+                                    )}
                                   </p>
                                   <p className="text-muted-foreground text-xs">
                                     {formatDateTime(entry.timestamp)}
@@ -2250,6 +2280,8 @@ export default function TaskDetailPage() {
                                               <AvatarImage
                                                 src={
                                                   userData.photoURL ||
+                                                  "/placeholder.svg" ||
+                                                  "/placeholder.svg" ||
                                                   "/placeholder.svg" ||
                                                   "/placeholder.svg" ||
                                                   "/placeholder.svg" ||

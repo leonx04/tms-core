@@ -2909,7 +2909,7 @@ export default function TaskDetailPage() {
                 </div>
               )}
 
-              <DialogFooter className="flex flex-col xs:flex-row justify-end xs:space-x-4 space-y-2 xs:space-y-0 pt-4">
+              <DialogFooter className="flex flex-col sm:flex-row justify-end sm:space-x-4 space-y-2 sm:space-y-0 pt-4">
                 <Button
                   type="button"
                   variant="outline"

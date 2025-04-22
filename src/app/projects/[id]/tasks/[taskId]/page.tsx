@@ -914,7 +914,7 @@ export default function TaskDetailPage() {
           url: media.url as string,
           resourceType: media.resourceType as string,
           format: media.format as string,
-        })), // Ensure media attachments conform to MediaAttachment type
+        })),
       };
 
       await set(newTaskRef, newTask);
@@ -1820,6 +1820,7 @@ export default function TaskDetailPage() {
                                       "/placeholder.svg" ||
                                       "/placeholder.svg" ||
                                       "/placeholder.svg" ||
+                                      "/placeholder.svg" ||
                                       "/placeholder.svg"
                                     }
                                     alt={
@@ -2285,6 +2286,7 @@ export default function TaskDetailPage() {
                                                   "/placeholder.svg" ||
                                                   "/placeholder.svg" ||
                                                   "/placeholder.svg" ||
+                                                  "/placeholder.svg" ||
                                                   "/placeholder.svg"
                                                 }
                                               />
@@ -2573,14 +2575,14 @@ export default function TaskDetailPage() {
           open={showStatusConfirmDialog}
           onOpenChange={setShowStatusConfirmDialog}
         >
-          <AlertDialogContent>
+          <AlertDialogContent className="sm:max-w-[425px]">
             <AlertDialogHeader>
               <AlertDialogTitle>Change Task Status</AlertDialogTitle>
               <AlertDialogDescription>
                 {getStatusChangeMessage()}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex-col xs:flex-row space-y-2 xs:space-y-0">
+            <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-0">
               <AlertDialogCancel
                 onClick={() => setPendingStatusChange(null)}
                 className="mt-0"
